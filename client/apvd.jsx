@@ -14,9 +14,6 @@ Page = React.createClass({
       }
     };
   },
-  ellipseDrag() {
-
-  },
   onTextFieldChange(value) {
     try {
       var ellipses = JSON.parse(value);
@@ -26,7 +23,7 @@ Page = React.createClass({
     }
   },
   onChange(k, v) {
-    console.log("change:", k, v);
+    //console.log("change:", k, v);
     var newEllipseK = _.extend(this.state.ellipses[k], v);
     var o = {}; o[k] = newEllipseK;
     var newEllipses = _.extend(this.state.ellipses, o);
@@ -83,6 +80,29 @@ Svg = React.createClass({
       dragStartY: e.clientY
     });
   },
+  getTheta(x, y, t) {
+    var r = Math.sqrt(x*x + y*y);
+    var theta = null;
+    var pi4s = Math.round(t * 2 / Math.PI);
+
+    if (-1 == pi4s) {
+      theta = -Math.acos(x/r)
+    } else if (0 == pi4s) {
+      theta = Math.asin(y/r);
+    } else if (1 == pi4s) {
+      theta = Math.acos(x/r);
+    } else if (1 < pi4s) {
+      theta = Math.PI - Math.asin(y/r);
+      if (theta > Math.PI) theta -= 2*Math.PI;
+    } else if (pi4s < -1) {
+      theta = -Math.PI - Math.asin(y/r);
+      if (theta < -Math.PI) theta += 2*Math.PI;
+    }
+    return {
+      theta: theta,
+      r: r
+    };
+  },
   onMouseMove(e) {
     if (this.state.dragging) {
       var dx = e.clientX - this.state.dragStartX;
@@ -96,50 +116,56 @@ Svg = React.createClass({
                 cy: ellipse.cy + dy
               }
         );
-      } else if (this.state.dragNode == 'vx1') {
+      } else if (this.state.dragNode == 'vx1' || this.state.dragNode == 'vx2') {
+        if (this.state.dragNode == 'vx2') {
+          dx = -dx;
+          dy = -dy;
+        }
         var rx = ellipse.rx;
-        var theta = ellipse.rotate * Math.PI / 180;
-        var cos = Math.cos(theta);
-        var sin = Math.sin(theta);
+        var t = ellipse.rotate * Math.PI / 180;
+        var cos = Math.cos(t);
+        var sin = Math.sin(t);
         var rxx = rx * cos;
         var rxy = rx * sin;
         var nxx = rxx + dx;
         var nxy = rxy + dy;
-        var nx = Math.sqrt(nxx*nxx + nxy*nxy);
-        var ntheta = null;//Math.acos(nxx/nx);
-        var pi4s = Math.round(theta * 2 / Math.PI);
-
-        if (-1 == pi4s) {
-          ntheta = -Math.acos(nxx/nx)
-        } else if (0 == pi4s) {
-          ntheta = Math.asin(nxy/nx);
-        } else if (1 == pi4s) {
-          ntheta = Math.acos(nxx/nx);
-        } else if (1 < pi4s) {
-          ntheta = Math.PI - Math.asin(nxy/nx);
-          if (ntheta > Math.PI) ntheta -= 2*Math.PI;
-        } else if (pi4s < -1) {
-          ntheta = -Math.PI - Math.asin(nxy/nx);
-          if (ntheta < -Math.PI) ntheta += 2*Math.PI;
-        }
-        console.log("new:", nx, ntheta * 180 / Math.PI, pi4s);
+        var { theta, r } = this.getTheta(nxx, nxy, t);
+        //console.log("new:", r, theta * 180 / Math.PI);
         this.props.onChange(
               this.state.dragEllipse,
               {
-                rotate: ntheta * 180 / Math.PI,
-                rx: nx
+                rotate: theta * 180 / Math.PI,
+                rx: r
               }
         );
-      } else if (this.state.dragNode == 'vx2') {
+      } else if (this.state.dragNode == 'vy1' || this.state.dragNode == 'vy2') {
+        if (this.state.dragNode == 'vy2') {
+          dx = -dx;
+          dy = -dy;
+        }
+        var ry = ellipse.ry;
+        var t = ellipse.rotate * Math.PI / 180;
+        var cos = Math.cos(t);
+        var sin = Math.sin(t);
+        var ryx = -ry * sin;
+        var ryy = ry * cos;
+        var nyx = ryx + dx;
+        var nyy = ryy + dy;
 
-      } else if (this.state.dragNode == 'vy1') {
-
-      } else if (this.state.dragNode == 'vy2') {
-
-      } else if (this.state.dragNode == 'f1') {
-
-      } else if (this.state.dragNode == 'f2') {
-
+        var { theta, r } = this.getTheta(nyy, -nyx, t);
+        //console.log("new: vy:", theta * 180 / Math.PI, nyy, -nyx);
+        this.props.onChange(
+              this.state.dragEllipse,
+              {
+                rotate: theta * 180 / Math.PI,
+                ry: r
+              }
+        );
+      } else if (this.state.dragNode == 'f1' || this.state.dragNode == 'f2') {
+        if (this.state.dragNode == 'vx2') {
+          dx = -dx;
+          dy = -dy;
+        }
       }
       this.setState({
         dragStartX: e.clientX,
