@@ -21,3 +21,6 @@ insecure                # Allow all DB writes from clients (for prototyping)
 react
 react-template-helper
 less
+
+
+npm-container
