@@ -4,12 +4,20 @@ Page = React.createClass({
     return {
       ellipses: {
         0: {
-          cx: 100,
-          cy: 100,
+          cx: 150,
+          cy: 150,
           rx: 50,
-          ry: 30,
+          ry: 60,
           rotate: 45,
-          style: {fill: 'red'}
+          color: 'red'
+        },
+        1: {
+          cx: 200,
+          cy: 200,
+          rx: 70,
+          ry: 40,
+          rotate: 20,
+          color: 'blue'
         }
       }
     };
@@ -238,7 +246,7 @@ Ellipse = React.createClass({
     this.props.dragStart(e, k, this.props.k);
   },
   render() {
-    var {cx, cy, rx, ry, rotate, style} = this.props;
+    var {cx, cy, rx, ry, rotate, color} = this.props;
 
     var vx1 = [ rx, 0 ];
     var vx2 = [ -rx, 0 ];
@@ -274,7 +282,7 @@ Ellipse = React.createClass({
           onMouseLeave={this.onMouseLeave}
           onMouseDown={(e) => { this.dragStart(e, 'c'); }}
     >
-      <ellipse rx={rx} ry={ry} style={style} />
+      <ellipse rx={rx} ry={ry} style={{ fill: color }} />
       {points}
     </g>;
   }
