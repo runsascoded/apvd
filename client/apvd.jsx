@@ -23,7 +23,6 @@ Page = React.createClass({
     }
   },
   onChange(k, v) {
-    //console.log("change:", k, v);
     var newEllipseK = _.extend(this.state.ellipses[k], v);
     var o = {}; o[k] = newEllipseK;
     var newEllipses = _.extend(this.state.ellipses, o);
@@ -66,12 +65,13 @@ Svg = React.createClass({
   },
   onMouseUp(e) {
     if (this.state.dragging) {
-      console.log("drag stop");
-      this.setState({ dragging: false });
+      this.setState({
+        dragging: false,
+        dragEllipse: null
+      });
     }
   },
   dragStart(e, k, ek) {
-    console.log("drag start", e.clientX, e.clientY);
     this.setState({
       dragging: true,
       dragNode: k,
