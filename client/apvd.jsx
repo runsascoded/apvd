@@ -55,7 +55,7 @@ ModelTextField = React.createClass({
           onKeyPress={this.onKeyPress}
           onKeyDown={this.onKeyDown}
           onChange={this.onChange}
-          defaultValue={JSON.stringify(this.props.ellipses, null, 2)}
+          value={JSON.stringify(this.props.ellipses, null, 2)}
     />;
   }
 });
