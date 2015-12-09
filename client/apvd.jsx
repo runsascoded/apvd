@@ -153,7 +153,6 @@ Svg = React.createClass({
         var nyy = ryy + dy;
 
         var { theta, r } = this.getTheta(nyy, -nyx, t);
-        //console.log("new: vy:", theta * 180 / Math.PI, nyy, -nyx);
         this.props.onChange(
               this.state.dragEllipse,
               {
@@ -162,10 +161,34 @@ Svg = React.createClass({
               }
         );
       } else if (this.state.dragNode == 'f1' || this.state.dragNode == 'f2') {
-        if (this.state.dragNode == 'vx2') {
+        if (this.state.dragNode == 'f2') {
           dx = -dx;
           dy = -dy;
         }
+        var {rx, ry} = ellipse;
+        var rM = Math.max(rx, ry);
+        var rm = Math.min(rx, ry);
+        var f = Math.sqrt(rM*rM - rm*rm);
+        var t = ellipse.rotate * Math.PI / 180;
+        var cos = Math.cos(t);
+        var sin = Math.sin(t);
+        var fx = f * (rx >= ry ? cos : -sin);
+        var fy = f * (rx >= ry ? sin : cos);
+        var nfx = fx + dx;
+        var nfy = fy + dy;
+        var { theta, r } = this.getTheta(rx >= ry ? nfx : nfy, rx >= ry ? nfy : -nfx, t);
+        var changes = { rotate: theta * 180 / Math.PI };
+
+        if (rx >= ry) {
+          changes.rx = Math.sqrt(ry*ry + r*r);
+        } else {
+          changes.ry = Math.sqrt(rx*rx + r*r);
+        }
+
+        this.props.onChange(
+              this.state.dragEllipse,
+              changes
+        );
       }
       this.setState({
         dragStartX: e.clientX,
