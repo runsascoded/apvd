@@ -272,6 +272,7 @@ Ellipse = React.createClass({
           transform={"translate(" + cx + "," + cy + ") rotate(" + rotate + ")"}
           onMouseEnter={this.onMouseEnter}
           onMouseLeave={this.onMouseLeave}
+          onMouseDown={(e) => { this.dragStart(e, 'c'); }}
     >
       <ellipse rx={rx} ry={ry} style={style} />
       {points}
@@ -282,6 +283,7 @@ Ellipse = React.createClass({
 Point = React.createClass({
   onMouseDown(e) {
     this.props.dragStart(e, this.props.k);
+    e.stopPropagation();
   },
   render() {
     return <circle
