@@ -1,25 +1,175 @@
 
+pi = Math.PI;
+
+cubic = (a, b, c, d) => {
+  if (d != undefined) {
+    return cubic(b/a, c/a, d/a);
+  }
+
+  if (c != undefined) {
+    var p = b - a*a/3;
+    var q = c - a*b/3 + 2*a*a*a/27;
+    return cubic(p, q).map((x) => { return x - a/3; });
+  }
+
+  var p = a;
+  var q = b;
+
+  if (q == 0) {
+    if (p < 0) {
+      return [ -Math.sqrt(-p), 0, Math.sqrt(-p) ];
+    }
+    return [ 0 ];
+  } else if (p == 0) {
+    return [ Math.pow(-q, 1/3) ];
+  }
+  var p3 = -p/3;
+  var p33 = p3*p3*p3;
+  var q2 = -q/2;
+  var q22 = q2*q2;
+
+  var r = q22 - p33;
+  console.log("cubic:", p, q, r);
+
+  if (r < 0) {
+    function tk(k) {
+      return 2 * Math.sqrt(p3) * Math.cos((Math.acos(q2/Math.sqrt(p33)) - 2*pi*k) / 3);
+    }
+    var roots = [ tk(0), tk(1), tk(2) ];
+    roots.sort(function(a,b) { return a -b; });
+    return roots;
+  } else {
+    var sq = Math.sqrt(r);
+    return [ Math.pow(q2 + sq, 1/3) + Math.pow(q2 - sq, 1/3) ];
+  }
+};
+
+quartic = (a, b, c, d, e) => {
+
+  if (e != undefined) {
+    return quartic(b/a, c/a, d/a, e/a);
+  }
+
+  if (d != undefined) {
+    var p = b - 3*a*a/8;
+    var q = c + a*(a*a - 4*b)/8;
+    var r = d + a*(-3*a*a*a - 64*c + 16*a*b)/256;
+    return quartic(p, q, r).map((x) => { return x - a/4; });
+  }
+
+
+
+  var A = b*b - 3*a*c + 12*d;
+  var B = 2*b*b*b - 9*a*b*c + 27*c*c + 27*a*a*d -72*b*d;
+
+  var cbrt2 = Math.pow(2, 1/3);
+
+  var R1 = -4*A*A*A + B*B;
+  var S1 = Math.sqrt(R1);
+
+  var C = Math.pow(B + S1, 1/3);
+
+  var R2 = a*a/4 - 2*b/3 + cbrt2*A/3/C + C/3/cbrt2;
+  var S2 = Math.sqrt(R2);
+
+  var D = -a*a*a + 4*a*b - 8*c;
+
+  var E = D/4/S1;
+
+  console.log("A:", A, "B:", B, "R1:", R1, "S1:", S1, "C:", C, "R2:", R2, "S2:", S2, "D:", D, "E:", E);
+
+  function root(sgn1, sgn2) {
+    var R3 = a*a/4 - 2*b/3 + R2 - E*sgn1;
+    var S3 = Math.sqrt(R3);
+
+    return -a/4 - S2*sgn1/2 - S3*sgn2/2;
+  }
+
+  return [root(1, 1), root(1, -1), root(-1, 1), root(-1, -1)];
+};
+
 Page = React.createClass({
-  getInitialState() {
-    return {
-      ellipses: {
-        0: {
-          cx: 150,
-          cy: 150,
-          rx: 50,
-          ry: 60,
-          rotate: 45,
-          color: 'red'
-        },
-        1: {
-          cx: 200,
-          cy: 200,
-          rx: 70,
-          ry: 40,
-          rotate: 20,
-          color: 'blue'
-        }
+  computeIntersections(e1, e2) {
+    var t1 = e1.rotate * Math.PI / 180;
+    var cos1 = Math.cos(t1);
+    var sin1 = Math.sin(t1);
+    function transform(x, y) {
+      if (x instanceof Array) {
+        y = x[1];
+        x = x[0];
       }
+      return [
+        (cos1*x + sin1*y - e1.cx) / e1.rx,
+        (cos1*y - sin1*x - e1.cy) / e1.ry
+      ];
+    }
+
+    var r2M = Math.max(e2.rx, e2.ry);
+    var r2m = Math.min(e2.rx, e2.ry);
+    var f2 = Math.sqrt(r2M*r2M - r2m*r2m);
+
+    var t2 = e2.rotate * Math.PI / 180;
+    var cos2 = Math.cos(t2);
+    var sin2 = Math.sin(t2);
+
+    var f21x = e2.cx + (e2.rx >= e2.ry ? (e2.rx * cos2) : (e2.ry * -sin2));
+    var f21y = e2.cy + (e2.rx >= e2.ry ? (e2.rx * sin2) : (e2.ry * cos2));
+
+    var f22x = 2*e2.cx - f21x;
+    var f22y = 2*e2.cy - f21y;
+
+    var t2x = e2.cx + (e2.rx >= e2.ry ? (e2.ry * -sin2) : (e2.rx * cos2));
+    var t2y = e2.cy + (e2.rx >= e2.ry ? (e2.ry * cos2) : (e2.rx * sin2));
+
+    var f21t = transform(f21x, f21y);
+    var f22t = transform(f22x, f22y);
+    var t2t = transform(t2x, t2y);
+
+    var fd2xt = f21t[0] - t2t[0];
+    var fd2yt = f21t[1] - t2t[1];
+    var rM2t = Math.sqrt(fd2xt*fd2xt + fd2yt*fd2yt);
+
+    var c2t = [(f21t[0] + f22t[0])/2, (f21t[1] + f22t[1])/2];
+    var rm2xt = t2t[0] - c2t[0];
+    var rm2yt = t2t[1] - c2t[1];
+    var rm2t = Math.sqrt(rm2xt*rm2xt + rm2yt*rm2yt);
+
+
+  },
+  getInitialState() {
+    var ellipses = [
+      {
+        cx: 150,
+        cy: 150,
+        rx: 50,
+        ry: 60,
+        rotate: 45,
+        color: 'red'
+      },
+      {
+        cx: 200,
+        cy: 200,
+        rx: 70,
+        ry: 40,
+        rotate: 20,
+        color: 'blue'
+      }
+    ];
+
+    var intersections = [];
+    for (var i = 0; i < ellipses.length - 1; i++) {
+      for (var j = i + 1; j < ellipses.length; j++) {
+        intersections = intersections.concat(this.computeIntersections(ellipses[i], ellipses[j]));
+      }
+    }
+    console.log("intersections:", intersections);
+
+    var ellipsesObj = {};
+    ellipses.forEach((e, i) => {
+      ellipsesObj[i] = e;
+    });
+    return {
+      ellipses: ellipsesObj
     };
   },
   onTextFieldChange(value) {
