@@ -1,6 +1,8 @@
 
 pi = Math.PI;
 
+cmp = (a,b) => { return a-b; }
+
 cubic = (a, b, c, d) => {
   if (d != undefined) {
     return cubic(b/a, c/a, d/a);
@@ -21,7 +23,7 @@ cubic = (a, b, c, d) => {
     }
     return [ 0 ];
   } else if (p == 0) {
-    return [ Math.pow(-q, 1/3) ];
+    return [ Math.cbrt(-q) ];
   }
   var p3 = -p/3;
   var p33 = p3*p3*p3;
@@ -29,18 +31,24 @@ cubic = (a, b, c, d) => {
   var q22 = q2*q2;
 
   var r = q22 - p33;
-  console.log("cubic:", p, q, r);
+  //console.log("cubic:", p, q, r);
 
   if (r < 0) {
     function tk(k) {
       return 2 * Math.sqrt(p3) * Math.cos((Math.acos(q2/Math.sqrt(p33)) - 2*pi*k) / 3);
     }
     var roots = [ tk(0), tk(1), tk(2) ];
-    roots.sort(function(a,b) { return a -b; });
+    roots.sort(cmp);
     return roots;
   } else {
-    var sq = Math.sqrt(r);
-    return [ Math.pow(q2 + sq, 1/3) + Math.pow(q2 - sq, 1/3) ];
+
+    if (r == 0) {
+      return [ 3*q/p, -q2/p3, -q2/p3 ].sort(cmp);
+    } else {
+      var sq = Math.sqrt(r);
+      //console.log("sq:", sq);
+      return [ Math.cbrt(q2 + sq) + Math.cbrt(q2 - sq) ];
+    }
   }
 };
 
@@ -57,35 +65,53 @@ quartic = (a, b, c, d, e) => {
     return quartic(p, q, r).map((x) => { return x - a/4; });
   }
 
+  var roots = [];
+  if (b == 0) {
+    var d = a*a - 4*c;
+    if (d < 0) return [];
+    var sq = Math.sqrt(d);
+    var q1 = (-a + sq)/2;
+    var q2 = (-a - sq)/2;
 
+    //console.log("biquadratic:", a, c, d, sq, q1, q2);
 
-  var A = b*b - 3*a*c + 12*d;
-  var B = 2*b*b*b - 9*a*b*c + 27*c*c + 27*a*a*d -72*b*d;
-
-  var cbrt2 = Math.pow(2, 1/3);
-
-  var R1 = -4*A*A*A + B*B;
-  var S1 = Math.sqrt(R1);
-
-  var C = Math.pow(B + S1, 1/3);
-
-  var R2 = a*a/4 - 2*b/3 + cbrt2*A/3/C + C/3/cbrt2;
-  var S2 = Math.sqrt(R2);
-
-  var D = -a*a*a + 4*a*b - 8*c;
-
-  var E = D/4/S1;
-
-  console.log("A:", A, "B:", B, "R1:", R1, "S1:", S1, "C:", C, "R2:", R2, "S2:", S2, "D:", D, "E:", E);
-
-  function root(sgn1, sgn2) {
-    var R3 = a*a/4 - 2*b/3 + R2 - E*sgn1;
-    var S3 = Math.sqrt(R3);
-
-    return -a/4 - S2*sgn1/2 - S3*sgn2/2;
+    if (q1 >= 0) {
+      var sq1 = Math.sqrt(q1);
+      roots = roots.concat([ -sq1, sq1 ]);
+    }
+    if (q2 >= 0) {
+      var sq2 = Math.sqrt(q2);
+      roots = roots.concat([ -sq2, sq2 ]);
+    }
+    return roots.sort(cmp);
   }
 
-  return [root(1, 1), root(1, -1), root(-1, 1), root(-1, -1)];
+  var croots = cubic(5*a/2, 2*a*a - c, a*a*a/2 - a*c/2 - b*b/8);
+  //console.log("croots:", croots);
+  var y = croots[0];
+
+  var sq = Math.sqrt(a + 2*y);
+
+  function root(s1, s2) {
+    var s1sq = s1*sq;
+    var B = -(3*a + 2*y + 2*b/s1sq);
+    if (B >= 0) {
+      var sq1 = Math.sqrt(B);
+      roots.push((s1sq + s2 * sq1) / 2);
+    }
+  }
+
+  root(1, 1);
+  root(1, -1);
+  root(-1, 1);
+  root(-1, -1);
+
+  //var rootsObj = {};
+  //roots.forEach((r) => { rootsObj[r] = true });
+  //roots = [];
+  //for (var k in rootsObj) { roots.push(k); }
+
+  return roots.sort(cmp);
 };
 
 Page = React.createClass({
