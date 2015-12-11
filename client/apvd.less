@@ -4,10 +4,23 @@
 svg {
   float: left;
   height: @h;
+  width: 300px;
   border: 1px solid black;
 
   ellipse {
     fill-opacity: 0.4;
+  }
+
+  .grid-line {
+    stroke: lightgrey;
+  }
+  .axis {
+    stroke: grey;
+  }
+
+  .cursor {
+    font-family: monospace;
+    font-size: 10px;
   }
 }
 
