@@ -7,7 +7,7 @@ Ellipse = class {
     this.ry = o.ry;
     this.color = o.color;
 
-    if (o.rotate) {
+    if (o.rotate !== undefined) {
       this.rotate = o.rotate;
     } else {
       this.theta = o.theta;
@@ -23,7 +23,6 @@ Ellipse = class {
 
     this.cos = Math.cos(this.theta);
     this.sin = Math.sin(this.theta);
-    //console.log("cos:", this.cos, "sin:", this.sin);
 
     var {cx, cy, rx, ry, cos, sin} = this;
 
@@ -48,11 +47,10 @@ Ellipse = class {
     this.f2x = cx - fr*(((rx >= ry) ? this.vxx : this.vyx) - cx);
     this.f2y = cy - fr*(((rx >= ry) ? this.vxy : this.vyy) - cy);
     this.f2 = [ this.f2x, this.f2y ];
-    //console.log(this.s());
   }
 
   toString() {
-    return "E(" + this.cx + "," + this.cy + "); " + this.rx + "," + this.ry + "," + this.rotate + ")";
+    return "E(" + r3(this.cx) + "," + r3(this.cy) + "; " + r3(this.rx) + "," + r3(this.ry) + "," + r3(this.rotate) + ")";
   }
 
   s() {
@@ -92,8 +90,8 @@ Ellipse = class {
 
   project(e) {
     var c = this.transform(e.cx, e.cy);
-    var vx = this.transform(e.cx + e.rx*e.cos, e.cy + e.rx*e.sin);
-    var vy = this.transform(e.cx - e.ry*e.sin, e.cy + e.ry*e.cos);
+    var vx = this.transform(e.vx[0], e.vx[1]);
+    var vy = this.transform(e.vy[0], e.vy[1]);
 
     var rxx = vx[0] - c[0];
     var rxy = vx[1] - c[1];
@@ -108,7 +106,7 @@ Ellipse = class {
 
     var t = (sin >= 0) ? Math.acos(cos) : -Math.acos(cos);
 
-    //console.log("project:", [c, vx, vy].map((p) => { return p.join(","); }).join(" "));
+    console.log("project:", e.toString(), [c, vx, vy].map((p) => { return p.map(r3).join(","); }).join(" "));
 
     return new Ellipse({ cx: c[0], cy: c[1], rx: rxd, ry: ryd, theta: t, color: e.color });
   }

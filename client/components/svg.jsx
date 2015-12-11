@@ -86,7 +86,7 @@ Svg = React.createClass({
         var rxx = rx * cos;
         var rxy = rx * sin;
         var nxx = rxx + dx;
-        var nxy = rxy + dy;
+        var nxy = rxy - dy;
         var { theta, r } = this.getTheta(nxx, nxy, t);
         //console.log("new:", r, theta * 180 / Math.PI);
         this.props.onChange(
@@ -107,7 +107,7 @@ Svg = React.createClass({
         var sin = Math.sin(t);
         var ryx = -ry * sin;
         var ryy = ry * cos;
-        var nyx = ryx - dx;
+        var nyx = ryx + dx;
         var nyy = ryy - dy;
 
         var { theta, r } = this.getTheta(nyy, -nyx, t);
@@ -132,8 +132,8 @@ Svg = React.createClass({
         var sin = Math.sin(t);
         var fx = f * (rx >= ry ? cos : -sin);
         var fy = f * (rx >= ry ? sin : cos);
-        var nfx = fx + (rx >= ry ? dx : -dx);
-        var nfy = fy + (rx >= ry ? dy : -dy);
+        var nfx = fx + dx;//(rx >= ry ? dx : -dx);
+        var nfy = fy - dy;//(rx >= ry ? dy : -dy);
         var { theta, r } = this.getTheta(rx >= ry ? nfx : nfy, rx >= ry ? nfy : -nfx, t);
         var changes = { rotate: theta * 180 / Math.PI };
 

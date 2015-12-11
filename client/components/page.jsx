@@ -3,19 +3,19 @@ Page = React.createClass({
   getInitialState() {
     var ellipses = [
       {
-        cx: 20,
-        cy: -10,
-        rx: 50,
-        ry: 60,
-        rotate: 45,
+        cx: 0,
+        cy: 0,
+        rx: 20,
+        ry: 110,
+        rotate: 0,
         color: 'red'
       },
       {
-        cx: 20,
-        cy: 20,
-        rx: 70,
-        ry: 40,
-        rotate: 20,
+        cx: 2,
+        cy: 30,
+        rx: 110,
+        ry: 20,
+        rotate: 65,
         color: 'blue'
       }
     ].map((e) => { return new Ellipse(e); });

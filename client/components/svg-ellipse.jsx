@@ -48,7 +48,7 @@ SvgEllipse = React.createClass({
     }
 
     return <g
-          transform={"translate(" + cx + "," + cy + ") rotate(" + -rotate + ")"}
+          transform={"translate(" + cx + "," + cy + ") rotate(" + rotate + ")"}
           onMouseEnter={this.onMouseEnter}
           onMouseLeave={this.onMouseLeave}
           onMouseDown={(e) => { this.dragStart(e, 'c'); }}
