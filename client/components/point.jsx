@@ -10,6 +10,7 @@ Point = React.createClass({
           cx={this.props.cs[0]}
           cy={this.props.cs[1]}
           onMouseDown={this.onMouseDown}
+          style={{ fill: this.props.color || 'black' }}
     />;
   }
 });

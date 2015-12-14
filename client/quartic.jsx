@@ -27,7 +27,6 @@ quartic = (a, b, c, d, e) => {
       roots = roots.concat([ -sq1, sq1 ]);
     }
     if (q2 >= 0) {
-      var sq2 = Math.sqrt(q2);
       roots = roots.concat([ -sq2, sq2 ]);
     }
     return roots.sort(cmp);

@@ -17,7 +17,7 @@ SvgEllipse = React.createClass({
     this.props.dragStart(e, k, this.props.k);
   },
   render() {
-    var {cx, cy, rx, ry, rotate, color} = this.props;
+    var {cx, cy, rx, ry, degrees, color} = this.props;
 
     var vx1 = [ rx, 0 ];
     var vx2 = [ -rx, 0 ];
@@ -37,18 +37,18 @@ SvgEllipse = React.createClass({
     var points = [];
     if (this.state.mouseEntered || this.props.dragging) {
       points = [
-        <Point key="vx1" k="vx1" cs={vx1} dragStart={this.dragStart} scale={this.props.scale} />,
-        <Point key="vx2" k="vx2" cs={vx2} dragStart={this.dragStart} scale={this.props.scale} />,
-        <Point key="vy1" k="vy1" cs={vy1} dragStart={this.dragStart} scale={this.props.scale} />,
-        <Point key="vy2" k="vy2" cs={vy2} dragStart={this.dragStart} scale={this.props.scale} />,
-        <Point key="c" k="c" cs={c} dragStart={this.dragStart} scale={this.props.scale} />,
-        <Point key="f1" k="f1" cs={f1} dragStart={this.dragStart} scale={this.props.scale} />,
-        <Point key="f2" k="f2" cs={f2} dragStart={this.dragStart} scale={this.props.scale} />
+        <Point key="f1" k="f1" cs={f1} dragStart={this.dragStart} scale={this.props.scale} color="lightgrey" />,
+        <Point key="f2" k="f2" cs={f2} dragStart={this.dragStart} scale={this.props.scale} color="lightgrey" />,
+        <Point key="vx1" k="vx1" cs={vx1} dragStart={this.dragStart} scale={this.props.scale} color="black" />,
+        <Point key="vx2" k="vx2" cs={vx2} dragStart={this.dragStart} scale={this.props.scale} color="black" />,
+        <Point key="vy1" k="vy1" cs={vy1} dragStart={this.dragStart} scale={this.props.scale} color="grey" />,
+        <Point key="vy2" k="vy2" cs={vy2} dragStart={this.dragStart} scale={this.props.scale} color="grey" />,
+        <Point key="c" k="c" cs={c} dragStart={this.dragStart} scale={this.props.scale} />
       ];
     }
 
     return <g
-          transform={"translate(" + cx + "," + cy + ") rotate(" + rotate + ")"}
+          transform={"translate(" + cx + "," + cy + ") rotate(" + degrees + ")"}
           onMouseEnter={this.onMouseEnter}
           onMouseLeave={this.onMouseLeave}
           onMouseDown={(e) => { this.dragStart(e, 'c'); }}

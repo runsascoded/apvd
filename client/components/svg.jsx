@@ -57,10 +57,16 @@ Svg = React.createClass({
     var offsetX = e.clientX - node.offsetLeft;
     var offsetY = e.clientY - node.offsetTop;
 
+    var vOffset = this.invert(offsetX, offsetY);
+
     this.setState({
-      vcursor: this.invert(offsetX, offsetY),
+      vcursor: vOffset,
       cursor: { x: offsetX, y: offsetY }
     });
+
+    if (this.props.onCursor) {
+      this.props.onCursor(vOffset);
+    }
 
     if (this.state.dragging) {
       var dx = (offsetX - this.state.dragStartX) / this.scale();
@@ -80,7 +86,7 @@ Svg = React.createClass({
           dy = -dy;
         }
         var rx = ellipse.rx;
-        var t = ellipse.rotate * Math.PI / 180;
+        var t = ellipse.degrees * Math.PI / 180;
         var cos = Math.cos(t);
         var sin = Math.sin(t);
         var rxx = rx * cos;
@@ -92,7 +98,7 @@ Svg = React.createClass({
         this.props.onChange(
               this.state.dragEllipse,
               {
-                rotate: theta * 180 / Math.PI,
+                degrees: theta * 180 / Math.PI,
                 rx: r
               }
         );
@@ -102,7 +108,7 @@ Svg = React.createClass({
           dy = -dy;
         }
         var ry = ellipse.ry;
-        var t = ellipse.rotate * Math.PI / 180;
+        var t = ellipse.degrees * Math.PI / 180;
         var cos = Math.cos(t);
         var sin = Math.sin(t);
         var ryx = -ry * sin;
@@ -114,7 +120,7 @@ Svg = React.createClass({
         this.props.onChange(
               this.state.dragEllipse,
               {
-                rotate: theta * 180 / Math.PI,
+                degrees: theta * 180 / Math.PI,
                 ry: r
               }
         );
@@ -127,7 +133,7 @@ Svg = React.createClass({
         var rM = Math.max(rx, ry);
         var rm = Math.min(rx, ry);
         var f = Math.sqrt(rM*rM - rm*rm);
-        var t = ellipse.rotate * Math.PI / 180;
+        var t = ellipse.degrees * Math.PI / 180;
         var cos = Math.cos(t);
         var sin = Math.sin(t);
         var fx = f * (rx >= ry ? cos : -sin);
@@ -135,7 +141,7 @@ Svg = React.createClass({
         var nfx = fx + dx;//(rx >= ry ? dx : -dx);
         var nfy = fy - dy;//(rx >= ry ? dy : -dy);
         var { theta, r } = this.getTheta(rx >= ry ? nfx : nfy, rx >= ry ? nfy : -nfx, t);
-        var changes = { rotate: theta * 180 / Math.PI };
+        var changes = { degrees: theta * 180 / Math.PI };
 
         if (rx >= ry) {
           changes.rx = Math.sqrt(ry*ry + r*r);
@@ -171,7 +177,7 @@ Svg = React.createClass({
     var width = this.state.width || 300;
     var height = this.state.height || 400;
     var transforms = [];
-    var {projection, ellipses, showGrid, gridSize} = this.props;
+    var {projection, ellipses, showGrid, gridSize, projectedCursor, points} = this.props;
     //console.log("ellipses:", _.map(ellipses, (e) => { return e.toString(); }).join(" "));
     if (projection) {
       if (projection.x !== undefined || projection.y !== undefined) {
@@ -246,6 +252,10 @@ Svg = React.createClass({
 
     }
 
+    //if (projectedCursor) {
+    //  console.log("projected cursor:", projectedCursor);
+    //}
+
     var svgEllipses = [];
     for (var k in ellipses) {
       svgEllipses.push(
@@ -259,6 +269,15 @@ Svg = React.createClass({
             />
       );
     }
+
+    var svgPoints = [];
+    if (points) {
+      svgPoints =
+            points.map((p, i) => {
+              return <circle key={i} r={3 / s} className="projected-point" cx={p[0]} cy={p[1]} />
+            });
+    }
+
     return <svg
           onMouseMove={this.onMouseMove}
           onMouseUp={this.onMouseUp}
@@ -275,6 +294,17 @@ Svg = React.createClass({
         <g className="ellipses">
           {svgEllipses}
         </g>
+        {svgPoints}
+        {
+          projectedCursor ?
+                <circle
+                      className="projected-cursor"
+                      r={3 / s}
+                      cx={projectedCursor[0]}
+                      cy={projectedCursor[1]}
+                /> :
+                null
+        }
       </g>
       <text className="cursor" x="10" y="20">
         {
