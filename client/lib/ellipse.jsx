@@ -13,7 +13,6 @@ Ellipse = class {
       if (o.C != o.A) {
         t = Math.atan(o.B / (o.A - o.C)) / 2;
       }
-      //console.log("angle:", deg(o.t), deg(t));
       this.theta = t;
     }
 
@@ -35,12 +34,8 @@ Ellipse = class {
         this.rx = Math.sqrt(n / A) / 2;
         this.ry = Math.sqrt(n / C) / 2;
 
-        //console.log("\trotation-less:", [o.A,o.B,o.C,o.D,o.E,o.F].map(r3).join(","), "->", pp(this.cx, this.cy), pp(this.rx, this.ry), deg(this.theta));
-
       } else {
-        //console.log("unrotating:", [o.A,o.B,o.C,o.D,o.E,o.F].map(r3).join(","), -t);
         var e = this.rotate(-t);
-        //console.log("unrotated:", e.toString());
         var {cx, cy} = e;
         this.rx = e.rx;
         this.ry = e.ry;
@@ -55,10 +50,8 @@ Ellipse = class {
       this.ry = o.ry;
       if (o.degrees !== undefined) {
         this.degrees = o.degrees;
-        //console.log("transferred rotate:", this.degrees, this.theta, this.t, this.cos, this.sin);
       } else {
         this.theta = o.theta;
-        //console.log("transferred theta:", this.degrees, this.theta, this.t, this.cos, this.sin);
       }
     }
 
@@ -66,14 +59,11 @@ Ellipse = class {
 
     if (this.theta === undefined) {
       this.theta = this.degrees * pi / 180;
-      //console.log("set theta:", this.degrees, this.theta, this.t, this.cos, this.sin);
     }
     if (this.degrees === undefined) {
       this.degrees = 180 * this.theta / pi;
-      //console.log("set rotate:", this.degrees, this.theta, this.t, this.cos, this.sin);
     }
     this.t = this.theta;
-    //console.log("\tset angle:", [this.t, this.theta, this.degrees].map(r3).join(","));
 
     this.cos = Math.cos(this.theta);
     this.sin = Math.sin(this.theta);
@@ -89,7 +79,6 @@ Ellipse = class {
       var c2 = c*c;
       var s2 = s*s;
 
-      //var d = rx2*ry2 - cx*cx*ry2 - cy*cy*rx2;
       var d1 = ry*(cx*c + cy*s);
       var d2 = rx*(cy*c - cx*s);
       var d = rx2*ry2 - d1*d1 - d2*d2;
@@ -102,11 +91,9 @@ Ellipse = class {
       this.A = a1;
       this.B = 2*c*s*r1;
       this.C = c1;
-      this.D = -2 * (cx*a1 + cy*c*s*r1); // 2*(s*cy*rx2 - c*cx*ry2) / d;
-      this.E = -2 * (cy*c1 + cx*c*s*r1); //-2*(c*cy*rx2 + s*cx*ry2) / d;
+      this.D = -2 * (cx*a1 + cy*c*s*r1);
+      this.E = -2 * (cy*c1 + cx*c*s*r1);
       this.F = -d;
-      //console.log("set:", "(" + [this.A, this.B, this.C, this.D, this.E].map(r3).join(",") + ")", d, pp([c, s]), this.degrees, this.t, this.theta);
-      //console.log("set ABCs:", this.toString());
     } else {
       this.A = o.A;
       this.B = o.B;
@@ -140,8 +127,6 @@ Ellipse = class {
     this.f2x = cx - fr*(((rx >= ry) ? this.vxx : this.vyx) - cx);
     this.f2y = cy - fr*(((rx >= ry) ? this.vxy : this.vyy) - cy);
     this.f2 = [ this.f2x, this.f2y ];
-
-    //console.log(this.toString(), "(" + [A,B,C,D,E].map(r3).join(",") + ")");
   }
 
   toString() {
@@ -188,7 +173,6 @@ Ellipse = class {
 
   translate(tx, ty) {
     var {A, B, C, D, E, F} = this;
-    //console.log("translating:", this.toString(), "+", pp(tx, ty));
     var e = new Ellipse({
       A: A,
       B: B,
@@ -199,8 +183,6 @@ Ellipse = class {
       t: this.t,
       color: this.color
     });
-
-    //console.log("translated:", this.toString(), "+", pp(tx,ty), "->", e.toString());
 
     return e;
   }
@@ -253,82 +235,7 @@ Ellipse = class {
   }
 
   affine(sx, sy, t, tx, ty) {
-    //console.log("affine:", sx, sy, deg(t), tx, ty);
-
     return this.translate(tx, ty).rotate(t).scale(sx, sy);
-
-    //var tx2 = tx*tx;
-    //var ty2 = ty*ty;
-    //var txy = tx*ty;
-    //
-    //var sx2 = sx*sx;
-    //var sy2 = sy*sy;
-    //
-    //var {A, B, C, D, E} = this;
-    //
-    //var c = Math.cos(t);
-    //var c2 = c*c;
-    //var s = Math.sin(t);
-    //var s2 = s*s;
-    //var cs = c*s;
-    //
-    //var d = 1 - (D*tx + A*tx2 + E*ty + B*tx*ty + C*ty2);
-    //
-    //var o = {
-    //  A: (A*c2 + B*cs + C*s2) * sx2 / d,
-    //  B: (B*(c2 - s2) + 2*cs*(C - A)) * sx * sy / d,
-    //  C: (C*c2 - B*cs + A*s2) * sy2 / d,
-    //  D: ( 2*A*tx*c + B*tx*s + B*ty*c + 2*C*ty*s + D*c + E*s) * sx / d,
-    //  E: (-2*A*tx*s + B*tx*c - B*ty*s + 2*C*ty*c - D*s + E*c) * sy / d,
-    //  t: this.t + t,
-    //  color: this.color
-    //};
-
-
-    //var d = 1 - ( -D*sx*tx*c - E*sy*ty*c + A*sx2*tx2*c2 +
-    //      B*sx*sy*tx*ty*c2 + C*sy2*ty2*c2 + E*sx*tx*s -
-    //      D*sy*ty*s - B*sx2*tx2*cs +
-    //      2*A*sx*sy*tx*ty*cs - 2*C*sx*sy*tx*ty*cs +
-    //      B*sy2*ty2*cs + C*sx2*tx2*s2 -
-    //      B*sx*sy*tx*ty*s2 + A*sy2*ty2*s2 );
-
-    //var o = {
-    //  A: (A*c2 - B*cs + C*s2) / sx2 / d,
-    //  B: (B*(c2 - s2) + 2*cs*(A - C)) / sx / sy / d,
-    //  C: (C*c2 + B*cs + A*s2) / sy2 / d,
-    //  D: ( D*c - E*s + B/sy*ty*s2 - B/sy*ty*c2 - 2*A/sx*tx*c2 - 2*A/sy*ty*cs + 2*B/sx*tx*cs + 2*C/sy*ty*cs - 2*C/sx*tx*s2 ) / sx / d,
-    //  E: ( E*c + D*s + B/sx*tx*s2 - B/sx*tx*c2 - 2*A/sy*ty*s2 - 2*A/sx*tx*cs - 2*B/sy*ty*cs + 2*C/sx*tx*cs - 2*C/sy*ty*c2 ) / sy / d,
-    //  t: this.t + t,
-    //  color: this.color
-    //};
-
-
-    //var As = A*sx2;
-    //var Bs = B*sx*sy;
-    //var Cs = C*sy2;
-    //var Ds = D*sx;
-    //var Es = E*sy;
-
-    //var d = 1 - (
-    //            txy*(2*cs*(As - Cs) + Bs*(c2 - s2)) +
-    //            tx2*(As*c2 - Bs*cs + Cs*s2) +
-    //            ty2*(As*s2 + Bs*cs + Cs*c2)
-    //            - Ds*tx*c - Es*ty*c + Es*tx*s - Ds*ty*s
-    //      );
-
-    //var o = {
-    //  A: ( As*c2 + Bs*cs + Cs*s2 ) / d,
-    //  B: ( Bs*(c2 - s2) + 2*cs*(Cs - As) ) / d,
-    //  C: ( As*s2 - Bs*cs + Cs*c2 ) / d,
-    //  D: ( Ds*c + Es*s - 2*As*tx*c2 + 2*As*ty*cs - Bs*ty*c2 - 2*Bs*tx*cs + Bs*ty*s2 - 2*Cs*ty*cs - 2*Cs*tx*s2 ) / d,
-    //  E: ( Es*c - Ds*s + 2*As*tx*cs - 2*As*ty*s2 - Bs*tx*c2 - 2*Bs*ty*cs + Bs*tx*s2 - 2*Cs*ty*c2 - 2*Cs*tx*cs ) / d,
-    //  t: this.t + t,
-    //  color: this.color
-    //};
-
-    //console.log("\t",[A,B,C,D,E].map(r3).join(","), "->", [o.A,o.B,o.C,o.D,o.E].map(r3).join(","), d);
-    //
-    //return new Ellipse(o);
   }
 
   modify(fields) {
@@ -346,27 +253,6 @@ Ellipse = class {
 
   project(e) {
     return this.affine(1/e.rx, 1/e.ry, -e.t, -e.cx, -e.cy);
-
-    //var c = this.transform(e.cx, e.cy);
-    //var vx = this.transform(e.vx[0], e.vx[1]);
-    //var vy = this.transform(e.vy[0], e.vy[1]);
-    //
-    //var rxx = vx[0] - c[0];
-    //var rxy = vx[1] - c[1];
-    //var rxd = Math.sqrt(rxx*rxx + rxy*rxy);
-    //
-    //var ryx = vy[0] - c[0];
-    //var ryy = vy[1] - c[1];
-    //var ryd = Math.sqrt(ryx*ryx + ryy*ryy);
-    //
-    //var cos = rxx / rxd;
-    //var sin = rxy / rxd;
-    //
-    //var t = (sin >= 0) ? Math.acos(cos) : -Math.acos(cos);
-    //
-    ////console.log("project:", e.toString(), [[e.cx,e.cy], e.vx, e.vy].map(pp).join(" "), " | ", [c, vx, vy].map(pp).join(" "));
-    //
-    //return new Ellipse({ cx: c[0], cy: c[1], rx: rxd, ry: ryd, theta: t, color: e.color });
   }
 
   getDegrees(d) {
