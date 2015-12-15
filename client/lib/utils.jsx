@@ -6,7 +6,10 @@ cmp = (a,b) => { return a-b; };
 
 r3 = (x) => { return Math.round(1000 * x) / 1000; };
 
-pp = (p, q) => { return '(' + (q === undefined ? p : [p, q]).map(r3).join(',') + ')'; };
+pp = (p, q) => { return '(' + (p instanceof Array ? p : [p, q]).map(r3).join(',') + ')'; };
+
+pps = (a) => { return a.map(pp).join(" "); };
+cpps = (a) => { console.log(pps(a)); };
 
 deg = (t) => { return 180 * t / pi; };
 rad = (d) => { return pi * d / 180; };

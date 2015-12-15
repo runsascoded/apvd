@@ -4,26 +4,26 @@ Page = React.createClass({
     var ellipses = [
       {
         cx: 0,
-        cy: 1,
-        rx: 2,
-        ry: 1,
-        degrees: 30,
+        cy: 0,
+        rx: 1,
+        ry: 2,
+        degrees: 0,
         color: 'red'
       },
       {
-        cx: 1,
-        cy: 0,
-        rx: sq2,
-        ry: sq2/2,
-        degrees: 45,
+        cx: 0.5,
+        cy: -0.5,
+        rx: 2,
+        ry: 0.2,
+        degrees: -5,
         color: 'blue'
       },
       {
-        cx: 0,
-        cy: -2,
-        rx: 1,
-        ry: 1,
-        degrees: 60,
+        cx: 0.25,
+        cy: -0.8,
+        rx: 2,
+        ry: 0.6,
+        degrees: 30,
         color: 'darkgoldenrod'
       }
     ].map((e) => { return new Ellipse(e); });
@@ -77,10 +77,29 @@ Page = React.createClass({
     var e1 = ellipses[1];
 
     var ellipses0 = _.map(ellipses, (e) => { return e.project(e0); });
+    var ellipses1 = _.map(ellipses, (e) => { return e.project(e1); });
+
+    //var intersections0 = ellipses0[1].unitIntersections();
+    var intersections0 = [];
+    ellipses0.forEach((e, i) => {
+      if (i != 0) {
+        intersections0 = intersections0.concat(e.unitIntersections());
+      }
+    });
+    var originalIntersections0 = intersections0.map((p) => { return e0.invert(p); });
+
+    var intersections1 = [];
+    ellipses1.forEach((e, i) => {
+      if (i != 1) {
+        intersections1 = intersections1.concat(e.unitIntersections());
+      }
+    });
+    var originalIntersections1 = intersections1.map((p) => { return e1.invert(p); });
 
     return <div>
       <Svg
             ellipses={ellipses}
+            points={originalIntersections0.concat(originalIntersections1)}
             onChange={this.onChange}
             showGrid={true}
             gridSize={1}
@@ -89,13 +108,15 @@ Page = React.createClass({
       />
       <Svg
             ellipses={ellipses0}
+            points={intersections0}
             projection={{ x: 0, y: 0, s: 50 }}
             showGrid={true}
             gridSize={1}
             projectedCursor={this.state.projectedCursor && this.state.projectedCursor[0]}
       />
       <Svg
-            ellipses={ _.map(ellipses, (e) => { return e.project(e1); }) }
+            ellipses={ ellipses1 }
+            points={intersections1}
             projection={{ x: 0, y: 0, s: 50 }}
             showGrid={true}
             gridSize={1}

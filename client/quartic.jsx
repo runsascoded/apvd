@@ -2,6 +2,9 @@
 quartic = (a, b, c, d, e) => {
 
   if (e != undefined) {
+    if (a == 0) {
+      return cubic(b, c, d, e);
+    }
     return quartic(b/a, c/a, d/a, e/a);
   }
 
@@ -11,6 +14,8 @@ quartic = (a, b, c, d, e) => {
     var r = d + a*(-3*a*a*a - 64*c + 16*a*b)/256;
     return quartic(p, q, r).map((x) => { return x - a/4; });
   }
+
+  //console.log("depressed quartic:", a, b, c);
 
   var roots = [];
   if (b == 0) {

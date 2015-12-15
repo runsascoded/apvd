@@ -18,7 +18,6 @@ Ellipse = class {
 
     if (!('cx' in o)) {
 
-
       var c = Math.cos(t);
       var s = Math.sin(t);
 
@@ -276,58 +275,41 @@ Ellipse = class {
   }
 
   unitIntersections() {
-    var d = this.rM;
-    var d2 = d*d;
-    var d4 = d2*d2;
+    var {A, B, C, D, E, F} = this;
 
-    var f2x = this.f2x;
-    var f2y = this.f2y;
-    var f1x = this.f1x;
-    var f1y = this.f1y;
+    var B2 = B*B;
+    var E2 = E*E;
+    var BE = B*E;
+    var AC = A - C;
+    var CF = C + F;
 
-    var S = 4*d2 + f1x*f1x + f1y*f1y + f2x*f2x + f2y*f2y;
-    var S2 = S*S;
-    var S4 = S2*S2;
+    var c4 = AC*AC + B2;
+    var c3 = 2*D*AC + 2*BE;
+    var c2 = D*D + 2*AC*CF + E2 - B2;
+    var c1 = 2*D*CF - 2*BE;
+    var c0 = CF*CF - E2;
 
-    var dx = f1x - f2x;
-    var dy = f1y - f2y;
-
-    var dx2 = dx*dx;
-    var dx4 = dx2*dx2;
-
-    var dy2 = dy*dy;
-    var dy4 = dy2*dy2;
-
-    var f1x2 = f1x*f1x;
-    var f1y2 = f1y*f1y;
-    var f2x2 = f2x*f2x;
-    var f2y2 = f2y*f2y;
-
-    var c0 = -256*d4 + 128*d2*dy2 - 16*dy4 - 512*d4*f2x2 +
-          128*d2*dy2*f2x2 - 256*d4*f2x2*f2x2 + 512*d4*f2y2 +
-          128*d2*dy2*f2y2 - 512*d4*f2x2*f2y2 - 256*d4*f2y2*f2y2 +
-          32*d2*S2 - 8*dy2*S2 + 32*d2*f2x2*S2 + 32*d2*f2y2*S2 - S4;
-
-    var c1 = 1024*d4*f2x - 256*d2*dy2*f2x + 1024*d4*f2x2*f2x +
-          1024*d4*f2x*f2y2 + 512*d2*dx*dy*f2y*S - 64*d2*f2x*S2;
-
-    var c2 = 128*d2*dx2 - 128*d2*dy2 - 32*dx2*dy2 + 32*dy4 -
-          1024*d4*f2x2 + 128*d2*dx2*f2x2 - 128*d2*dy2*f2x2 -
-          1024*d4*f2y2 + 128*d2*dx2*f2y2 - 128*d2*dy2*f2y2 -
-          8*dx2*S2 + 8*dy2*S2 + 64*dx2*dy2*S2;
-
-    var c3 = -256*d2*dx2*f2x + 256*d2*dy2*f2x - 512*d2*dx*dy*f2y*S;
-
-    var c4 = -16*dx4 + 32*dx2*dy2 - 16*dy4 - 64*dx2*dy2*S2;
-
-    //console.log("ceoffs:", c0, c1, c2, c3, c4);
+    //console.log("ceoffs:", c4,c3,c2,c1,c0);
 
     var xs = quartic(c4, c3, c2, c1, c0);
 
-    var ys = xs.map((x) => { return Math.sqrt(1 - x*x); });
+    var ys = xs.map((x) => {
+      var y = Math.sqrt(1 - x*x);
+      var b = A*x*x + C*y*y + D*x + F;
+      var c = B*x*y + E*y;
+      var r1 = b + c;
+      var r2 = b - c;
+
+      if (Math.abs(r2) < Math.abs(r1)) {
+        return -y;
+      }
+      //console.log("\t", pp(x,r1),pp(x,r2));
+
+      return y;
+    });
     var ps = xs.map((x, i) => { return [ x, ys[i] ]; });
-    //console.log(ps.map((p) => { return p.join(","); }));
-    //return ps.map(invert);
+
+    //console.log("unit:", this.toString(), "coeffs:", [c4,c3,c2,c1,c0].map(r3), "xs:", xs.map(r3), "ps:", pps(ps));
     return ps;
   }
 };
