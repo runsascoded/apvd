@@ -1,7 +1,7 @@
 
 Ellipse = class {
   constructor(o) {
-
+    this.i = o.i;
     if ('A' in o) {
       this.A = o.A;
       this.B = o.B;
@@ -139,6 +139,17 @@ Ellipse = class {
     return this.toString();
   }
 
+  polar(x, y) {
+    var p = this.transform(x, y);
+    var r = Math.sqrt(p[0]*p[0] + p[1]*p[1]);
+    //console.log("transformed:", pp(x,y), "->", pp(p), "r:", r, "p[0]/r:", p[0]/r);
+    if (r == 0) return { r: r, t: 0 };
+   // var atan = (p[0] == 0) ?
+    var t =  (p[1] < 0) ? -Math.acos(p[0] / r) : Math.acos(p[0] / r);
+    //console.log("polar:", pp(x,y), pp(r,t));
+    return { r: r, t: t };
+  }
+
   transform(x, y) {
     if (x instanceof Array) {
       y = x[1];
@@ -180,7 +191,8 @@ Ellipse = class {
       E: E - 2*C*ty - B*tx,
       F: F + A*tx*tx + B*tx*ty + C*ty*ty - D*tx - E*ty,
       t: this.t,
-      color: this.color
+      color: this.color,
+      i: this.i
     });
 
     return e;
@@ -209,7 +221,8 @@ Ellipse = class {
       E: D*s + E*c,
       F: F,
       t: this.t + t,
-      color: this.color
+      color: this.color,
+      i: this.i
     });
 
     if (x || y) {
@@ -229,7 +242,8 @@ Ellipse = class {
       E: E/sy,
       F: F,
       t: this.t,
-      color: this.color
+      color: this.color,
+      i: this.i
     });
   }
 
@@ -246,7 +260,8 @@ Ellipse = class {
       theta: this.theta,
       cx: this.cx,
       cy: this.cy,
-      color: this.color
+      color: this.color,
+      i: this.i
     });
   }
 
@@ -263,9 +278,27 @@ Ellipse = class {
   }
 
   intersect(e) {
-    var p = this.project(e);
-    var uis = p.unitIntersections();
-    var ret = uis.map(this.invert);
+    var e1 = this;
+    var e2 = e;
+    var p1 = e1.project(e2);
+    //console.log("e1:", e1.toString(), "e2:", e2.toString(), "p1:", p1.toString());
+    var uis = p1.unitIntersections();
+
+    //console.log("uis:", uis);
+    var ret = uis.map((ui) => {
+      var [c2, s2] = ui;
+      var [x, y] = e2.invert(c2, s2);
+      //console.log("ui:", pp(ui), "xy:", pp(x,y), "cs2:", pp(c2, s2));
+      return new Intersection({
+        e1: e1,
+        e2: e2,
+        x: x,
+        y: y,
+        c2: c2,
+        s2: s2
+      });
+    });
+
     //console.log("projected:", p.s());
     //console.log("unit intxs:", uis.map((p) => { return p.join(","); }));
     //console.log("inverted:", ret.map((p) => { return p.join(","); }));
@@ -289,25 +322,46 @@ Ellipse = class {
     var c1 = 2*D*CF - 2*BE;
     var c0 = CF*CF - E2;
 
-    //console.log("ceoffs:", c4,c3,c2,c1,c0);
+    [c4, c3, c2, c1, c0] = [c4, c3, c2, c1, c0].map(zero);
+    //if (Math.abs(c4) < 1e-15) {
+    //
+    //}
+
+    //console.log("coeffs:", c4,c3,c2,c1,c0);
 
     var xs = quartic(c4, c3, c2, c1, c0);
+    //console.log("quartic:", xs);
+    var xo = {};
+    xs.forEach((x) => {
+      xo[x] = (xo[x] || 0) + 1;
+    });
 
-    var ys = xs.map((x) => {
+    //console.log("xo:", xo);
+
+    //var rxs = [];
+    //var ys = [];
+    var ps = [];
+    _.forEach(xo, (n, x) => {
       var y = Math.sqrt(1 - x*x);
+      if (isNaN(y)) return;
       var b = A*x*x + C*y*y + D*x + F;
       var c = B*x*y + E*y;
-      var r1 = b + c;
-      var r2 = b - c;
+      var r1 = Math.abs(b + c);
+      var r2 = Math.abs(b - c);
 
-      if (Math.abs(r2) < Math.abs(r1)) {
-        return -y;
+      //console.log("x:", x, "n:", n, "rs:", r1, r2, r1 - r2);
+      if (n > 1) {
+        //console.log("pushing double:", y, -y);
+        ps.push([x, -y]);
+        ps.push([x, y]);
+      } else if (r2 < r1) {
+        ps.push([x, -y]);
+      } else {
+        ps.push([x, y]);
       }
       //console.log("\t", pp(x,r1),pp(x,r2));
-
-      return y;
     });
-    var ps = xs.map((x, i) => { return [ x, ys[i] ]; });
+    //var ps = xs.map((x, i) => { return [ x, ys[i] ]; });
 
     //console.log("unit:", this.toString(), "coeffs:", [c4,c3,c2,c1,c0].map(r3), "xs:", xs.map(r3), "ps:", pps(ps));
     return ps;

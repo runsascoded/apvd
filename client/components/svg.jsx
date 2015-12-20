@@ -177,7 +177,7 @@ Svg = React.createClass({
     var width = this.state.width || 300;
     var height = this.state.height || 400;
     var transforms = [];
-    var {projection, ellipses, showGrid, gridSize, projectedCursor, points} = this.props;
+    var {projection, ellipses, showGrid, gridSize, projectedCursor, points, edges} = this.props;
     //console.log("ellipses:", _.map(ellipses, (e) => { return e.toString(); }).join(" "));
     if (projection) {
       if (projection.x !== undefined || projection.y !== undefined) {
@@ -274,8 +274,35 @@ Svg = React.createClass({
     if (points) {
       svgPoints =
             points.map((p, i) => {
-              return <circle key={i} r={3 / s} className="projected-point" cx={p[0]} cy={p[1]} />
+              return <circle
+                    key={i}
+                    r={3 / s}
+                    className="projected-point"
+                    cx={p[0] || p.x}
+                    cy={p[1] || p.y}
+              />;
             });
+    }
+
+    var svgEdges = [];
+    if (edges) {
+      svgEdges = edges.map((e, i) => {
+        var {t1, t2} = e;
+        if (t2 < t1) {
+          t2 += 2*pi;
+        }
+        var largeArc = (t2 - t1 > pi) ? 1 : 0;
+        var str = "M" + e.x1 + "," + e.y1 + " A" + e.rx + "," + e.ry + " " + deg(e.e.t) + " " + largeArc + "," + 1 + " " + e.x2 + "," + e.y2 + " Z";
+        //console.log(str);
+        return <path
+              key={i}
+              d={str}
+              stroke={e.e.color}
+              strokeWidth={2 / s}
+              className="edge"
+              fill={e.e.color}
+        />;
+      });
     }
 
     return <svg
@@ -291,10 +318,15 @@ Svg = React.createClass({
             }
       >
         {gridLines}
+        <g className="edges">
+          {svgEdges}
+        </g>
         <g className="ellipses">
           {svgEllipses}
         </g>
-        {svgPoints}
+        <g className="points">
+          {svgPoints}
+        </g>
         {
           projectedCursor ?
                 <circle

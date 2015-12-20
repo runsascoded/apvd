@@ -3,40 +3,33 @@ Page = React.createClass({
   getInitialState() {
     var ellipses = [
       {
-        cx: 0,
-        cy: 0,
+        cx: -0.82,
+        cy: 0.38,
         rx: 1,
         ry: 2,
         degrees: 0,
-        color: 'red'
+        color: 'red',
+        i: 0
       },
       {
-        cx: 0.5,
-        cy: -0.5,
+        cx: 0,
+        cy: 0,
         rx: 2,
-        ry: 0.2,
-        degrees: -5,
-        color: 'blue'
-      },
+        ry: 1,
+        degrees: 90,
+        color: 'blue',
+        i: 1
+      }/*,
       {
         cx: 0.25,
         cy: -0.8,
         rx: 2,
         ry: 0.6,
         degrees: 30,
-        color: 'darkgoldenrod'
-      }
+        color: 'darkgoldenrod',
+        i: 2
+      }*/
     ].map((e) => { return new Ellipse(e); });
-
-    //ellipses[0].intersect(ellipses[1]);
-
-    //var intersections = [];
-    //for (var i = 0; i < ellipses.length - 1; i++) {
-    //  for (var j = i + 1; j < ellipses.length; j++) {
-    //    intersections = intersections.concat(computeIntersections(ellipses[i], ellipses[j]));
-    //  }
-    //}
-    //console.log("intersections:", intersections.map((p) => { return p.join(","); }));
 
     var ellipsesObj = {};
     ellipses.forEach((e, i) => {
@@ -79,27 +72,85 @@ Page = React.createClass({
     var ellipses0 = _.map(ellipses, (e) => { return e.project(e0); });
     var ellipses1 = _.map(ellipses, (e) => { return e.project(e1); });
 
-    //var intersections0 = ellipses0[1].unitIntersections();
-    var intersections0 = [];
-    ellipses0.forEach((e, i) => {
-      if (i != 0) {
-        intersections0 = intersections0.concat(e.unitIntersections());
-      }
-    });
-    var originalIntersections0 = intersections0.map((p) => { return e0.invert(p); });
+    var intersections = [];
 
+    _.forEach(ellipses, (ei, i) => {
+      _.forEach(ellipses, (ej, j) => {
+        if (i < j) {
+          var is = ei.intersect(ej);
+          intersections = intersections.concat(is);
+        }
+      });
+    });
+
+    var intersections0 = [];
     var intersections1 = [];
-    ellipses1.forEach((e, i) => {
-      if (i != 1) {
-        intersections1 = intersections1.concat(e.unitIntersections());
+    _.forEach(intersections, (i) => {
+      if ('0' in i.o) {
+        var o = i.o[0];
+        intersections0.push([ o.c, o.s ]);
+      }
+      if ('1' in i.o) {
+        var o = i.o[1];
+        intersections1.push([ o.c, o.s ]);
       }
     });
-    var originalIntersections1 = intersections1.map((p) => { return e1.invert(p); });
+
+    var iByE = {};
+    intersections.forEach((p) => {
+      _.forEach(p.o, (o, i) => {
+        if (!(i in iByE)) {
+          iByE[i] = [];
+        }
+        iByE[i].push(p);
+      });
+    });
+
+    _.forEach(iByE, (a, i) => {
+      //console.log(a, i);
+      a.sort((i1, i2) => {
+        return i1.o[i].t - i2.o[i].t;
+      });
+      var n = a.length;
+      a.forEach((p, j) => {
+        p.o[i].next = a[(j+1)%n];
+        p.o[i].prev = a[(j-1+n)%n];
+      });
+    });
+
+    console.log(iByE);
+
+    var edgesByE = {};
+    _.forEach(iByE, (a, i) => {
+      var edges = a.map((p) => {
+        var e = ellipses[i];
+        if (!(i in edgesByE)) {
+          edgesByE[i] = [];
+        }
+        return new Edge({
+          e: e,
+          p1: p,
+          p2: p.o[i].next
+        });
+      });
+      edgesByE[i] = edges;
+
+      console.log("i:", i, "\n\t" + a.map((p, j) => {
+              var edge = edges[j];
+              var o = p.o[i];
+              return r3(deg(o.t)) + ": " +
+                    r3(deg(o.prev.o[i].t)) + " " + r3(deg(o.next.o[i].t)) + ", (" +
+                    [edge.x1, edge.y1, deg(edge.t1)].map(r3).join(",") + ") (" +
+                    [edge.x2, edge.y2, deg(edge.t2)].map(r3).join(",") + ")";
+            }).join("\n\t"));
+    });
+    console.log(intersections.map((i) => { return i.toString(); }).join("\n"));
 
     return <div>
       <Svg
             ellipses={ellipses}
-            points={originalIntersections0.concat(originalIntersections1)}
+            edges={/*edgesByE[1]*/ edgesByE[0].concat(edgesByE[1])}
+            points={intersections}
             onChange={this.onChange}
             showGrid={true}
             gridSize={1}

@@ -18,23 +18,36 @@ quartic = (a, b, c, d, e) => {
   //console.log("depressed quartic:", a, b, c);
 
   var roots = [];
-  if (b == 0) {
+  if (Math.abs(b) < 1e-15) {
+    //b = 0;
     var d = a*a - 4*c;
-    if (d < 0) return [];
+    if (Math.abs(d) < 1e-15) {
+      d = 0;
+    }
+    if (d < 0) {
+      //console.log("negative d:", d);
+      return [];
+    }
     var sq = Math.sqrt(d);
+    //console.log("d:", d, "sq:", sq);
     var q1 = (-a + sq)/2;
     var q2 = (-a - sq)/2;
 
-    //console.log("biquadratic:", a, c, d, sq, q1, q2);
+    //console.log("biquadratic:", pp([a, c, d, sq, q1, q2]));
 
     if (q1 >= 0) {
       var sq1 = Math.sqrt(q1);
+      //console.log("pushing sq1s:", -sq1, sq1);
       roots = roots.concat([ -sq1, sq1 ]);
     }
     if (q2 >= 0) {
+      var sq2 = Math.sqrt(q2);
+      //console.log("pushing sq2s:", -sq2, sq2);
       roots = roots.concat([ -sq2, sq2 ]);
     }
-    return roots.sort(cmp);
+    var sorted = roots.sort(cmp);
+    //console.log("roots:", roots, "sorted:", sorted);
+    return sorted;
   }
 
   var croots = cubic(5*a/2, 2*a*a - c, a*a*a/2 - a*c/2 - b*b/8);
@@ -42,6 +55,7 @@ quartic = (a, b, c, d, e) => {
   var y = croots[0];
 
   var sq = Math.sqrt(a + 2*y);
+  //console.log("a+2y:", a+2*y, "sq:", sq);
 
   function root(s1, s2) {
     var s1sq = s1*sq;
@@ -49,6 +63,8 @@ quartic = (a, b, c, d, e) => {
     if (B >= 0) {
       var sq1 = Math.sqrt(B);
       roots.push((s1sq + s2 * sq1) / 2);
+    } else {
+      //console.log("negative B:", B);
     }
   }
 
