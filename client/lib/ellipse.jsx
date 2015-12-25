@@ -277,6 +277,20 @@ Ellipse = class {
     return this.invert(Math.cos(t), Math.sin(t));
   }
 
+  contains(px, py) {
+    if (px instanceof Array) {
+      py = px[1];
+      px = px[0];
+    } else if (typeof px === 'object' && 'x' in px) {
+      py = px.y;
+      px = px.x;
+    }
+    var [x, y] = this.transform(px, py);
+    var r2 = x*x + y*y;
+    //console.log("\tchecking containment:", pp(px, py), pp(x,y), r2);
+    return r2 <= 1;
+  }
+
   intersect(e) {
     var e1 = this;
     var e2 = e;

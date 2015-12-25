@@ -52,6 +52,21 @@ Intersection = class {
     this.o[e1.i] = e1o;
     this.o[e2.i] = e2o;
 
+    this.edges = [];
+  }
+
+  addEdge(edge) {
+    this.edges.push(edge);
+    //if (!(edge.i in this.edges)) {
+    //  this.edges[edge.i] = [];
+    //}
+    //this.edges[edge.i].push(edge);
+  }
+
+  other(e) {
+    if (e == this.e1) return this.e2;
+    if (e == this.e2) return this.e1;
+    throw new Error("Bad other ellipse req: " + e.toString() + " in " + this.toString());
   }
 
   toString() {
@@ -67,6 +82,6 @@ Intersection = class {
   }
 
   s() {
-    return this.toString();
+    return "I" + pp(this.x, this.y);
   }
 };

@@ -177,7 +177,7 @@ Svg = React.createClass({
     var width = this.state.width || 300;
     var height = this.state.height || 400;
     var transforms = [];
-    var {projection, ellipses, showGrid, gridSize, projectedCursor, points, edges} = this.props;
+    var {projection, ellipses, showGrid, gridSize, projectedCursor, points, edges, regions} = this.props;
     //console.log("ellipses:", _.map(ellipses, (e) => { return e.toString(); }).join(" "));
     if (projection) {
       if (projection.x !== undefined || projection.y !== undefined) {
@@ -286,24 +286,17 @@ Svg = React.createClass({
 
     var svgEdges = [];
     if (edges) {
-      svgEdges = edges.map((e, i) => {
-        var {t1, t2} = e;
-        if (t2 < t1) {
-          t2 += 2*pi;
-        }
-        var largeArc = (t2 - t1 > pi) ? 1 : 0;
-        var str = "M" + e.x1 + "," + e.y1 + " A" + e.rx + "," + e.ry + " " + deg(e.e.t) + " " + largeArc + "," + 1 + " " + e.x2 + "," + e.y2 + " Z";
-        //console.log(str);
-        return <path
-              key={i}
-              d={str}
-              stroke={e.e.color}
-              strokeWidth={2 / s}
-              className="edge"
-              fill={e.e.color}
-        />;
-      });
+      //svgEdges = edges.map((e, i) => {
+      //  return e.elem(i, 2/s);
+      //});
     }
+
+    //var svgRegions = [];
+    //if (regions) {
+    //  svgRegions = regions.map((r, i) => {
+    //    return r.elem(i, 4/s);
+    //  });
+    //}
 
     return <svg
           onMouseMove={this.onMouseMove}
@@ -318,15 +311,10 @@ Svg = React.createClass({
             }
       >
         {gridLines}
-        <g className="edges">
-          {svgEdges}
-        </g>
-        <g className="ellipses">
-          {svgEllipses}
-        </g>
-        <g className="points">
-          {svgPoints}
-        </g>
+        <g className="edges">{svgEdges}</g>
+        <g className="ellipses">{svgEllipses}</g>
+        <g className="regions">{regions}</g>
+        <g className="points">{svgPoints}</g>
         {
           projectedCursor ?
                 <circle
