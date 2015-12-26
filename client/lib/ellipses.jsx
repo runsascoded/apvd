@@ -9,6 +9,26 @@ Ellipses = class {
     this.computeEdgeContainments();
     this.computeRegions();
 
+    areas = {};
+    _.forEach(ellipses, ((e) => {
+      this.regions.forEach((r) => {
+        if (e.i in r.props.obj) {
+          areas[e.i] = (areas[e.i] || 0) + r.props.area;
+        }
+      });
+    }).bind(this));
+
+    //console.log(areas);
+    //console.log(_.values(areas).map((v) => { return v / pi; }));
+
+    //console.log(
+    //      this.regions.map((r) => {
+    //        return r.props.k + ": " + r.props.area + "(" + (r.props.area/pi) + ")";
+    //      }).join("\n")
+    //);
+
+    //this.props.regions.forEach((r) => { console.log(r); });
+
     //console.log(this.regions.map(ts).join("\n"));
   }
 
@@ -77,11 +97,66 @@ Ellipses = class {
         if (!(regionStr in regionsObj)) {
           regionsObj[regionStr] = [];
         }
-        //var r = new Region({
-        //  edges: _.extend([], edges),
-        //  points: _.extend([], points),
-        //  k: regionStr
-        //});
+
+        var n = points.length;
+        var [ polygonArea, secantArea, regionArea ] = [ 0, 0, 0 ];
+        if (n == 2) {
+          var secants = edges.map((edge, i) => {
+            var point = points[i];
+            var area = edge.secant;
+            return (edge.p1 == point) ? area : -area;
+          });
+
+          secantArea = secants.reduce(sum);
+          regionArea = Math.abs(secantArea);
+        } else {
+
+          var [cx, cy] = [ 0, 0 ];
+          points.forEach((p) => {
+            cx += p.x;
+            cy += p.y;
+          });
+          cx /= n;
+          cy /= n;
+
+          var clockwise = true;
+          var prevT = null;
+          for (var j = 0; j < n; j++) {
+            var p = points[j];
+            var [dx,dy] = [p.x - cx, p.y - cy];
+            var r = sq(dx*dx + dy*dy);
+            var t = Math.acos(dx/r);
+            if (dy < 0) {
+              t = -t;
+            }
+            if (prevT != null && t > prevT && t - prevT < pi) {
+              clockwise = false;
+              //console.log("\t", points[j-1].s(), "->", p.s(), prevT, "->", t );
+              break;
+            }
+            prevT = t;
+          }
+
+          polygonArea =
+                Math.abs(
+                      points.map((p, i) => {
+                        var next = points[(i + 1) % n];
+                        return p.x*next.y - p.y*next.x;
+                      }).reduce(sum) / 2
+                );
+
+          var secants = edges.map((edge, i) => {
+            var point = points[i];
+            var area = edge.secant;
+            var ret = ((edge.p1 == point) != clockwise) ? area : -area;
+            //console.log("\t", point.s(), edge.s(), area, ret, clockwise);
+            return ret;
+          });
+
+          secantArea = secants.reduce(sum);
+          regionArea = polygonArea + secantArea;
+        }
+
         var r =
               <Region
                     k={regionStr}
@@ -90,12 +165,18 @@ Ellipses = class {
                     i={regions.length}
                     key={regions.length}
                     width={3 / 50}
+                    area={regionArea}
+                    secantArea={secantArea}
+                    polygonArea={polygonArea}
+                    obj={region}
               />;
+
+        //console.log(regionStr, r3(polygonArea), r3(secantArea), r3(regionArea));
+
         regionsObj[regionStr].push(r);
         regions.push(r);
 
         return;
-        //return new Region({ edges: edges });
       }
       if (point.i in visitedPoints) {
         return;
@@ -103,9 +184,7 @@ Ellipses = class {
       if (region && _.isEmpty(region)) {
         return;
       }
-      //if (edges.length) {
-        //var prevEdge = edges[edges.length - 1];
-        //var prevEllipse = prevEdge.e;
+
       var prevEllipse = edges.length ? edges[edges.length - 1].e : null;
       log("continuing point:", point.s(), keyStr(region));
       visitedPoints[point.i] = true;

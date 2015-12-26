@@ -9,7 +9,7 @@
 Region = React.createClass({
 
   onMouseEnter(e) {
-    console.log("enter:", this.props.k);
+    console.log("enter:", this.props.k, this.props.polygonArea, this.props.secantArea, this.props.area);
   },
 
   onMouseLeave(e) {
@@ -18,10 +18,19 @@ Region = React.createClass({
 
   render() {
     var {i, width, points, edges} = this.props;
+    var n = points.length;
+
     var d = edges.map(((e, i) => {
       var point = points[i];
       return i ? e.arcpath(point) : e.path(point);
     }).bind(this)).join(" ");
+
+    //this.area = regionArea;
+    //this.secantArea = secantArea;
+    //this.polygonArea = polygonArea;
+    //
+    //console.log("region:", this);
+
     //console.log("region:", d);
     return <path
           key={i}

@@ -30,8 +30,8 @@ Ellipse = class {
         this.cx = -D / 2 / A;
         this.cy = -E / 2 / C;
         var n = -4*F + D*D/A + E*E/C;
-        this.rx = Math.sqrt(n / A) / 2;
-        this.ry = Math.sqrt(n / C) / 2;
+        this.rx = sq(n / A) / 2;
+        this.ry = sq(n / C) / 2;
 
       } else {
         var e = this.rotate(-t);
@@ -105,7 +105,7 @@ Ellipse = class {
     this.rM = Math.max(rx, ry);
     this.rm = Math.min(rx, ry);
 
-    this.fd = Math.sqrt(this.rM*this.rM - this.rm*this.rm);
+    this.fd = sq(this.rM*this.rM - this.rm*this.rm);
     var fr = this.fd / this.rM;
 
     this.vxx = cx + rx*cos;
@@ -141,7 +141,7 @@ Ellipse = class {
 
   polar(x, y) {
     var p = this.transform(x, y);
-    var r = Math.sqrt(p[0]*p[0] + p[1]*p[1]);
+    var r = sq(p[0]*p[0] + p[1]*p[1]);
     //console.log("transformed:", pp(x,y), "->", pp(p), "r:", r, "p[0]/r:", p[0]/r);
     if (r == 0) return { r: r, t: 0 };
    // var atan = (p[0] == 0) ?
@@ -356,7 +356,7 @@ Ellipse = class {
     //var ys = [];
     var ps = [];
     _.forEach(xo, (n, x) => {
-      var y = Math.sqrt(1 - x*x);
+      var y = sq(1 - x*x);
       if (isNaN(y)) return;
       var b = A*x*x + C*y*y + D*x + F;
       var c = B*x*y + E*y;

@@ -28,20 +28,20 @@ quartic = (a, b, c, d, e) => {
       //console.log("negative d:", d);
       return [];
     }
-    var sq = Math.sqrt(d);
+    var sqd = sq(d);
     //console.log("d:", d, "sq:", sq);
-    var q1 = (-a + sq)/2;
-    var q2 = (-a - sq)/2;
+    var q1 = (-a + sqd)/2;
+    var q2 = (-a - sqd)/2;
 
     //console.log("biquadratic:", pp([a, c, d, sq, q1, q2]));
 
     if (q1 >= 0) {
-      var sq1 = Math.sqrt(q1);
+      var sq1 = sq(q1);
       //console.log("pushing sq1s:", -sq1, sq1);
       roots = roots.concat([ -sq1, sq1 ]);
     }
     if (q2 >= 0) {
-      var sq2 = Math.sqrt(q2);
+      var sq2 = sq(q2);
       //console.log("pushing sq2s:", -sq2, sq2);
       roots = roots.concat([ -sq2, sq2 ]);
     }
@@ -54,14 +54,14 @@ quartic = (a, b, c, d, e) => {
   //console.log("croots:", croots);
   var y = croots[0];
 
-  var sq = Math.sqrt(a + 2*y);
+  var sqa = sq(a + 2*y);
   //console.log("a+2y:", a+2*y, "sq:", sq);
 
   function root(s1, s2) {
-    var s1sq = s1*sq;
+    var s1sq = s1*sqa;
     var B = -(3*a + 2*y + 2*b/s1sq);
     if (B >= 0) {
-      var sq1 = Math.sqrt(B);
+      var sq1 = sq(B);
       roots.push((s1sq + s2 * sq1) / 2);
     } else {
       //console.log("negative B:", B);

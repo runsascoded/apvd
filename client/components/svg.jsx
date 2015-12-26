@@ -30,7 +30,7 @@ Svg = React.createClass({
   },
   getTheta(x, y, t) {
     //y = -y;
-    var r = Math.sqrt(x*x + y*y);
+    var r = sq(x*x + y*y);
     var theta = null;
     var pi4s = Math.round(t * 2 / Math.PI);
 
@@ -132,7 +132,7 @@ Svg = React.createClass({
         var {rx, ry} = ellipse;
         var rM = Math.max(rx, ry);
         var rm = Math.min(rx, ry);
-        var f = Math.sqrt(rM*rM - rm*rm);
+        var f = sq(rM*rM - rm*rm);
         var t = ellipse.degrees * Math.PI / 180;
         var cos = Math.cos(t);
         var sin = Math.sin(t);
@@ -144,9 +144,9 @@ Svg = React.createClass({
         var changes = { degrees: theta * 180 / Math.PI };
 
         if (rx >= ry) {
-          changes.rx = Math.sqrt(ry*ry + r*r);
+          changes.rx = sq(ry*ry + r*r);
         } else {
-          changes.ry = Math.sqrt(rx*rx + r*r);
+          changes.ry = sq(rx*rx + r*r);
         }
 
         this.props.onChange(
@@ -162,8 +162,17 @@ Svg = React.createClass({
   },
   componentDidMount() {
     //console.log("svg:", ReactDOM.findDOMNode(this));
+
+    //if (this.props.regions) {
+    //  console.log("mounted:\n" + this.props.regions.map((r) => {
+    //    return r.props.k + ": " + r.area;
+    //  }).join("\n"));
+    //  this.props.regions.forEach((r) => { console.log(r); });
+    //}
+
     this.setState({ width: 300, height: 400 });
   },
+
   invert(x, y) {
     return {
       x: (x - this.state.width/2) / this.scale(),
@@ -178,10 +187,22 @@ Svg = React.createClass({
     var height = this.state.height || 400;
     var transforms = [];
     var {projection, ellipses, showGrid, gridSize, projectedCursor, points, edges, regions} = this.props;
+
+    //if (regions) {
+    //  console.log("render:\n" + regions.map((r) => {
+    //          return r.props.k + ": " + r.area;
+    //        }).join("\n"));
+    //  regions.forEach((r) => { console.log(r); });
+    //}
+
     //console.log("ellipses:", _.map(ellipses, (e) => { return e.toString(); }).join(" "));
     if (projection) {
       if (projection.x !== undefined || projection.y !== undefined) {
-        transforms.push([ "translate", (projection.x + width/2) || 0, (projection.y + height/2) || 0 ]);
+        transforms.push([
+          "translate",
+          (projection.x + width/2) || 0,
+          (projection.y + height/2) || 0
+        ]);
       }
       if (projection.s) {
         transforms.push([ "scale", projection.s, -projection.s ]);

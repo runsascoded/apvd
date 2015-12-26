@@ -28,6 +28,21 @@ Edge = class {
     this.mt = (this.t1 + this.t2 + (this.t2 < this.t1 ? tpi : 0)) / 2;
     this.mp = this.e.getPoint(this.mt);
 
+    this.dt = this.t2 - this.t1;
+    if (this.dt < 0) {
+      this.dt += tpi;
+    }
+
+    this.sector = this.rx * this.ry * this.dt / 2;
+    this.triangle = this.rx * this.ry * Math.sin(this.dt) / 2;
+    this.secant = this.sector - this.triangle;
+
+    //console.log(
+    //      this.s(),
+    //      r3(this.sector), r3(this.triangle), r3(this.secant),
+    //      pd(this.dt), pd(this.t1), pd(this.t2)
+    //);
+
     //console.log(this.toString())
 
     //this.containers = new Set();
@@ -67,25 +82,14 @@ Edge = class {
 
   arcpath(from) {
     var {rx, ry, e} = this;
-    var [tf, tt] = (from == this.p1) ? [ this.t1, this.t2 ] : [ this.t2, this.t1 ];
     var xf = from.x;
     var yf = from.y;
     var to = this.other(from);
-    //var tt = to.t;
     var xt = to.x;
     var yt = to.y;
 
-    var delta = this.t2 - this.t1;
-    if (delta < 0) {
-      delta += tpi;
-    }
-
-    var td = tt - tf;
-    if (td < 0) {
-      td += tpi;
-    }
     //console.log(this.s(), pd(td), pd(tf), pd(tt));
-    var largeArc = (delta > pi) ? 1 : 0;
+    var largeArc = (this.dt > pi) ? 1 : 0;
     var sweepFlag = (from == this.p1) ? 1 : 0;
     return [
       "A" + pc(rx, ry),

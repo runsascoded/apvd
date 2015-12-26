@@ -29,7 +29,7 @@ SvgEllipse = React.createClass({
 
     var rM = Math.max(rx, ry);
     var rm = Math.min(rx, ry);
-    var rc = Math.sqrt(rM*rM - rm*rm);
+    var rc = sq(rM*rM - rm*rm);
 
     var f1 = rx >= ry ? [ rc, 0 ] : [ 0, rc ];
     var f2 = rx >= ry ? [ -rc, 0 ] : [ 0, -rc ];

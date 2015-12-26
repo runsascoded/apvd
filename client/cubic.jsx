@@ -5,7 +5,7 @@ cubic = (a, b, c, d) => {
       var D = c*c - 4*b*d;
       //console.log("quadratic:", b, c, d, " ", D);
       if (D > 0) {
-        var sqD = Math.sqrt(D);
+        var sqD = sq(D);
         return [ (-c + sqD) / 2 / b, (-c - sqD) / 2 / b ];
       } else if (D == 0) {
         return [ -c / 2 / b ];
@@ -26,7 +26,7 @@ cubic = (a, b, c, d) => {
 
   if (q == 0) {
     if (p < 0) {
-      return [ -Math.sqrt(-p), 0, Math.sqrt(-p) ];
+      return [ -sq(-p), 0, sq(-p) ];
     }
     return [ 0 ];
   } else if (p == 0) {
@@ -42,7 +42,7 @@ cubic = (a, b, c, d) => {
 
   if (r < 0) {
     function tk(k) {
-      return 2 * Math.sqrt(p3) * Math.cos((Math.acos(q2/Math.sqrt(p33)) - 2*pi*k) / 3);
+      return 2 * sq(p3) * Math.cos((Math.acos(q2/sq(p33)) - 2*pi*k) / 3);
     }
     var roots = [ tk(0), tk(1), tk(2) ];
     roots.sort(cmp);
@@ -52,9 +52,9 @@ cubic = (a, b, c, d) => {
     if (r == 0) {
       return [ 3*q/p, -q2/p3, -q2/p3 ].sort(cmp);
     } else {
-      var sq = Math.sqrt(r);
+      var sqr = sq(r);
       //console.log("sq:", sq);
-      return [ Math.cbrt(q2 + sq) + Math.cbrt(q2 - sq) ];
+      return [ Math.cbrt(q2 + sqr) + Math.cbrt(q2 - sqr) ];
     }
   }
 };

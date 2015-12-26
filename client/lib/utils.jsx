@@ -25,7 +25,8 @@ zero = (n) => {
   return n;
 };
 
-sq2 = Math.sqrt(2);
+sq = Math.sqrt;
+sq2 = sq(2);
 
 setEntry = (arr, i1, i2, v) => {
   if (!(i1 in arr)) {
@@ -87,3 +88,5 @@ ts = (o) => { return o.toString(); };
 tss = (o) => { return o.s(); };
 
 ss = (a, sep) => { return a.map(tss).join(sep || " "); };
+
+sum = (a,b) => { return a+b; };
