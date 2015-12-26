@@ -21,7 +21,7 @@ Page = React.createClass({
         i: 1
       },
       {
-        cx: -1.7,
+        cx: -1.58,
         cy: 1,
         rx: 2,
         ry: 0.6,
@@ -66,13 +66,14 @@ Page = React.createClass({
   render() {
     var ellipses = this.state.ellipses;
     var e = new Ellipses(ellipses);
+    //console.log(e.areasObj);
     var { intersections, edgesByE, regions } = e;
 
     var e0 = ellipses[0];
     var e1 = ellipses[1];
 
     var ellipses0 = _.map(ellipses, (e) => { return e.project(e0); });
-    var ellipses1 = _.map(ellipses, (e) => { return e.project(e1); });
+    var ellipses1 = e1 ? _.map(ellipses, (e) => { return e.project(e1); }) : [];
 
     var intersections0 = [];
     var intersections1 = [];
@@ -87,10 +88,20 @@ Page = React.createClass({
       }
     });
 
+    //var ellipseKeys = _.keys(ellipses).join(",");
+    var areaKeys = powerset(_.keys(ellipses)).map((s) => { return s.join(","); }).sort(lengthCmp);
+    //var areaKeys = _.keys(e.areasObj).sort(lengthCmp);
+    var maxKeyLen = Math.max.apply(Math, areaKeys.map((k) => { return k.length; }));
+    var areasStr =
+          areaKeys.map((rs) => {
+            var area = e.areasObj[rs] || 0;
+            return rs + spaces(maxKeyLen - rs.length) + ": " + r3(area / pi);
+          }).join("\n");
+
     return <div>
       <Svg
             ellipses={ellipses}
-            edges={edgesByE[0].concat(edgesByE[1])}
+            edges={/*edgesByE[0].concat(edgesByE[1])*/[]}
             points={intersections}
             regions={regions}
             onChange={this.onChange}
@@ -98,6 +109,11 @@ Page = React.createClass({
             gridSize={1}
             projection={{ x: 0, y: 0, s: 50 }}
             onCursor={this.onCursor}
+      />
+      <textarea
+            className="areas"
+            onChange={(e) => {}}
+            value={areasStr}
       />
       <Svg
             ellipses={ellipses0}

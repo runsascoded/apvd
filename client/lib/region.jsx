@@ -20,6 +20,22 @@ Region = React.createClass({
     var {i, width, points, edges} = this.props;
     var n = points.length;
 
+    if (n == 1) {
+      var e = edges[0].e;
+      return <g
+            transform={"translate(" + e.cx + "," + e.cy + ") rotate(" + e.degrees + ")"}>
+        <ellipse
+              rx={e.rx}
+              ry={e.ry}
+              className="region"
+              stroke="black"
+              strokeWidth={width}
+              onMouseEnter={this.onMouseEnter}
+              onMouseLeave={this.onMouseLeave}
+        />
+      </g>;
+    }
+
     var d = edges.map(((e, i) => {
       var point = points[i];
       return i ? e.arcpath(point) : e.path(point);

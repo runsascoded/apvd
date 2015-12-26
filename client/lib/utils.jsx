@@ -90,3 +90,25 @@ tss = (o) => { return o.s(); };
 ss = (a, sep) => { return a.map(tss).join(sep || " "); };
 
 sum = (a,b) => { return a+b; };
+
+powerset = (a) => {
+  if (!a.length) {
+    return [[]];
+  }
+  var rest = powerset(a.slice(1));
+  return rest.map((r) => { return [a[0]].concat(r); }).concat(rest);
+};
+
+lengthCmp = (a,b) => {
+  var ld = a.length - b.length;
+  if (ld) return ld;
+  if (a < b) return -1;
+  if (a > b) return 1;
+  return 0;
+};
+
+spaces = (n) => {
+  var s = "";
+  for (var i = 0; i < n; i++) { s += " "; }
+  return s;
+};

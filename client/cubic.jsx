@@ -4,11 +4,12 @@ cubic = (a, b, c, d) => {
     if (a == 0) {
       var D = c*c - 4*b*d;
       //console.log("quadratic:", b, c, d, " ", D);
-      if (D > 0) {
+      if (D < 0 && D > -1e-14) {
+        D = 0;
+      }
+      if (D >= 0) {
         var sqD = sq(D);
         return [ (-c + sqD) / 2 / b, (-c - sqD) / 2 / b ];
-      } else if (D == 0) {
-        return [ -c / 2 / b ];
       }
       return [];
     }

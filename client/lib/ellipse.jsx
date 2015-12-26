@@ -337,9 +337,6 @@ Ellipse = class {
     var c0 = CF*CF - E2;
 
     [c4, c3, c2, c1, c0] = [c4, c3, c2, c1, c0].map(zero);
-    //if (Math.abs(c4) < 1e-15) {
-    //
-    //}
 
     //console.log("coeffs:", c4,c3,c2,c1,c0);
 
@@ -375,7 +372,6 @@ Ellipse = class {
       }
       //console.log("\t", pp(x,r1),pp(x,r2));
     });
-    //var ps = xs.map((x, i) => { return [ x, ys[i] ]; });
 
     //console.log("unit:", this.toString(), "coeffs:", [c4,c3,c2,c1,c0].map(r3), "xs:", xs.map(r3), "ps:", pps(ps));
     return ps;

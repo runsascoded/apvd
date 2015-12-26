@@ -41,7 +41,7 @@ Intersection = class {
     }
 
     if (o.x === undefined) {
-      var [x, y] = e1.invert(this.c1, this.s1);
+      var [x, y] = e1.invert(e1o.c, e1o.s);
       this.x = x;
       this.y = y;
     } else {

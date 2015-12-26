@@ -20,7 +20,9 @@ Edge = class {
     this.y2 = this.p2.y;
     this.o2 = this.p2.o[this.i];
     this.t2 = this.o2.t;
-    this.p2.addEdge(this);
+    if (this.p2 != this.p1) {
+      this.p2.addEdge(this);
+    }
 
     this.n = 0;
     this.ps = [ this.p1, this.p2 ];
@@ -29,7 +31,9 @@ Edge = class {
     this.mp = this.e.getPoint(this.mt);
 
     this.dt = this.t2 - this.t1;
-    if (this.dt < 0) {
+    if (this.p1 == this.p2) {
+      this.dt = tpi;
+    } else if (this.dt < 0) {
       this.dt += tpi;
     }
 
@@ -44,8 +48,6 @@ Edge = class {
     //);
 
     //console.log(this.toString())
-
-    //this.containers = new Set();
     this.containers = {};
   }
 
@@ -77,18 +79,15 @@ Edge = class {
   }
 
   s() {
-    return "Edge(" + pp(this.x1,this.y1) + "," + pp(this.x2, this.y2) + ")";
+    return "E(" + this.i + ":" + pp(this.x1,this.y1) + "," + pp(this.x2, this.y2) + ")";
   }
 
   arcpath(from) {
     var {rx, ry, e} = this;
-    var xf = from.x;
-    var yf = from.y;
-    var to = this.other(from);
-    var xt = to.x;
-    var yt = to.y;
 
-    //console.log(this.s(), pd(td), pd(tf), pd(tt));
+    var to = this.other(from);
+    var [xt,yt] = [to.x, to.y];
+
     var largeArc = (this.dt > pi) ? 1 : 0;
     var sweepFlag = (from == this.p1) ? 1 : 0;
     return [
@@ -96,7 +95,6 @@ Edge = class {
       deg(e.t),
       pc(largeArc, sweepFlag),
       pc(xt, yt)
-      //,"Z"
     ].join(' ');
   }
 

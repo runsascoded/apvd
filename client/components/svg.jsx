@@ -333,8 +333,8 @@ Svg = React.createClass({
       >
         {gridLines}
         <g className="edges">{svgEdges}</g>
-        <g className="ellipses">{svgEllipses}</g>
         <g className="regions">{regions}</g>
+        <g className="ellipses">{svgEllipses}</g>
         <g className="points">{svgPoints}</g>
         {
           projectedCursor ?
