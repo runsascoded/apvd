@@ -2,25 +2,15 @@
 Ellipses = class {
   constructor(ellipses) {
     this.ellipses = ellipses;
-    this.n = _.keys(ellipses).length;
+    this.keys = _.keys(ellipses);
+    this.n = this.keys.length;
 
     this.computeIntersections();
+    this.computeIslands();
     this.computeIntersectionsByEllipse();
     this.computeEdgesByEllipse();
     this.computeEdgeContainments();
     this.computeRegions();
-
-    areas = {};
-    _.forEach(ellipses, ((e) => {
-      this.regions.forEach((r) => {
-        if (e.i in r.props.obj) {
-          areas[e.i] = (areas[e.i] || 0) + r.props.area;
-        }
-      });
-    }).bind(this));
-
-    //console.log(areas);
-    console.log(_.values(areas).map((v) => { return v / pi; }).map(r3).join(" "));
 
     //console.log(
     //      this.regions.map((r) => {
@@ -28,37 +18,50 @@ Ellipses = class {
     //      }).join("\n")
     //);
 
-    //this.props.regions.forEach((r) => { console.log(r); });
-
     //console.log(this.regions.map(ts).join("\n"));
   }
 
   computeIntersections() {
-    var {ellipses, n} = this;
+    var {ellipses, n, keys} = this;
     var intersections = [];
-    var containments = [];
-    for (var i = 0; i < n; i++) {
-      containments[i] = [];
-    }
+    var intsByE = {};
+    var intsByExE = {};
+    var containments = {};
+    keys.forEach((i) => {
+      containments[i] = {};
+      intsByE[i] = [];
+      intsByExE[i] = {};
+    });
     var retry = false;
-    for (var i = 0; i < n - 1; i++) {
+    for (var ii = 0; ii < n - 1; ii++) {
+      var i = keys[ii];
       var ei = ellipses[i];
-      for (var j = i + 1; j < n; j++) {
+      for (var ji = ii + 1; ji < n; ji++) {
+        var j = keys[ji];
         var ej = ellipses[j];
-
-        //if (!(j in containments)) {
-        //  containments[j] = [];
-        //}
 
         var is = ei.intersect(ej);
         if (is.length) {
+          is.forEach((int, k) => {
+            int.i = intersections.length + k;
+            intsByE[i].push(int);
+            intsByE[j].push(int);
+            if (!(j in intsByExE[i])) {
+              intsByExE[i][j] = [];
+            }
+            intsByExE[i][j].push(int);
+            if (!(i in intsByExE[j])) {
+              intsByExE[j][i] = [];
+            }
+            intsByExE[j][i].push(int);
+          });
           intersections = intersections.concat(is);
         } else {
-          if (ei.contains(ej.cx, ej.cy)) {
+          if (ei.containsEllipse(ej)) {
             //console.log(i, "contains", j);
             containments[i][j] = true;
           }
-          if (ej.contains(ei.cx, ei.cy)) {
+          if (ej.containsEllipse(ei)) {
             containments[j][i] = true;
             if (containments[i][j]) {
               var t = Math.random() * tpi;
@@ -74,7 +77,7 @@ Ellipses = class {
                 color: ei.color
               });
               retry = true;
-              console.log("retrying:", ellipses);
+              console.log("retrying:", ei.i, ej.i, ei, ej, ellipses);
             }
           }
         }
@@ -86,25 +89,18 @@ Ellipses = class {
     } else {
       this.intersections = intersections;
       this.containments = containments;
+      //console.log(intsByE, intsByExE);
+      this.intsByE = intsByE;
+      this.intsByExE = intsByExE;
     }
   }
 
   computeIntersectionsByEllipse() {
-    var intsByE = {};
-    var intersections = this.intersections;
-    intersections.forEach((p, i) => {
-      p.i = i;
+    var {intersections, intsByE} = this;
 
-      _.forEach(p.o, (o, j) => {
-        if (!(j in intsByE)) {
-          intsByE[j] = [];
-        }
-        intsByE[j].push(p);
-      });
-    });
-
+    // Add degenerate [0,2pi) edges for ellipses that don't intersect with any others.
     _.forEach(this.ellipses, (e, i) => {
-      if (!(i in intsByE)) {
+      if (!intsByE[i].length) {
         var int = new Intersection({
           e1: e,
           e2: e,
@@ -117,6 +113,8 @@ Ellipses = class {
       }
     });
 
+    // Sort each ellipse's intersections in order of a CCW tour of the ellipse's border,
+    // starting from -pi.
     _.forEach(intsByE, (a, i) => {
       a.sort((i1, i2) => {
         return i1.o[i].t - i2.o[i].t;
@@ -128,8 +126,50 @@ Ellipses = class {
       });
     });
 
-    //console.log(intsByE);
-    this.intsByE = intsByE;
+  }
+
+  computeIslands() {
+    var {intsByExE, containments} = this;
+    var intersectionClosures = {};
+    _.forEach(intsByExE, (o, i) => {
+      if (!(i in intersectionClosures)) {
+        intersectionClosures[i] = {};
+      }
+      _.forEach(o, (u, j) => {
+        intersectionClosures[i][j] = true;
+        //console.log("adding:", j, "to", i, ";", kvs(intersectionClosures));
+        if (j in intersectionClosures) {
+          intersectionClosures[j] = _.extend(intersectionClosures[j], intersectionClosures[i]);
+          _.forEach(intersectionClosures[j], (o, k) => {
+            intersectionClosures[k] = intersectionClosures[j];
+          });
+          //console.log("post-extension:", kvs(intersectionClosures));
+        } else {
+          intersectionClosures[j] = intersectionClosures[i];
+        }
+      });
+    });
+
+    //console.log("closures:", kvs(intersectionClosures));
+
+    var islands = {};
+    _.forEach(this.ellipses, (e, i) => {
+      islands[i] = {};
+    });
+    _.forEach(intsByExE, (o, i) => {
+      var ints = intersectionClosures[i];
+      _.forEach(containments, (u, j) => {
+        if (containments[j][i] && !(j in ints)) {
+          islands[i][j] = true;
+        }
+      });
+    });
+
+    //console.log(
+    //      "islands:",
+    //      _.map(islands, (v, k) => { return k + ": " + _.keys(v).join(""); }).join(", ")
+    //);
+    this.islands = islands;
   }
 
   computeEdgesByEllipse() {
@@ -214,12 +254,16 @@ Ellipses = class {
 
     _.forEach(edgesByE, ((edges, i) => {
       edges.forEach((edge) => {
-        containments[i].forEach((u, ci) => {
-          console.log("noting", ci, "contains", edge.toString());
-          edge.containers[ci] = true;
+        _.forEach(containments, (ci, j) => {
+          if (ci[edge.i]) {
+            //console.log("noting", j, "contains", edge.toString());
+            edge.containers[j] = true;
+          }
         });
+
         var keysStr = _.keys(edge.containers).sort().join(",");
         //console.log(edge.s(), keysStr);
+
         if (_.isEmpty(edge.containers)) {
           this.totalEdgeVisits++;
         } else {
@@ -254,8 +298,9 @@ Ellipses = class {
       edgeVisits[edge.j] = edgeVisits[edge.j] - 1;
     }
 
-    var intersections = this.intersections;
-    function traverse(point, region, prevUnusedEllipses, startPoint, level) {
+    var {intersections, containments, islands} = this;
+
+    function traverse(point, region, prevUnusedEllipses, nonContainerRegion, startPoint, level) {
       function log() {
         var args = Array.prototype.slice.apply(arguments);
         var indent = "";
@@ -265,14 +310,13 @@ Ellipses = class {
         //console.log.apply(console, [indent].concat(args));
       }
 
-      if (region && _.isEmpty(region)) {
+      if (region && _.isEmpty(nonContainerRegion)) {
         return;
       }
 
       //console.log("traverse:", point.toString(), region);
       if (point == startPoint) {
         var regionKey = _.keys(region);
-        numEdgeVisits += regionKey.length;
         var regionStr = regionKey.sort().join("");
 
         if (edges.length > 1) {
@@ -283,15 +327,10 @@ Ellipses = class {
           }
         }
 
-        //console.log(
-        //      "region:", regionStr, regionKey, region, "\n\t" +
-        //      points.map((p) => { return p.s(); }).join("\n\t")
-        //      edges.map((e) => { return e.s(); }).join("\n\t")
-        //);
-
         _.forEach(edges, (edge) => {
           edgeVisits[edge.j] = (edgeVisits[edge.j] || 0) + 1;
         });
+        numEdgeVisits += edges.length;
 
         var n = points.length;
         var [ polygonArea, secantArea, regionArea ] = [ 0, 0, 0 ];
@@ -306,44 +345,16 @@ Ellipses = class {
           regionArea = Math.abs(secantArea);
         } else {
 
-          var [cx, cy] = [ 0, 0 ];
-          points.forEach((p) => {
-            cx += p.x;
-            cy += p.y;
-          });
-          cx /= n;
-          cy /= n;
-
-          var clockwise = true;
-          var prevT = null;
-          for (var j = 0; j < n; j++) {
-            var p = points[j];
-            var [dx,dy] = [p.x - cx, p.y - cy];
-            var r = sq(dx*dx + dy*dy);
-            var t = Math.acos(dx/r);
-            if (dy < 0) {
-              t = -t;
-            }
-            if (prevT != null && t > prevT && t - prevT < pi) {
-              clockwise = false;
-              //console.log("\t", points[j-1].s(), "->", p.s(), prevT, "->", t );
-              break;
-            }
-            prevT = t;
-          }
-
           polygonArea =
-                Math.abs(
-                      points.map((p, i) => {
-                        var next = points[(i + 1) % n];
-                        return p.x*next.y - p.y*next.x;
-                      }).reduce(sum) / 2
-                );
+                points.map((p, i) => {
+                  var next = points[(i + 1) % n];
+                  return p.x*next.y - p.y*next.x;
+                }).reduce(sum) / 2;
 
           var secants = edges.map((edge, i) => {
             var point = points[i];
             var area = edge.secant;
-            var ret = ((edge.p1 == point) != clockwise) ? area : -area;
+            var ret = (edge.p1 == point) ? area : -area;
             //console.log("\t", point.s(), edge.s(), area, ret, clockwise);
             return ret;
           });
@@ -366,14 +377,42 @@ Ellipses = class {
                     obj={region}
               />;
 
+        var containers = {};
+        if (regionKey.length > 1) {
+          var containerKeys = _.keys(islands[edges[0].i]);
+          if (containerKeys.length) {
+            powerset(containerKeys).forEach((s) => {
+              var k = s.join(',');
+              containers[k] = true;
+            });
+          }
+        }
+
+        log("containers:", keyStr(containers));
+
+        var addedRegions = [];
         powerset(regionKey).forEach((rk) => {
           var rs = rk.join(",");
-          areasObj[rs] = (areasObj[rs] || 0) + regionArea;
+          addedRegions.push(rs);
+          if (!(rs in containers)) {
+          //  if (rs == '0') {
+          //  console.log("\tadding area:", regionArea/pi, "to", rs, ss(points), ss(edges));
+            //}
+            areasObj[rs] = (areasObj[rs] || 0) + regionArea;
+          } else {
+            log("skipping contained key:", rs);
+          }
         });
-        //console.log(regionStr, ss(points), ss(edges), r3(polygonArea), r3(secantArea), r3(regionArea));
+
+        //console.log(
+        //      "adding region:", regionStr,
+        //      "to (" + addedRegions.join(" ") + ")",
+        //      ss(points), ss(edges),
+        //      r3(regionArea/pi)
+        //      , r3(polygonArea/pi), r3(secantArea/pi)//, r3(regionArea)
+        //);
 
         regions.push(r);
-
         return;
       }
       if (point.i in visitedPoints) {
@@ -394,15 +433,39 @@ Ellipses = class {
               edgeVisits[edge.j],
               edge.e != prevEllipse
         );
-        if (canVisit(edge) &&
-                //edge.hasContainers(region) &&
-              edge.e != prevEllipse) {
+        if (canVisit(edge) && edge.e != prevEllipse) {
 
           visitEdge(edge);
           var [ newRegion, lostEllipses, unusedEllipses ] =
                 region ?
                       intersect(region, edge.ellipses) :
-                      [ edge.ellipses, {} ];
+                      [ edge.ellipses, {}, {} ];
+
+          if (region) {
+            log(
+                  "removing lost ellipses from ncr:",
+                  keyStr(lostEllipses, ""),
+                  keyStr(nonContainerRegion, "")
+            );
+            _.forEach(lostEllipses, (u, i) => {
+              delete nonContainerRegion[i];
+            });
+          } else {
+            nonContainerRegion = {};
+
+            _.keys(edge.ellipses).forEach((i) => {
+              nonContainerRegion[i] = true;
+            });
+            _.forEach(edge.ellipses, (e, i) => {
+              //log("checking for islands:", i, islands[i]);
+              _.forEach(islands[i], (u, j) => {
+                //log("removing", j, "which islands", i);
+                delete nonContainerRegion[j];
+              });
+            });
+          }
+          log("nonContainerRegion:", keyStr(nonContainerRegion));
+
           log(
                 "adding edge:", edge.s(), keyStr(edge.ellipses),
                 "lost:", keyStr(lostEllipses), "unused:", keyStr(unusedEllipses)
@@ -428,6 +491,7 @@ Ellipses = class {
                     edge.other(point),
                     newRegion,
                     unusedEllipses,
+                    nonContainerRegion,
                     startPoint || point,
                     (level || 0) + 1
               );
@@ -443,6 +507,7 @@ Ellipses = class {
     }
 
     for (var i = 0; i < intersections.length && numEdgeVisits < this.totalEdgeVisits; i++) {
+      //console.log("traversing:", intersections[i].s(), numEdgeVisits, this.totalEdgeVisits);
       traverse(intersections[i]);
     }
 

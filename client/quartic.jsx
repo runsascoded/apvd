@@ -73,11 +73,6 @@ quartic = (a, b, c, d, e) => {
   root(-1, 1);
   root(-1, -1);
 
-  //var rootsObj = {};
-  //roots.forEach((r) => { rootsObj[r] = true });
-  //roots = [];
-  //for (var k in rootsObj) { roots.push(k); }
-
   return roots.sort(cmp);
 };
 

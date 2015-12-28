@@ -5,35 +5,44 @@ Page = React.createClass({
       {
         cx: -0.82,
         cy: 0.38,
-        rx: 1,
-        ry: 2,
+        rx: 2,
+        ry: 3,
         degrees: 0,
         color: 'red',
         i: 0
       },
       {
+        cx: 0.5,
+        cy: -0.44,
+        rx: 1.85,
+        ry: 1,
+        degrees: -23,
+        color: 'darkgoldenrod',
+        i: 2
+      },
+      {
         cx: 0,
         cy: 0,
-        rx: 2,
-        ry: 1,
+        rx: .5,
+        ry: .5,
         degrees: 90,
         color: 'blue',
         i: 1
       },
       {
-        cx: -1.58,
-        cy: 1,
-        rx: 2,
-        ry: 0.6,
-        degrees: -30,
-        color: 'darkgoldenrod',
-        i: 2
+        cx: -0.8,
+        cy: 0,
+        rx: .5,
+        ry: .5,
+        degrees: 0,
+        color: 'green',
+        i: 3
       }
     ].map((e) => { return new Ellipse(e); });
 
     var ellipsesObj = {};
-    ellipses.forEach((e, i) => {
-      ellipsesObj[i] = e;
+    ellipses.forEach((e) => {
+      ellipsesObj[e.i] = e;
     });
     return {
       ellipses: ellipsesObj
@@ -69,24 +78,24 @@ Page = React.createClass({
     //console.log(e.areasObj);
     var { intersections, edgesByE, regions } = e;
 
-    var e0 = ellipses[0];
-    var e1 = ellipses[1];
+    //var e0 = ellipses[0];
+    //var e1 = ellipses[1];
+    //
+    //var ellipses0 = _.map(ellipses, (e) => { return e.project(e0); });
+    //var ellipses1 = e1 ? _.map(ellipses, (e) => { return e.project(e1); }) : [];
 
-    var ellipses0 = _.map(ellipses, (e) => { return e.project(e0); });
-    var ellipses1 = e1 ? _.map(ellipses, (e) => { return e.project(e1); }) : [];
-
-    var intersections0 = [];
-    var intersections1 = [];
-    _.forEach(intersections, (i) => {
-      if ('0' in i.o) {
-        var o = i.o[0];
-        intersections0.push([ o.c, o.s ]);
-      }
-      if ('1' in i.o) {
-        var o = i.o[1];
-        intersections1.push([ o.c, o.s ]);
-      }
-    });
+    //var intersections0 = [];
+    //var intersections1 = [];
+    //_.forEach(intersections, (i) => {
+    //  if ('0' in i.o) {
+    //    var o = i.o[0];
+    //    intersections0.push([ o.c, o.s ]);
+    //  }
+    //  if ('1' in i.o) {
+    //    var o = i.o[1];
+    //    intersections1.push([ o.c, o.s ]);
+    //  }
+    //});
 
     //var ellipseKeys = _.keys(ellipses).join(",");
     var areaKeys = powerset(_.keys(ellipses)).map((s) => { return s.join(","); }).sort(lengthCmp);
@@ -114,22 +123,6 @@ Page = React.createClass({
             className="areas"
             onChange={(e) => {}}
             value={areasStr}
-      />
-      <Svg
-            ellipses={ellipses0}
-            points={intersections0}
-            projection={{ x: 0, y: 0, s: 50 }}
-            showGrid={true}
-            gridSize={1}
-            projectedCursor={this.state.projectedCursor && this.state.projectedCursor[0]}
-      />
-      <Svg
-            ellipses={ ellipses1 }
-            points={intersections1}
-            projection={{ x: 0, y: 0, s: 50 }}
-            showGrid={true}
-            gridSize={1}
-            projectedCursor={this.state.projectedCursor && this.state.projectedCursor[1]}
       />
       <ModelTextField
             ellipses={ellipses}

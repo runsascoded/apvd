@@ -46,14 +46,11 @@ pushEntry = (arr, i1, i2, v) => {
   a1[i2].push(v);
 };
 
-keyStr = (o) => {
-  if (o instanceof Set) {
-    var a = [];
-    o.forEach((v) => { a.push(v); });
-    return a.join(",");
-  }
-  return _.map(o, (v, k) => { return k; }).join(",");
+keyStr = (o, sep) => {
+  return _.map(o, (v, k) => { return k; }).join(sep || ",");
 };
+ks = keyStr;
+kvs = (obj) => { return _.map(obj, (o, i) => { return i + ": " + ks(o, ""); }).join(", "); };
 
 eqSet = (as, bs) => {
   if (as.size !== bs.size) return false;

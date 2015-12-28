@@ -277,6 +277,10 @@ Ellipse = class {
     return this.invert(Math.cos(t), Math.sin(t));
   }
 
+  containsEllipse(e) {
+    return this.contains(e.vx);
+  }
+
   contains(px, py) {
     if (px instanceof Array) {
       py = px[1];
