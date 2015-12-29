@@ -12,29 +12,29 @@ Page = React.createClass({
         i: 0
       },
       {
-        cx: 0.5,
-        cy: -0.44,
-        rx: 1.85,
-        ry: 1,
-        degrees: -23,
-        color: 'darkgoldenrod',
-        i: 2
-      },
-      {
-        cx: 0,
-        cy: 0,
-        rx: .5,
-        ry: .5,
-        degrees: 90,
+        cx: -0.7,
+        cy: 0.12,
+        rx: 1.3,
+        ry: 0.4,
+        degrees: 114,
         color: 'blue',
         i: 1
       },
       {
-        cx: -0.8,
-        cy: 0,
+        cx: 0.5,
+        cy: 1.52,
+        rx: .94,
+        ry: .48,
+        degrees: 18,
+        color: 'darkgoldenrod',
+        i: 2
+      },
+      {
+        cx: -1.76,
+        cy: -1.92,
         rx: .5,
-        ry: .5,
-        degrees: 0,
+        ry: .48,
+        degrees: -44,
         color: 'green',
         i: 3
       }

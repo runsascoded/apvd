@@ -1,11 +1,4 @@
 
-//Region = class {
-//  constructor(o) {
-//    this.edges = o.edges;
-//    this.points = o.points;
-//    this.k = o.k;
-//  }
-
 Region = React.createClass({
 
   onMouseEnter(e) {
@@ -19,7 +12,6 @@ Region = React.createClass({
   render() {
     var {i, width, points, edges} = this.props;
     var n = points.length;
-
     if (n == 1) {
       var e = edges[0].e;
       return <g
@@ -27,7 +19,7 @@ Region = React.createClass({
         <ellipse
               rx={e.rx}
               ry={e.ry}
-              className="region"
+              className={_.isEmpty(this.props.containers) ? "region" : "clear"}
               stroke="black"
               strokeWidth={width}
               onMouseEnter={this.onMouseEnter}
@@ -41,12 +33,6 @@ Region = React.createClass({
       return i ? e.arcpath(point) : e.path(point);
     }).bind(this)).join(" ");
 
-    //this.area = regionArea;
-    //this.secantArea = secantArea;
-    //this.polygonArea = polygonArea;
-    //
-    //console.log("region:", this);
-
     //console.log("region:", d);
     return <path
           key={i}
@@ -58,8 +44,4 @@ Region = React.createClass({
           onMouseLeave={this.onMouseLeave}
     />;
   }
-
-  //toString() {
-  //  return "R(" + this.k + "  " + this.points.map(tss).join(" ") + ")";
-  //}
 });

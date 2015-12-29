@@ -73,8 +73,8 @@ Edge = class {
   toString() {
     return "Edge(" +
           this.i +": " +
-          pp(this.x1,this.y1) + " -> " + pp(this.x2, this.y2) + ", " +
-          pd(this.t1) + "->" + pd(this.t2) + ", " +
+          pp(this.x1,this.y1) + " → " + pp(this.x2, this.y2) + ", " +
+          pd(this.t1) + "→" + pd(this.t2) + ", " +
           pp(this.mp) + ")";
   }
 

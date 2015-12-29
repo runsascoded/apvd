@@ -142,7 +142,7 @@ Ellipse = class {
   polar(x, y) {
     var p = this.transform(x, y);
     var r = sq(p[0]*p[0] + p[1]*p[1]);
-    //console.log("transformed:", pp(x,y), "->", pp(p), "r:", r, "p[0]/r:", p[0]/r);
+    //console.log("transformed:", pp(x,y), "→", pp(p), "r:", r, "p[0]/r:", p[0]/r);
     if (r == 0) return { r: r, t: 0 };
    // var atan = (p[0] == 0) ?
     var t =  (p[1] < 0) ? -Math.acos(p[0] / r) : Math.acos(p[0] / r);

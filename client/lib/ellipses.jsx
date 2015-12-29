@@ -210,7 +210,7 @@ Ellipses = class {
 
     //console.log(this.intersections.map((i) => { return i.toString(); }).join("\n"));
 
-    //console.log("edges:", ss(allEdges));
+    //console.log("edges:", "\n" + ss(allEdges, "\n"));
 
     this.edgesByE = edgesByE;
     this.edges = allEdges;
@@ -219,7 +219,7 @@ Ellipses = class {
   computeEdgeContainments() {
     // Compute ellipses containing each edge.
 
-    var { ellipses, intsByE, edgesByE, containments } = this;
+    var { ellipses, intsByE, edgesByE, containments, islands } = this;
 
     _.forEach(edgesByE, (edges, i) => {
       var e = ellipses[i];
@@ -261,14 +261,22 @@ Ellipses = class {
           }
         });
 
-        var keysStr = _.keys(edge.containers).sort().join(",");
+        //var keysStr = _.keys(edge.containers).sort().join(",");
         //console.log(edge.s(), keysStr);
 
-        if (_.isEmpty(edge.containers)) {
-          this.totalEdgeVisits++;
-        } else {
-          this.totalEdgeVisits += 2;
+        var onlyIslandContainers = true;
+        for (var k in edge.containers) {
+          if (!islands[edge.i][k]) {
+            onlyIslandContainers = false;
+            break;
+          }
         }
+        if (onlyIslandContainers) {
+          edge.expectedEdgeVisits = 1;
+        } else {
+          edge.expectedEdgeVisits = 2;
+        }
+        this.totalEdgeVisits += edge.expectedEdgeVisits;
       });
     }).bind(this));
   }
@@ -277,28 +285,25 @@ Ellipses = class {
     var areasObj = {};
     var regions = [];
     var visitedPoints = {};
+    var regionEdgePairs = {};
     var edges = [];
     var points = [];
     var edgeVisits = {};
 
     function canVisit(edge) {
-      if (!(edge.j in edgeVisits)) return true;
-      var n = edgeVisits[edge.j];
-      return n < 1 || (n == 1 && !_.isEmpty(edge.containers));
+      return (edgeVisits[edge.j] || 0) < edge.expectedEdgeVisits;
     }
 
     var numEdgeVisits = 0;
     function visitEdge(edge) {
-      edges.push(edge);
       edgeVisits[edge.j] = (edgeVisits[edge.j] || 0) + 1;
     }
 
-    function unvisitEdge() {
-      var edge = edges.pop();
+    function unvisitEdge(edge) {
       edgeVisits[edge.j] = edgeVisits[edge.j] - 1;
     }
 
-    var {intersections, containments, islands} = this;
+    var {intersections, totalEdgeVisits, islands} = this;
 
     function traverse(point, region, prevUnusedEllipses, nonContainerRegion, startPoint, level) {
       function log() {
@@ -314,11 +319,9 @@ Ellipses = class {
         return;
       }
 
-      //console.log("traverse:", point.toString(), region);
       if (point == startPoint) {
-        var regionKey = _.keys(region);
-        var regionStr = regionKey.sort().join("");
 
+        // First and last edges can't come from the same ellipse.
         if (edges.length > 1) {
           var firstEdge = edges[0];
           var lastEdge = edges[edges.length - 1];
@@ -327,11 +330,18 @@ Ellipses = class {
           }
         }
 
-        _.forEach(edges, (edge) => {
-          edgeVisits[edge.j] = (edgeVisits[edge.j] || 0) + 1;
+        edges.forEach((e1) => {
+          edges.forEach((e2) => {
+            if (!(e1.j in regionEdgePairs)) {
+              regionEdgePairs[e1.j] = {};
+            }
+            regionEdgePairs[e1.j][e2.j] = true;
+          });
         });
+
         numEdgeVisits += edges.length;
 
+        // Compute region area.
         var n = points.length;
         var [ polygonArea, secantArea, regionArea ] = [ 0, 0, 0 ];
         if (n == 2) {
@@ -355,7 +365,6 @@ Ellipses = class {
             var point = points[i];
             var area = edge.secant;
             var ret = (edge.p1 == point) ? area : -area;
-            //console.log("\t", point.s(), edge.s(), area, ret, clockwise);
             return ret;
           });
 
@@ -363,20 +372,11 @@ Ellipses = class {
           regionArea = Math.abs(polygonArea + secantArea);
         }
 
-        var r =
-              <Region
-                    k={regionStr}
-                    edges={_.extend([], edges)}
-                    points={_.extend([], points)}
-                    i={regions.length}
-                    key={regions.length}
-                    width={3 / 50}
-                    area={regionArea}
-                    secantArea={secantArea}
-                    polygonArea={polygonArea}
-                    obj={region}
-              />;
+        var regionKey = _.keys(region);
+        var regionStr = regionKey.sort().join("");
 
+        // "Island" containers -- those that contain this region and don't transitively intersect with any of the ellipses whose edges bound this region -- need this region's area subtracted from their total area, because each such ellipse will add up its own area without subtracting "islands" that it contains, resulting in contained islands being double-counted towards the containers' area if we also add them here.
+        // The powerset of the set of island-containers all need to skip adding the current region's area for this reason, i.e. if two ellipses both island-contain this region, each of them as well as their intersection will inadvertently count this region's area on their own, and so should skip counting it here.
         var containers = {};
         if (regionKey.length > 1) {
           var containerKeys = _.keys(islands[edges[0].i]);
@@ -390,14 +390,26 @@ Ellipses = class {
 
         log("containers:", keyStr(containers));
 
+        var r =
+              <Region
+                    k={regionStr}
+                    containers={containers}
+                    edges={_.extend([], edges)}
+                    points={_.extend([], points)}
+                    i={regions.length}
+                    key={regions.length}
+                    width={3 / 50}
+                    area={regionArea}
+                    secantArea={secantArea}
+                    polygonArea={polygonArea}
+                    obj={region}
+              />;
+
         var addedRegions = [];
         powerset(regionKey).forEach((rk) => {
           var rs = rk.join(",");
-          addedRegions.push(rs);
           if (!(rs in containers)) {
-          //  if (rs == '0') {
-          //  console.log("\tadding area:", regionArea/pi, "to", rs, ss(points), ss(edges));
-            //}
+            addedRegions.push(rs);
             areasObj[rs] = (areasObj[rs] || 0) + regionArea;
           } else {
             log("skipping contained key:", rs);
@@ -407,40 +419,51 @@ Ellipses = class {
         //console.log(
         //      "adding region:", regionStr,
         //      "to (" + addedRegions.join(" ") + ")",
-        //      ss(points), ss(edges),
-        //      r3(regionArea/pi)
-        //      , r3(polygonArea/pi), r3(secantArea/pi)//, r3(regionArea)
+        //      ps(points, edges),
+        //      "area:", r3(regionArea/pi),
+        //      edgeVisits, numEdgeVisits, totalEdgeVisits
         //);
 
         regions.push(r);
-        return;
+        return true;
       }
       if (point.i in visitedPoints) {
         return;
       }
 
       var prevEllipse = edges.length ? edges[edges.length - 1].e : null;
-      log("continuing point:", point.s(), keyStr(region));
+      log("continuing point:", point.s(), keyStr(region), "existing points:", ss(points));
       visitedPoints[point.i] = true;
       points.push(point);
-      _.forEach(point.edges, (edge) => {
+      var found = false;
+      for (var edgeIdx = 0; edgeIdx < point.edges.length; edgeIdx++) {
+        var edge = point.edges[edgeIdx];
+
+        var edgeNotSaturated = canVisit(edge);
+        var differentEllipse = (edge.e != prevEllipse);
+        var edgeRegionPairs = regionEdgePairs[edge.j] || {};
+        var notInRegionWithFirstEdge = (edges.length == 0 || !edgeRegionPairs[edges[0].j]);
 
         log(
               "checking:",
               edge.s(),
-              canVisit(edge),
-              edge.j,
-              edgeVisits[edge.j],
-              edge.e != prevEllipse
+              edgeNotSaturated,
+              '(' + edge.j + ": " + edgeVisits[edge.j] + ')',
+              "different ellipse:", differentEllipse,
+              "not in region with first edge:", notInRegionWithFirstEdge, '(' + (edges.length ? edges[0].s() : '-') + ')'
         );
-        if (canVisit(edge) && edge.e != prevEllipse) {
+
+        if (edgeNotSaturated && differentEllipse && notInRegionWithFirstEdge) {
 
           visitEdge(edge);
+          edges.push(edge);
+
           var [ newRegion, lostEllipses, unusedEllipses ] =
                 region ?
                       intersect(region, edge.ellipses) :
                       [ edge.ellipses, {}, {} ];
 
+          // Update nonContainerRegion
           if (region) {
             log(
                   "removing lost ellipses from ncr:",
@@ -464,7 +487,8 @@ Ellipses = class {
               });
             });
           }
-          log("nonContainerRegion:", keyStr(nonContainerRegion));
+
+          //log("nonContainerRegion:", keyStr(nonContainerRegion));
 
           log(
                 "adding edge:", edge.s(), keyStr(edge.ellipses),
@@ -472,6 +496,7 @@ Ellipses = class {
           );
 
           if (edges.length >= 3 && !_.isEmpty(lostEllipses)) {
+            // If at least two edges precede this one and we just lost an ellipse E from the in-progress region, then the preceding ellipses all share containment by E while this one doesn't, meaning this is an invalid region; some other sibling edge to the current one must continue including E, and not including it means that edge cuts through the middle of the region we are currently building with the current edge, which is invalid.
             //console.log(
             //      "lost ellipses:",
             //      keyStr(lostEllipses),
@@ -480,6 +505,7 @@ Ellipses = class {
           } else {
             var doublyUnused = intersect(unusedEllipses, prevUnusedEllipses || {})[0];
             if (!_.isEmpty(doublyUnused)) {
+              // A converse check to the above: if two consecutive edges are contained by an ellipse E that some earlier edge is not contained by (as evidenced by the current region not including E), then that earlier edge breaks the rule above of not dropping an ellipse that two consecutive edges are contained by, and the current region (with last edge) is invalid.
               //console.log(
               //      "doubly-unused ellipses:",
               //      keyStr(doublyUnused),
@@ -487,28 +513,48 @@ Ellipses = class {
               //      edge.e.i, "vs.", prevEllipse.i
               //);
             } else {
-              traverse(
+              if (traverse(
                     edge.other(point),
                     newRegion,
                     unusedEllipses,
                     nonContainerRegion,
                     startPoint || point,
                     (level || 0) + 1
-              );
+              )) {
+                found = true;
+              }
             }
           }
-          unvisitEdge();
+
+          edges.pop();
+
+          if (found) {
+            if (edges.length >= 2) {
+              break;
+            }
+            found = false;
+          } else {
+            unvisitEdge(edge);
+          }
           log("removed edge:", edge.s(), edge.j, edgeVisits[edge.j]);
         }
-
-      });
+      }
       delete visitedPoints[point.i];
       points.pop();
+      return found;
     }
 
-    for (var i = 0; i < intersections.length && numEdgeVisits < this.totalEdgeVisits; i++) {
-      //console.log("traversing:", intersections[i].s(), numEdgeVisits, this.totalEdgeVisits);
+    for (var i = 0; i < intersections.length && numEdgeVisits < totalEdgeVisits; i++) {
       traverse(intersections[i]);
+    }
+
+    if (numEdgeVisits < totalEdgeVisits) {
+      console.error(
+            "Fewer edge visits detected than expected: " +
+            numEdgeVisits + " " +
+            totalEdgeVisits +
+            "\n" + regions.map(rts).join("\n")
+      );
     }
 
     this.areasObj = areasObj;

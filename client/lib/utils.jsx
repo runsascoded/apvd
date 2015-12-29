@@ -109,3 +109,21 @@ spaces = (n) => {
   for (var i = 0; i < n; i++) { s += " "; }
   return s;
 };
+
+pathStr = (points, edges) => {
+  return '[' + points.map((p, i) => {
+    return pc(r3(p.x), r3(p.y)) + " " + edges[i].i + "→";
+  }).join(" ") + ']';
+};
+ps = pathStr;
+
+regionString = (r) => {
+  return ps(r.props.points, r.props.edges);
+};
+rts = regionString;
+
+os = (o) => {
+  return _.map(o, (v, k) => {
+    return k + ": " + _.keys(v).join(',');
+  }).join(" ");
+};
