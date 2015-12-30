@@ -18,7 +18,7 @@ rad = (d) => { return pi * d / 180; };
 
 pd = (t) => { return r3(deg(t)) + "°"; };
 
-zero = (n) => {
+zeroCheck = (n) => {
   if (Math.abs(n) < 1e-13) {
     n = 0;
   }
@@ -127,3 +127,5 @@ os = (o) => {
     return k + ": " + _.keys(v).join(',');
   }).join(" ");
 };
+
+js = JSON.stringify;

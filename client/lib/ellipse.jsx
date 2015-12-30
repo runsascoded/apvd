@@ -340,7 +340,7 @@ Ellipse = class {
     var c1 = 2*D*CF - 2*BE;
     var c0 = CF*CF - E2;
 
-    [c4, c3, c2, c1, c0] = [c4, c3, c2, c1, c0].map(zero);
+    [c4, c3, c2, c1, c0] = [c4, c3, c2, c1, c0].map(zeroCheck);
 
     //console.log("coeffs:", c4,c3,c2,c1,c0);
 
