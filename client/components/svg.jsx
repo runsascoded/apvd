@@ -305,20 +305,6 @@ Svg = React.createClass({
             });
     }
 
-    var svgEdges = [];
-    if (edges) {
-      //svgEdges = edges.map((e, i) => {
-      //  return e.elem(i, 2/s);
-      //});
-    }
-
-    //var svgRegions = [];
-    //if (regions) {
-    //  svgRegions = regions.map((r, i) => {
-    //    return r.elem(i, 4/s);
-    //  });
-    //}
-
     return <svg
           onMouseMove={this.onMouseMove}
           onMouseUp={this.onMouseUp}
@@ -332,7 +318,6 @@ Svg = React.createClass({
             }
       >
         {gridLines}
-        <g className="edges">{svgEdges}</g>
         <g className="regions">{regions}</g>
         <g className="ellipses">{svgEllipses}</g>
         <g className="points">{svgPoints}</g>

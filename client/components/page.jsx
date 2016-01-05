@@ -5,8 +5,8 @@ Page = React.createClass({
       {
         cx: -0.82,
         cy: 0.38,
-        rx: 2,
-        ry: 3,
+        rx: 1,
+        ry: 2,
         degrees: 0,
         color: 'red',
         i: 0
@@ -30,9 +30,9 @@ Page = React.createClass({
         i: 2
       },
       {
-        cx: -1.76,
-        cy: -1.92,
-        rx: .5,
+        cx: 0,
+        cy: 0,
+        rx: .6,
         ry: .48,
         degrees: -44,
         color: 'green',
@@ -78,24 +78,22 @@ Page = React.createClass({
     //console.log(e.areasObj);
     var { intersections, edgesByE, regions } = e;
 
-    //var e0 = ellipses[0];
-    //var e1 = ellipses[1];
-    //
-    //var ellipses0 = _.map(ellipses, (e) => { return e.project(e0); });
-    //var ellipses1 = e1 ? _.map(ellipses, (e) => { return e.project(e1); }) : [];
+    var e0 = ellipses[0];
+    var e1 = ellipses[1];
+    var e2 = ellipses[2];
 
-    //var intersections0 = [];
-    //var intersections1 = [];
-    //_.forEach(intersections, (i) => {
-    //  if ('0' in i.o) {
-    //    var o = i.o[0];
-    //    intersections0.push([ o.c, o.s ]);
-    //  }
-    //  if ('1' in i.o) {
-    //    var o = i.o[1];
-    //    intersections1.push([ o.c, o.s ]);
-    //  }
-    //});
+    var ellipses0 = _.map(ellipses, (e) => { return e.project(e0); });
+    var ellipses1 = e1 ? _.map(ellipses, (e) => { return e.project(e1); }) : [];
+    var ellipses2 = e2 ? _.map(ellipses, (e) => { return e.project(e2); }) : [];
+
+    var intersections0 = [];
+    var intersections1 = [];
+    var intersections2 = [];
+    _.forEach(intersections, (i) => {
+      intersections0.push(e0.transform(i.x, i.y));
+      intersections1.push(e1.transform(i.x, i.y));
+      intersections2.push(e2.transform(i.x, i.y));
+    });
 
     //var ellipseKeys = _.keys(ellipses).join(",");
     var areaKeys = powerset(_.keys(ellipses)).map((s) => { return s.join(","); }).sort(lengthCmp);
@@ -110,7 +108,6 @@ Page = React.createClass({
     return <div>
       <Svg
             ellipses={ellipses}
-            edges={/*edgesByE[0].concat(edgesByE[1])*/[]}
             points={intersections}
             regions={regions}
             onChange={this.onChange}
@@ -118,6 +115,30 @@ Page = React.createClass({
             gridSize={1}
             projection={{ x: 0, y: 0, s: 50 }}
             onCursor={this.onCursor}
+      />
+      <Svg
+            ellipses={ellipses0}
+            points={intersections0}
+            showGrid={true}
+            gridSize={1}
+            projection={{ x: 0, y: 0, s: 50 }}
+            projectedCursor={this.state.projectedCursor && this.state.projectedCursor[0]}
+        />
+      <Svg
+            ellipses={ellipses1}
+            points={intersections1}
+            showGrid={true}
+            gridSize={1}
+            projection={{ x: 0, y: 0, s: 50 }}
+            projectedCursor={this.state.projectedCursor && this.state.projectedCursor[1]}
+      />
+      <Svg
+            ellipses={ellipses2}
+            points={intersections2}
+            showGrid={true}
+            gridSize={1}
+            projection={{ x: 0, y: 0, s: 50 }}
+            projectedCursor={this.state.projectedCursor && this.state.projectedCursor[2]}
       />
       <textarea
             className="areas"
