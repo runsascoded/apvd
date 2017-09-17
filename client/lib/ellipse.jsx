@@ -2,6 +2,7 @@
 Ellipse = class {
   constructor(o) {
     this.i = o.i;
+    this.name = o.name;
     let t;
     if ('A' in o) {
       if (isNaN(o.A)) {
@@ -198,7 +199,8 @@ Ellipse = class {
       F: F + A * tx * tx + B * tx * ty + C * ty * ty - D * tx - E * ty,
       t: this.t,
       color: this.color,
-      i: this.i
+      i: this.i,
+      name: this.name
     });
 
     return e;
@@ -227,7 +229,8 @@ Ellipse = class {
       F: F,
       t: this.t + t,
       color: this.color,
-      i: this.i
+      i: this.i,
+      name: this.name
     });
 
     if (x || y) {
@@ -248,7 +251,8 @@ Ellipse = class {
       F: F,
       t: this.t,
       color: this.color,
-      i: this.i
+      i: this.i,
+      name: this.name
     });
   }
 
@@ -263,9 +267,9 @@ Ellipse = class {
             this[k] = v;
           });
 
-    const { rx, ry, degrees, theta, cx, cy, color, i } = this;
+    const { rx, ry, degrees, theta, cx, cy, color, i, name } = this;
 
-    return new Ellipse({ rx, ry, degrees, theta, cx, cy, color, i });
+    return new Ellipse({ rx, ry, degrees, theta, cx, cy, color, i, name });
   }
 
   project(e) {

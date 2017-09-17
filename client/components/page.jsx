@@ -9,7 +9,8 @@ Page = React.createClass({
         ry: 2,
         degrees: 0,
         color: 'red',
-        i: 0
+        i: 0,
+        name: "A"
       },
       {
         cx: -0.7,
@@ -18,7 +19,8 @@ Page = React.createClass({
         ry: 0.4,
         degrees: 114,
         color: 'blue',
-        i: 1
+        i: 1,
+        name: "B"
       },
       {
         cx: 0.5,
@@ -27,7 +29,8 @@ Page = React.createClass({
         ry: .48,
         degrees: 18,
         color: 'darkgoldenrod',
-        i: 2
+        i: 2,
+        name: "C"
       },
       {
         cx: 0,
@@ -36,7 +39,8 @@ Page = React.createClass({
         ry: .48,
         degrees: -44,
         color: 'green',
-        i: 3
+        i: 3,
+        name: "D"
       }
     ].map(e => new Ellipse(e));
 
@@ -80,14 +84,27 @@ Page = React.createClass({
     const e = new Ellipses(ellipses);
     const { intersections, regions } = e;
 
-    const areaKeys = powerset(_.keys(ellipses)).map(s => s.join(",")).sort(lengthCmp);
-    const maxKeyLen = Math.max.apply(Math, areaKeys.map(k => k.length));
+    const areaKeys =
+          powerset(_.keys(ellipses))
+                .map(s => { return {
+                  key: s.join(","),
+                  name: s.length ? s.map(k => ellipses[k].name).join("⋂") : "*"
+                }})
+                .sort(
+                      (
+                            { key:k1, name:n1 },
+                            { key:k2, name:n2 }
+                      ) =>
+                            lengthCmp(k1, k2)
+                );
+
+    const maxKeyLen = Math.max.apply(Math, areaKeys.map(k => k.name.length));
 
     const areasStr =
           areaKeys.map(
                 rs => {
-                  const area = e.areasObj[rs] || 0;
-                  return rs + spaces(maxKeyLen - rs.length) + ": " + r3(area / pi);
+                  const area = e.areasObj[rs.key] || 0;
+                  return rs.name + spaces(maxKeyLen - rs.name.length) + ": " + r3(area / pi);
                 })
                 .join("\n");
 

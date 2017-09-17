@@ -88,16 +88,16 @@ ss = (a, sep) => { return a.map(tss).join(sep || " "); };
 
 sum = (a,b) => { return a+b; };
 
-powerset = (a) => {
+powerset = a => {
   if (!a.length) {
     return [[]];
   }
-  var rest = powerset(a.slice(1));
-  return rest.map((r) => { return [a[0]].concat(r); }).concat(rest);
+  const rest = powerset(a.slice(1));
+  return rest.map(r => [a[0]].concat(r)).concat(rest);
 };
 
-lengthCmp = (a,b) => {
-  var ld = a.length - b.length;
+lengthCmp = (a, b) => {
+  const ld = a.length - b.length;
   if (ld) return ld;
   if (a < b) return -1;
   if (a > b) return 1;
@@ -105,8 +105,8 @@ lengthCmp = (a,b) => {
 };
 
 spaces = (n) => {
-  var s = "";
-  for (var i = 0; i < n; i++) { s += " "; }
+  let s = "";
+  for (let i = 0; i < n; i++) { s += " "; }
   return s;
 };
 
