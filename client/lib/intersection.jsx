@@ -6,10 +6,10 @@ Intersection = class {
     this.e2 = o.e2;
     this.i1 = this.e1.i;
     this.i2 = this.e2.i;
-    var {e1, e2} = o;
+    const {e1, e2} = o;
     this.o = {};
-    var e1o = {};
-    var e2o = {};
+    const e1o = {};
+    const e2o = {};
 
     if (o.t1 === undefined) {
       e1o.t = e1.polar(o.x, o.y).t;
@@ -41,7 +41,7 @@ Intersection = class {
     }
 
     if (o.x === undefined) {
-      var [x, y] = e1.invert(e1o.c, e1o.s);
+      const [x, y] = e1.invert(e1o.c, e1o.s);
       this.x = x;
       this.y = y;
     } else {
@@ -64,8 +64,8 @@ Intersection = class {
   }
 
   other(e) {
-    if (e == this.e1) return this.e2;
-    if (e == this.e2) return this.e1;
+    if (e === this.e1) return this.e2;
+    if (e === this.e2) return this.e1;
     throw new Error("Bad other ellipse req: " + e.toString() + " in " + this.toString());
   }
 

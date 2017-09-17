@@ -2,46 +2,52 @@
 Ellipse = class {
   constructor(o) {
     this.i = o.i;
+    let t;
     if ('A' in o) {
+      if (isNaN(o.A)) {
+        throw new Error("Bad ellipse ctor: " + JSON.stringify(o));
+      }
       this.A = o.A;
       this.B = o.B;
       this.C = o.C;
       this.D = o.D;
       this.E = o.E;
       this.F = o.F;
-      var t = o.t;
-      if (o.C != o.A) {
+      t = o.t;
+      if (o.C !== o.A) {
         t = Math.atan(o.B / (o.A - o.C)) / 2;
       }
       this.theta = t;
+      this.t = t;
     }
 
     if (!('cx' in o)) {
 
-      var c = Math.cos(t);
-      var s = Math.sin(t);
+      if (t === undefined) {
+        throw new Error("expected t in Ellipse ctor: " + JSON.stringify(o));
+      }
+      const c = Math.cos(t);
+      const s = Math.sin(t);
 
       if (Math.abs(o.B) < 1e-10) {
 
-        var c2 = c*c;
-        var s2 = s*s;
+        const s2 = s*s;
 
-        var {A, B, C, D, E, F} = o;
+        const {A, B, C, D, E, F} = o;
         this.cx = -D / 2 / A;
         this.cy = -E / 2 / C;
-        var n = -4*F + D*D/A + E*E/C;
+        const n = -4 * F + D * D / A + E * E / C;
         this.rx = sq(n / A) / 2;
         this.ry = sq(n / C) / 2;
 
       } else {
-        var e = this.rotate(-t);
-        var {cx, cy} = e;
+        const e = this.rotate(-t);
+        const { cx, cy } = e;
         this.rx = e.rx;
         this.ry = e.ry;
         this.cx = c*cx - s*cy;
         this.cy = s*cx + c*cy;
       }
-
     } else {
       this.cx = o.cx;
       this.cy = o.cy;
@@ -68,24 +74,24 @@ Ellipse = class {
     this.sin = Math.sin(this.theta);
 
 
-    var {cx, cy, rx, ry, cos, sin} = this;
+    const {cx, cy, rx, ry, cos, sin} = this;
 
     if (!('A' in o)) {
-      var rx2 = rx*rx;
-      var ry2 = ry*ry;
-      var c = cos;
-      var s = sin;
-      var c2 = c*c;
-      var s2 = s*s;
+      const rx2 = rx * rx;
+      const ry2 = ry * ry;
+      const c = cos;
+      const s = sin;
+      const c2 = c*c;
+      const s2 = s*s;
 
-      var d1 = ry*(cx*c + cy*s);
-      var d2 = rx*(cy*c - cx*s);
-      var d = rx2*ry2 - d1*d1 - d2*d2;
+      const d1 = ry * (cx * c + cy * s);
+      const d2 = rx * (cy * c - cx * s);
+      let d = rx2 * ry2 - d1 * d1 - d2 * d2;
 
-      var a1 = c2*ry2 + s2*rx2;
-      var c1 = c2*rx2 + s2*ry2;
+      const a1 = c2 * ry2 + s2 * rx2;
+      const c1 = c2 * rx2 + s2 * ry2;
 
-      var r1 = ry2 - rx2;
+      const r1 = ry2 - rx2;
 
       this.A = a1;
       this.B = 2*c*s*r1;
@@ -106,7 +112,7 @@ Ellipse = class {
     this.rm = Math.min(rx, ry);
 
     this.fd = sq(this.rM*this.rM - this.rm*this.rm);
-    var fr = this.fd / this.rM;
+    const fr = this.fd / this.rM;
 
     this.vxx = cx + rx*cos;
     this.vxy = cy + rx*sin;
@@ -140,12 +146,12 @@ Ellipse = class {
   }
 
   polar(x, y) {
-    var p = this.transform(x, y);
-    var r = sq(p[0]*p[0] + p[1]*p[1]);
+    const p = this.transform(x, y);
+    const r = sq(p[0] * p[0] + p[1] * p[1]);
     //console.log("transformed:", pp(x,y), "→", pp(p), "r:", r, "p[0]/r:", p[0]/r);
-    if (r == 0) return { r: r, t: 0 };
+    if (r === 0) return { r: r, t: 0 };
    // var atan = (p[0] == 0) ?
-    var t =  (p[1] < 0) ? -Math.acos(p[0] / r) : Math.acos(p[0] / r);
+    const t = (p[1] < 0) ? -Math.acos(p[0] / r) : Math.acos(p[0] / r);
     //console.log("polar:", pp(x,y), pp(r,t));
     return { r: r, t: t };
   }
@@ -171,10 +177,10 @@ Ellipse = class {
       y = x[1];
       x = x[0];
     }
-    var rX = this.rx * x;
-    var rY = this.ry * y;
-    var X = this.cos*rX - this.sin*rY;
-    var Y = this.cos*rY + this.sin*rX;
+    const rX = this.rx * x;
+    const rY = this.ry * y;
+    const X = this.cos * rX - this.sin * rY;
+    const Y = this.cos * rY + this.sin * rX;
     return [
       X + this.cx,
       Y + this.cy
@@ -182,14 +188,14 @@ Ellipse = class {
   }
 
   translate(tx, ty) {
-    var {A, B, C, D, E, F} = this;
-    var e = new Ellipse({
+    const {A, B, C, D, E, F} = this;
+    const e = new Ellipse({
       A: A,
       B: B,
       C: C,
-      D: D - 2*A*tx - B*ty,
-      E: E - 2*C*ty - B*tx,
-      F: F + A*tx*tx + B*tx*ty + C*ty*ty - D*tx - E*ty,
+      D: D - 2 * A * tx - B * ty,
+      E: E - 2 * C * ty - B * tx,
+      F: F + A * tx * tx + B * tx * ty + C * ty * ty - D * tx - E * ty,
       t: this.t,
       color: this.color,
       i: this.i
@@ -199,18 +205,17 @@ Ellipse = class {
   }
 
   rotate(t, x, y) {
-    var {A, B, C, D, E, F} = this;
-    var c = Math.cos(t);
-    var s = Math.sin(t);
-    var c2 = c*c;
-    var s2 = s*s;
-    var cs = c*s;
+    const {A, B, C, D, E, F} = this;
+    const c = Math.cos(t);
+    const s = Math.sin(t);
+    const c2 = c * c;
+    const s2 = s * s;
+    const cs = c * s;
 
-    var e = this;
+    let e;
     if (x || y) {
       x = x || 0;
       y = y || 0;
-      e = this.translate(-x, -y);
     }
 
     e = new Ellipse({
@@ -233,13 +238,13 @@ Ellipse = class {
   }
 
   scale(sx, sy) {
-    var {A, B, C, D, E, F} = this;
+    const {A, B, C, D, E, F} = this;
     return new Ellipse({
-      A: A/sx/sx,
-      B: B/sx/sy,
-      C: C/sy/sy,
-      D: D/sx,
-      E: E/sy,
+      A: A / sx / sx,
+      B: B / sx / sy,
+      C: C / sy / sy,
+      D: D / sx,
+      E: E / sy,
       F: F,
       t: this.t,
       color: this.color,
@@ -252,17 +257,15 @@ Ellipse = class {
   }
 
   modify(fields) {
-    _.forEach(fields, (v,k) => { this[k] = v; });
-    return new Ellipse({
-      rx: this.rx,
-      ry: this.ry,
-      degrees: this.degrees,
-      theta: this.theta,
-      cx: this.cx,
-      cy: this.cy,
-      color: this.color,
-      i: this.i
-    });
+    _.forEach(
+          fields,
+          (v, k) => {
+            this[k] = v;
+          });
+
+    const { rx, ry, degrees, theta, cx, cy, color, i } = this;
+
+    return new Ellipse({ rx, ry, degrees, theta, cx, cy, color, i });
   }
 
   project(e) {
@@ -289,32 +292,26 @@ Ellipse = class {
       py = px.y;
       px = px.x;
     }
-    var [x, y] = this.transform(px, py);
-    var r2 = x*x + y*y;
+    const [x, y] = this.transform(px, py);
+    const r2 = x * x + y * y;
     //console.log("\tchecking containment:", pp(px, py), pp(x,y), r2);
     return r2 <= 1;
   }
 
   intersect(e) {
-    var e1 = this;
-    var e2 = e;
-    var p1 = e1.project(e2);
+    const e1 = this;
+    const e2 = e;
+    const p1 = e1.project(e2);
     //console.log("e1:", e1.toString(), "e2:", e2.toString(), "p1:", p1.toString());
-    var uis = p1.unitIntersections();
+    const uis = p1.unitIntersections();
 
     //console.log("uis:", uis);
-    var ret = uis.map((ui) => {
-      var [c2, s2] = ui;
-      var [x, y] = e2.invert(c2, s2);
+    const ret = uis.map(ui => {
+      const [c2, s2] = ui;
+      const [x, y] = e2.invert(c2, s2);
       //console.log("ui:", pp(ui), "xy:", pp(x,y), "cs2:", pp(c2, s2));
-      return new Intersection({
-        e1: e1,
-        e2: e2,
-        x: x,
-        y: y,
-        c2: c2,
-        s2: s2
-      });
+
+      return new Intersection({ e1, e2, x, y, c2, s2 });
     });
 
     //console.log("projected:", p.s());
@@ -326,27 +323,27 @@ Ellipse = class {
   }
 
   unitIntersections() {
-    var {A, B, C, D, E, F} = this;
+    const {A, B, C, D, E, F} = this;
 
-    var B2 = B*B;
-    var E2 = E*E;
-    var BE = B*E;
-    var AC = A - C;
-    var CF = C + F;
+    const B2 = B * B;
+    const E2 = E * E;
+    const BE = B * E;
+    const AC = A - C;
+    const CF = C + F;
 
-    var c4 = AC*AC + B2;
-    var c3 = 2*D*AC + 2*BE;
-    var c2 = D*D + 2*AC*CF + E2 - B2;
-    var c1 = 2*D*CF - 2*BE;
-    var c0 = CF*CF - E2;
+    let c4 = AC * AC + B2;
+    let c3 = 2 * D * AC + 2 * BE;
+    let c2 = D * D + 2 * AC * CF + E2 - B2;
+    let c1 = 2 * D * CF - 2 * BE;
+    let c0 = CF * CF - E2;
 
     [c4, c3, c2, c1, c0] = [c4, c3, c2, c1, c0].map(zeroCheck);
 
     //console.log("coeffs:", c4,c3,c2,c1,c0);
 
-    var xs = quartic(c4, c3, c2, c1, c0);
+    const xs = quartic(c4, c3, c2, c1, c0);
     //console.log("quartic:", xs);
-    var xo = {};
+    const xo = {};
     xs.forEach((x) => {
       xo[x] = (xo[x] || 0) + 1;
     });
@@ -355,14 +352,14 @@ Ellipse = class {
 
     //var rxs = [];
     //var ys = [];
-    var ps = [];
+    const ps = [];
     _.forEach(xo, (n, x) => {
-      var y = sq(1 - x*x);
+      let y = sq(1 - x * x);
       if (isNaN(y)) return;
-      var b = A*x*x + C*y*y + D*x + F;
-      var c = B*x*y + E*y;
-      var r1 = Math.abs(b + c);
-      var r2 = Math.abs(b - c);
+      const b = A * x * x + C * y * y + D * x + F;
+      const c = B * x * y + E * y;
+      const r1 = Math.abs(b + c);
+      const r2 = Math.abs(b - c);
 
       //console.log("x:", x, "n:", n, "rs:", r1, r2, r1 - r2);
       if (n > 1) {

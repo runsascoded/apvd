@@ -3,14 +3,11 @@ Svg = React.createClass({
   getInitialState() {
     return {
       dragging: false,
-      cursor: {
-        x: 0,
-        y: 0
-      },
-      vcursor: { x: 0, y: 0 }
+      pointRadius: 3
     };
   },
-  onMouseUp(e) {
+
+  onMouseUp() {
     if (this.state.dragging) {
       this.setState({
         dragging: false,
@@ -18,141 +15,147 @@ Svg = React.createClass({
       });
     }
   },
+
   dragStart(e, k, ek) {
-    var node = ReactDOM.findDOMNode(this);
+    const { left, top } = this.domRect();
     this.setState({
       dragging: true,
       dragNode: k,
       dragEllipse: ek,
-      dragStartX: e.clientX - node.offsetLeft,
-      dragStartY: e.clientY - node.offsetTop
+      dragStartX: e.clientX - left,
+      dragStartY: e.clientY - top
     });
   },
-  getTheta(x, y, t) {
-    //y = -y;
-    var r = sq(x*x + y*y);
-    var theta = null;
-    var pi4s = Math.round(t * 2 / Math.PI);
 
-    if (-1 == pi4s) {
+  getTheta(x, y, t) {
+    const r = sq(x * x + y * y);
+    let theta = null;
+    const pi4s = Math.round(t * 2 / Math.PI);
+
+    if (-1 === pi4s) {
       theta = -Math.acos(x/r)
-    } else if (0 == pi4s) {
+    } else if (0 === pi4s) {
       theta = Math.asin(y/r);
-    } else if (1 == pi4s) {
+    } else if (1 === pi4s) {
       theta = Math.acos(x/r);
     } else if (1 < pi4s) {
       theta = Math.PI - Math.asin(y/r);
-      if (theta > Math.PI) theta -= 2*Math.PI;
+      if (theta > Math.PI)
+        theta -= 2*Math.PI;
     } else if (pi4s < -1) {
       theta = -Math.PI - Math.asin(y/r);
-      if (theta < -Math.PI) theta += 2*Math.PI;
+      if (theta < -Math.PI)
+        theta += 2*Math.PI;
     }
-    return {
-      theta: theta,
-      r: r
-    };
+    return { theta, r };
   },
+
+  domRect() {
+    return ReactDOM.findDOMNode(this).getBoundingClientRect();
+  },
+
   onMouseMove(e) {
-    var node = ReactDOM.findDOMNode(this);
-    var offsetX = e.clientX - node.offsetLeft;
-    var offsetY = e.clientY - node.offsetTop;
+    const { left, top } = this.domRect();
+    const offsetX = e.clientX - left;
+    const offsetY = e.clientY - top;
 
-    var vOffset = this.invert(offsetX, offsetY);
-
-    this.setState({
-      vcursor: vOffset,
-      cursor: { x: offsetX, y: offsetY }
-    });
+    const vOffset = this.virtual(offsetX, offsetY);
 
     if (this.props.onCursor) {
-      this.props.onCursor(vOffset);
+      if (this.props.transformBy) {
+        const [x, y] = this.props.transformBy.invert(vOffset.x, vOffset.y);
+        this.props.onCursor({ x, y });
+      } else
+        this.props.onCursor(vOffset);
     }
 
-    if (this.state.dragging) {
-      var dx = (offsetX - this.state.dragStartX) / this.scale();
-      var dy = (offsetY - this.state.dragStartY) / this.scale();
-      var ellipse = this.props.ellipses[this.state.dragEllipse];
-      if (this.state.dragNode == 'c') {
-        this.props.onChange(
-              this.state.dragEllipse,
+    const { dragging, dragStartX, dragStartY, dragEllipse, dragNode } = this.state;
+
+    if (dragging && this.props.onEllipseDrag) {
+      let dx = (offsetX - dragStartX) / this.scale();
+      let dy = (offsetY - dragStartY) / this.scale();
+      const ellipse = this.props.ellipses[dragEllipse];
+      if (dragNode === 'c') {
+        this.props.onEllipseDrag(
+              dragEllipse,
               {
                 cx: ellipse.cx + dx,
                 cy: ellipse.cy - dy
               }
         );
-      } else if (this.state.dragNode == 'vx1' || this.state.dragNode == 'vx2') {
-        if (this.state.dragNode == 'vx2') {
-          dx = -dx;
-          dy = -dy;
-        }
-        var rx = ellipse.rx;
-        var t = ellipse.degrees * Math.PI / 180;
-        var cos = Math.cos(t);
-        var sin = Math.sin(t);
-        var rxx = rx * cos;
-        var rxy = rx * sin;
-        var nxx = rxx + dx;
-        var nxy = rxy - dy;
-        var { theta, r } = this.getTheta(nxx, nxy, t);
-        //console.log("new:", r, theta * 180 / Math.PI);
-        this.props.onChange(
-              this.state.dragEllipse,
-              {
-                degrees: theta * 180 / Math.PI,
-                rx: r
-              }
-        );
-      } else if (this.state.dragNode == 'vy1' || this.state.dragNode == 'vy2') {
-        if (this.state.dragNode == 'vy2') {
-          dx = -dx;
-          dy = -dy;
-        }
-        var ry = ellipse.ry;
-        var t = ellipse.degrees * Math.PI / 180;
-        var cos = Math.cos(t);
-        var sin = Math.sin(t);
-        var ryx = -ry * sin;
-        var ryy = ry * cos;
-        var nyx = ryx + dx;
-        var nyy = ryy - dy;
+      } else {
+        const t = ellipse.degrees * Math.PI / 180;  // TODO: can this be ellipse.theta?
+        const cos = Math.cos(t);
+        const sin = Math.sin(t);
+        if (dragNode === 'vx1' || dragNode === 'vx2') {
+          if (dragNode === 'vx2') {
+            dx = -dx;
+            dy = -dy;
+          }
+          const rx = ellipse.rx;
+          const rxx = rx * cos;
+          const rxy = rx * sin;
+          const nxx = rxx + dx;
+          const nxy = rxy - dy;
+          const { theta, r } = this.getTheta(nxx, nxy, t);
+          this.props.onEllipseDrag(
+                dragEllipse,
+                {
+                  degrees: theta * 180 / Math.PI,
+                  rx: r
+                }
+          );
+        } else if (dragNode === 'vy1' || dragNode === 'vy2') {
+          if (dragNode === 'vy2') {
+            dx = -dx;
+            dy = -dy;
+          }
+          const ry = ellipse.ry;
+          const ryx = -ry * sin;
+          const ryy = ry * cos;
+          let nyx = ryx + dx;
+          const nyy = ryy - dy;
 
-        var { theta, r } = this.getTheta(nyy, -nyx, t);
-        this.props.onChange(
-              this.state.dragEllipse,
-              {
-                degrees: theta * 180 / Math.PI,
-                ry: r
-              }
-        );
-      } else if (this.state.dragNode == 'f1' || this.state.dragNode == 'f2') {
-        if (this.state.dragNode == 'f2') {
-          dx = -dx;
-          dy = -dy;
-        }
-        var {rx, ry} = ellipse;
-        var rM = Math.max(rx, ry);
-        var rm = Math.min(rx, ry);
-        var f = sq(rM*rM - rm*rm);
-        var t = ellipse.degrees * Math.PI / 180;
-        var cos = Math.cos(t);
-        var sin = Math.sin(t);
-        var fx = f * (rx >= ry ? cos : -sin);
-        var fy = f * (rx >= ry ? sin : cos);
-        var nfx = fx + dx;//(rx >= ry ? dx : -dx);
-        var nfy = fy - dy;//(rx >= ry ? dy : -dy);
-        var { theta, r } = this.getTheta(rx >= ry ? nfx : nfy, rx >= ry ? nfy : -nfx, t);
-        var changes = { degrees: theta * 180 / Math.PI };
+          const { theta, r } = this.getTheta(nyy, -nyx, t);
+          this.props.onEllipseDrag(
+                dragEllipse,
+                {
+                  degrees: theta * 180 / Math.PI,
+                  ry: r
+                }
+          );
+        } else if (dragNode === 'f1' || dragNode === 'f2') {
+          if (dragNode === 'f2') {
+            dx = -dx;
+            dy = -dy;
+          }
+          const { rx, ry } = ellipse;
+          const rM = Math.max(rx, ry);
+          const rm = Math.min(rx, ry);
+          const f = sq(rM * rM - rm * rm);
+          const fx = f * (rx >= ry ? cos : -sin);
+          const fy = f * (rx >= ry ? sin : cos);
+          const nfx = fx + dx;
+          const nfy = fy - dy;
+          const { theta, r } =
+                this.getTheta(
+                      rx >= ry ? nfx : nfy,
+                      rx >= ry ? nfy : -nfx,
+                      t
+                );
+          const changes = {degrees: theta * 180 / Math.PI};
 
-        if (rx >= ry) {
-          changes.rx = sq(ry*ry + r*r);
-        } else {
-          changes.ry = sq(rx*rx + r*r);
-        }
+          if (rx >= ry) {
+            changes.rx = sq(ry*ry + r*r);
+          } else {
+            changes.ry = sq(rx*rx + r*r);
+          }
 
-        this.props.onChange(
-              this.state.dragEllipse,
-              changes
-        );
+          this.props.onEllipseDrag(
+                dragEllipse,
+                changes
+          );
+        }
       }
       this.setState({
         dragStartX: offsetX,
@@ -160,42 +163,48 @@ Svg = React.createClass({
       });
     }
   },
+
   componentDidMount() {
-    //console.log("svg:", ReactDOM.findDOMNode(this));
-
-    //if (this.props.regions) {
-    //  console.log("mounted:\n" + this.props.regions.map((r) => {
-    //    return r.props.k + ": " + r.area;
-    //  }).join("\n"));
-    //  this.props.regions.forEach((r) => { console.log(r); });
-    //}
-
-    this.setState({ width: 300, height: 400 });
+    this.setState({
+      width: 300,
+      height: 400
+    });
   },
 
-  invert(x, y) {
+  transformed(x, y) {
+    if (this.props.transformBy) {
+      const [ tx, ty ] = this.props.transformBy.transform([ x, y ]);
+      return { x: tx, y: ty };
+    } else {
+      return { x, y };
+    }
+  },
+
+  virtual(x, y) {
     return {
-      x: (x - this.state.width/2) / this.scale(),
-      y: (y - this.state.height/2) / -this.scale()
+      x: (x - this.state.width / 2) / this.scale(),
+      y: (y - this.state.height / 2) / -this.scale()
     };
   },
+
+  actual(x, y) {
+    return {
+      x: x * this.scale() + this.state.width / 2,
+      y: y * this.scale() + this.state.height / 2,
+    }
+  },
+
   scale() {
     return this.props.projection && this.props.projection.s || 1
   },
+
   render() {
-    var width = this.state.width || 300;
-    var height = this.state.height || 400;
-    var transforms = [];
-    var {projection, ellipses, showGrid, gridSize, projectedCursor, points, edges, regions} = this.props;
+    const width = this.state.width || 300;
+    const height = this.state.height || 400;
+    const { dragEllipse, pointRadius } = this.state;
+    const transforms = [];
+    let { projection, ellipses, transformBy, cursor, showGrid, gridSize, points, regions, hideCursorDot } = this.props;
 
-    //if (regions) {
-    //  console.log("render:\n" + regions.map((r) => {
-    //          return r.props.k + ": " + r.area;
-    //        }).join("\n"));
-    //  regions.forEach((r) => { console.log(r); });
-    //}
-
-    //console.log("ellipses:", _.map(ellipses, (e) => { return e.toString(); }).join(" "));
     if (projection) {
       if (projection.x !== undefined || projection.y !== undefined) {
         transforms.push([
@@ -209,37 +218,29 @@ Svg = React.createClass({
       }
     }
 
-    var s = this.scale();
-
-    //function transform(x, y) {
-    //  return [ x*s + width/2, -y*s + height/2 ];
-    //}
+    const s = this.scale();
 
     gridSize = gridSize || (Math.min(width, height) / 11 / s);
-    var gridLines = [];
+
+    const gridLines = [];
     if (showGrid !== undefined) {
-      var tl = this.invert(0, 0);
-      var lx = tl.x - gridSize;
-      var ty = tl.y + gridSize;
+      const tl = this.virtual(0, 0);
+      const lx = tl.x - gridSize;
+      const ty = tl.y + gridSize;
 
-      var br = this.invert(width, height);
-      var rx = br.x + gridSize;
-      var by = br.y - gridSize;
+      const br = this.virtual(width, height);
+      const rx = br.x + gridSize;
+      const by = br.y - gridSize;
 
-      var startX = lx - (lx % gridSize);
-      //if (startX < 0) {
-      //  startX += (startX % gridSize) - gridSize;
-      //} else {
-      //  startX -= (startX % gridSize);
-      //}
+      const startX = lx - (lx % gridSize);
 
-      var vLines = [];
-      for (var x = startX; x <= rx; x += gridSize) {
-        var d = "M" + x + " " + ty + "V" + by;
+      const vLines = [];
+      for (let x = startX; x <= rx; x += gridSize) {
+        const d = "M" + x + " " + ty + "V" + by;
         vLines.push(
               <path
                     key={"v-"+x}
-                    className={"grid-line" + (x == 0 ? " axis" : "")}
+                    className={"grid-line" + (x === 0 ? " axis" : "")}
                     strokeWidth={gridSize / 20}
                     d={d}
               />
@@ -247,63 +248,100 @@ Svg = React.createClass({
       }
       gridLines.push(<g key="vertical" className="grid-lines vertical">{vLines}</g>);
 
-      var startY = by - (by % gridSize);
-      //if (startY < 0) {
-      //  startY+= (startY % gridSize) - gridSize;
-      //} else {
-      //  startY -= (startY % gridSize);
-      //}
+      const startY = by - (by % gridSize);
 
-      //console.log("x: %f (%f) %f, y: %f (%f) %f", lx, startX, rx, by, startY, ty);
-
-      var hLines = [];
-      for (var y = startY; y <= ty; y += gridSize) {
-        var d = "M" + lx + " " + y + "H" + rx;
-        //console.log("hline:", d);
+      const hLines = [];
+      for (let y = startY; y <= ty; y += gridSize) {
+        const d = "M" + lx + " " + y + "H" + rx;
         hLines.push(
               <path
                     key={"h-"+y}
-                    className={"grid-line" + (y == 0 ? " axis" : "")}
+                    className={"grid-line" + (y === 0 ? " axis" : "")}
                     strokeWidth={gridSize / 20}
                     d={d}
               />
         );
       }
-      gridLines.push(<g key="horizontal" className="grid-lines horizontal">{hLines}</g>);
-
+      gridLines.push(
+            <g key="horizontal" className="grid-lines horizontal">{hLines}</g>
+      );
     }
 
-    //if (projectedCursor) {
-    //  console.log("projected cursor:", projectedCursor);
-    //}
+    const svgEllipses = [];
+    _.forEach(ellipses, (ellipse, k) => {
 
-    var svgEllipses = [];
-    for (var k in ellipses) {
+      //console.log("projecting:", ellipse, "into", transformBy);
+      const transformedEllipse =
+            transformBy ?
+                  ellipse.project(transformBy) :
+                  ellipse;
+
       svgEllipses.push(
             <SvgEllipse
                   key={k}
                   k={k}
-                  dragging={this.state.dragEllipse == k}
+                  dragging={dragEllipse === k}
                   dragStart={this.dragStart}
-                  {...ellipses[k]}
+                  {...transformedEllipse}
                   scale={s}
             />
       );
-    }
+    });
 
-    var svgPoints = [];
+    let svgPoints = [];
     if (points) {
       svgPoints =
-            points.map((p, i) => {
-              return <circle
-                    key={i}
-                    r={3 / s}
-                    className="projected-point"
-                    cx={p[0] || p.x}
-                    cy={p[1] || p.y}
-              />;
-            });
+            points.map(
+                  (p, i) => {
+                    const t = this.transformed(p.x, p.y);
+                    //console.log("transformed point:", p, t);
+                    return <circle
+                          key={i}
+                          r={pointRadius / s}
+                          className="projected-point"
+                          cx={t.x}
+                          cy={t.y}
+                    />
+                  }
+            );
     }
+
+    const transformedCursor = cursor ? this.transformed(cursor.x, cursor.y) : null;
+    const rawCursor = cursor ? this.actual(transformedCursor.x, transformedCursor.y) : null;
+
+    const [ cursorCircle, cursorVirtualCoords, cursorRawCoords ] =
+          cursor ?
+                [
+                  hideCursorDot ?
+                        null :
+                        <circle
+                              className="projected-cursor"
+                              r={3 / s}
+                              cx={transformedCursor.x}
+                              cy={transformedCursor.y}
+                        />,
+                  <text className="cursor" x="10" y="20">
+                    {
+                      [
+                        cursor.x.toString().substr(0,4),
+                        cursor.y.toString().substr(0,4)
+                      ].join(",")
+                    }
+                  </text>,
+                  <text className="cursor" x="10" y="40">
+                    {
+                      [
+                        rawCursor.x.toString().substr(0,4),
+                        rawCursor.y.toString().substr(0,4)
+                      ].join(",")
+                    }
+                  </text>
+                ] :
+                [
+                  null,
+                  null,
+                  null
+                ];
 
     return <svg
           onMouseMove={this.onMouseMove}
@@ -321,34 +359,10 @@ Svg = React.createClass({
         <g className="regions">{regions}</g>
         <g className="ellipses">{svgEllipses}</g>
         <g className="points">{svgPoints}</g>
-        {
-          projectedCursor ?
-                <circle
-                      className="projected-cursor"
-                      r={3 / s}
-                      cx={projectedCursor[0]}
-                      cy={projectedCursor[1]}
-                /> :
-                null
-        }
+        {cursorCircle}
       </g>
-      <text className="cursor" x="10" y="20">
-        {
-          [
-            this.state.cursor.x.toString().substr(0,4),
-            this.state.cursor.y.toString().substr(0,4)
-          ].join(",")
-        }
-      </text>
-      <text className="cursor" x="10" y="40">
-        {
-          [
-            this.state.vcursor.x.toString().substr(0,4),
-            this.state.vcursor.y.toString().substr(0,4)
-          ].join(",")
-        }
-      </text>
+      {cursorRawCoords}
+      {cursorVirtualCoords}
     </svg>;
   }
 });
-

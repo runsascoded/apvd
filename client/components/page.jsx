@@ -1,7 +1,7 @@
 
 Page = React.createClass({
   getInitialState() {
-    var ellipses = [
+    let ellipses = [
       {
         cx: -0.82,
         cy: 0.38,
@@ -38,9 +38,9 @@ Page = React.createClass({
         color: 'green',
         i: 3
       }
-    ].map((e) => { return new Ellipse(e); });
+    ].map(e => new Ellipse(e));
 
-    var ellipsesObj = {};
+    const ellipsesObj = {};
     ellipses.forEach((e) => {
       ellipsesObj[e.i] = e;
     });
@@ -51,104 +51,88 @@ Page = React.createClass({
 
   onTextFieldChange(value) {
     try {
-      var ellipses = JSON.parse(value);
-      this.setState({ ellipses: ellipses, malformedEllipses: false });
+      const ellipses = JSON.parse(value);
+      this.setState({
+        ellipses,
+        malformedEllipses: false
+      });
     } catch(err) {
       this.setState({ malformedEllipses: true });
     }
   },
 
-  onChange(k, change) {
-    var newEllipseK = this.state.ellipses[k].modify(change);
-    var o = {}; o[k] = newEllipseK;
-    var newEllipses = _.extend(this.state.ellipses, o);
+  onEllipseDrag(k, change) {
+    const newEllipseK = this.state.ellipses[k].modify(change);
+    const o = {}; o[k] = newEllipseK;
+    const newEllipses = _.extend(this.state.ellipses, o);
     this.setState({ ellipses: newEllipses });
   },
 
-  onCursor(p) {
-    var transformed = _.map(this.state.ellipses, (e, k) => { return e.transform(p) });
+  onCursor(p, svgIdx) {
     this.setState({
-      projectedCursor: transformed
+      virtualCursor: p,
+      activeSvg: svgIdx
     });
   },
 
   render() {
-    var ellipses = this.state.ellipses;
-    var e = new Ellipses(ellipses);
-    //console.log(e.areasObj);
-    var { intersections, edgesByE, regions } = e;
+    const { ellipses, malformedEllipses, activeSvg } = this.state;
+    const e = new Ellipses(ellipses);
+    const { intersections, regions } = e;
 
-    var e0 = ellipses[0];
-    var e1 = ellipses[1];
-    var e2 = ellipses[2];
+    const areaKeys = powerset(_.keys(ellipses)).map(s => s.join(",")).sort(lengthCmp);
+    const maxKeyLen = Math.max.apply(Math, areaKeys.map(k => k.length));
 
-    var ellipses0 = _.map(ellipses, (e) => { return e.project(e0); });
-    var ellipses1 = e1 ? _.map(ellipses, (e) => { return e.project(e1); }) : [];
-    var ellipses2 = e2 ? _.map(ellipses, (e) => { return e.project(e2); }) : [];
+    const areasStr =
+          areaKeys.map(
+                rs => {
+                  const area = e.areasObj[rs] || 0;
+                  return rs + spaces(maxKeyLen - rs.length) + ": " + r3(area / pi);
+                })
+                .join("\n");
 
-    var intersections0 = [];
-    var intersections1 = [];
-    var intersections2 = [];
-    _.forEach(intersections, (i) => {
-      intersections0.push(e0.transform(i.x, i.y));
-      intersections1.push(e1.transform(i.x, i.y));
-      intersections2.push(e2.transform(i.x, i.y));
-    });
+    const projectedSVGs =
+          _.map(
+                ellipses,
+                (ellipse, k) =>
+                      <Svg
+                            key={k}
+                            transformBy={ellipses[k]}
+                            ellipses={ellipses}
+                            points={intersections}
+                            cursor={this.state.virtualCursor}
+                            showGrid={true}
+                            gridSize={1}
+                            projection={{ x: 0, y: 0, s: 50 }}
+                            onCursor={p => this.onCursor(p, k)}
+                            hideCursorDot={activeSvg === k}
+                      />
 
-    //var ellipseKeys = _.keys(ellipses).join(",");
-    var areaKeys = powerset(_.keys(ellipses)).map((s) => { return s.join(","); }).sort(lengthCmp);
-    //var areaKeys = _.keys(e.areasObj).sort(lengthCmp);
-    var maxKeyLen = Math.max.apply(Math, areaKeys.map((k) => { return k.length; }));
-    var areasStr =
-          areaKeys.map((rs) => {
-            var area = e.areasObj[rs] || 0;
-            return rs + spaces(maxKeyLen - rs.length) + ": " + r3(area / pi);
-          }).join("\n");
+          );
 
     return <div>
       <Svg
+            key="main"
             ellipses={ellipses}
             points={intersections}
+            cursor={this.state.virtualCursor}
             regions={regions}
-            onChange={this.onChange}
+            onEllipseDrag={this.onEllipseDrag}
             showGrid={true}
             gridSize={1}
             projection={{ x: 0, y: 0, s: 50 }}
             onCursor={this.onCursor}
+            hideCursorDot={activeSvg === undefined}
       />
-      <Svg
-            ellipses={ellipses0}
-            points={intersections0}
-            showGrid={true}
-            gridSize={1}
-            projection={{ x: 0, y: 0, s: 50 }}
-            projectedCursor={this.state.projectedCursor && this.state.projectedCursor[0]}
-        />
-      <Svg
-            ellipses={ellipses1}
-            points={intersections1}
-            showGrid={true}
-            gridSize={1}
-            projection={{ x: 0, y: 0, s: 50 }}
-            projectedCursor={this.state.projectedCursor && this.state.projectedCursor[1]}
-      />
-      <Svg
-            ellipses={ellipses2}
-            points={intersections2}
-            showGrid={true}
-            gridSize={1}
-            projection={{ x: 0, y: 0, s: 50 }}
-            projectedCursor={this.state.projectedCursor && this.state.projectedCursor[2]}
-      />
+      {projectedSVGs}
       <textarea
             className="areas"
-            onChange={(e) => {}}
+            onChange={() => {}}
             value={areasStr}
       />
       <ModelTextField
-            ellipses={ellipses}
+            {...{ellipses, malformedEllipses}}
             onChange={this.onTextFieldChange}
-            malformedEllipses={this.state.malformedEllipses}
       />
     </div>
   }
