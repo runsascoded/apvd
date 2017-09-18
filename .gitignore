@@ -4,4 +4,5 @@
 packages
 *.iml
 node_modules
+docs/_site
 build/_site
