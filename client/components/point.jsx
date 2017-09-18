@@ -1,4 +1,6 @@
 
+import React from 'react';
+
 Point = React.createClass({
   onMouseDown(e) {
     this.props.dragStart(e, this.props.k);

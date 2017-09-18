@@ -1,7 +1,9 @@
 
+import React from 'react';
+
 Region = React.createClass({
 
-  onMouseEnter(e) {
+  onMouseEnter() {
     console.log("enter:", this.props.k, this.props.polygonArea, this.props.secantArea, this.props.area);
   },
 
@@ -10,10 +12,10 @@ Region = React.createClass({
   },
 
   render() {
-    var {i, width, points, edges} = this.props;
-    var n = points.length;
-    if (n == 1) {
-      var e = edges[0].e;
+    const {i, width, points, edges} = this.props;
+    const n = points.length;
+    if (n === 1) {
+      const e = edges[0].e;
       return <g
             transform={"translate(" + e.cx + "," + e.cy + ") rotate(" + e.degrees + ")"}>
         <ellipse
@@ -28,10 +30,10 @@ Region = React.createClass({
       </g>;
     }
 
-    var d = edges.map(((e, i) => {
-      var point = points[i];
+    const d = edges.map((e, i) => {
+      const point = points[i];
       return i ? e.arcpath(point) : e.path(point);
-    }).bind(this)).join(" ");
+    }).join(" ");
 
     //console.log("region:", d);
     return <path

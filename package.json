@@ -1,0 +1,24 @@
+{
+  "name": "apvd",
+  "version": "1.0.0",
+  "description": "Area-proportional venn-diagrams",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ryan-williams/apvd.git"
+  },
+  "author": "@ryan-williams",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ryan-williams/apvd/issues"
+  },
+  "homepage": "https://github.com/ryan-williams/apvd#readme",
+  "dependencies": {
+    "babel-runtime": "^6.26.0",
+    "react": "^15.6.1",
+    "react-dom": "^15.6.1"
+  }
+}

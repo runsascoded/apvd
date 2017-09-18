@@ -1,4 +1,7 @@
 
+import React from 'react';
+// import Region from './region';
+
 Ellipses = class {
   constructor(ellipses) {
     this.ellipses = ellipses;

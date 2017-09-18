@@ -1,4 +1,6 @@
 
+import React from 'react';
+
 ModelTextField = React.createClass({
   onChange(e) {
     this.props.onChange(e.target.value);

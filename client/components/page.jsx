@@ -1,4 +1,6 @@
 
+import React from 'react';
+
 Page = React.createClass({
   getInitialState() {
     let ellipses = [
@@ -155,5 +157,12 @@ Page = React.createClass({
   }
 });
 
-Template.registerHelper('Page', () => { return Page; });
+import { Meteor } from 'meteor/meteor';
+import { render } from 'react-dom';
 
+Meteor.startup(() => {
+  render(
+        <Page />,
+        document.getElementById('page')
+  );
+});

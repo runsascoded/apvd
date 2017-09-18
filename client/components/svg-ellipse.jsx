@@ -1,4 +1,6 @@
 
+import React from 'react';
+
 SvgEllipse = React.createClass({
   getInitialState() {
     return {
