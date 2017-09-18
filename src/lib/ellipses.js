@@ -1,8 +1,12 @@
+import _ from "underscore";
+import Region from "./region";
+import Edge from "./edge";
+import Ellipse from "./ellipse";
+import Intersection from "./intersection";
+import {intersect, keyStr, powerset, rts, ss, sum, tpi} from "./utils";
+import React from "react";
 
-import React from 'react';
-// import Region from './region';
-
-Ellipses = class {
+export default class Ellipses {
   constructor(ellipses) {
     this.ellipses = ellipses;
     this.keys = _.keys(ellipses);

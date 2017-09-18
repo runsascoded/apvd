@@ -1,42 +1,51 @@
 
 import React from 'react';
+import { sq } from '../lib/utils';
+import Point from './point';
 
-SvgEllipse = React.createClass({
-  getInitialState() {
-    return {
-      mouseEntered: false
-    };
-  },
+export default class SvgEllipse extends React.Component {
+  constructor() {
+    super();
+    this.state = { mouseEntered: false };
+    this.onMouseEnter = this.onMouseEnter.bind(this);
+    this.onMouseLeave = this.onMouseLeave.bind(this);
+    this.dragStart = this.dragStart.bind(this);
+  }
+
   onMouseEnter() {
+    console.log("mouse enter:", this);
     this.setState({ mouseEntered: true });
-  },
+  }
+
   onMouseLeave() {
     this.setState({
       mouseEntered: false
     });
-  },
+  }
+
   dragStart(e, k) {
     this.props.dragStart(e, k, this.props.k);
-  },
+  }
+
   render() {
-    var {cx, cy, rx, ry, degrees, color} = this.props;
+    const {cx, cy, rx, ry, degrees, color} = this.props;
 
-    var vx1 = [ rx, 0 ];
-    var vx2 = [ -rx, 0 ];
+    const vx1 = [rx, 0];
+    const vx2 = [-rx, 0];
 
-    var vy1 = [ 0, ry ];
-    var vy2 = [ 0, -ry ];
+    const vy1 = [0, ry];
+    const vy2 = [0, -ry];
 
-    var c = [ 0, 0 ];
+    const c = [0, 0];
 
-    var rM = Math.max(rx, ry);
-    var rm = Math.min(rx, ry);
-    var rc = sq(rM*rM - rm*rm);
+    const rM = Math.max(rx, ry);
+    const rm = Math.min(rx, ry);
+    const rc = sq(rM * rM - rm * rm);
 
-    var f1 = rx >= ry ? [ rc, 0 ] : [ 0, rc ];
-    var f2 = rx >= ry ? [ -rc, 0 ] : [ 0, -rc ];
+    const f1 = rx >= ry ? [rc, 0] : [0, rc];
+    const f2 = rx >= ry ? [-rc, 0] : [0, -rc];
 
-    var points = [];
+    let points = [];
     if (this.state.mouseEntered || this.props.dragging) {
       points = [
         <Point key="f1" k="f1" cs={f1} dragStart={this.dragStart} scale={this.props.scale} color="lightgrey" />,
@@ -59,5 +68,5 @@ SvgEllipse = React.createClass({
       {points}
     </g>;
   }
-});
+}
 

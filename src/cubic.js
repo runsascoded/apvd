@@ -1,5 +1,7 @@
 
-cubic = (a, b, c, d) => {
+import { sq, pi, cmp } from './lib/utils';
+
+export const cubic = (a, b, c, d) => {
   if (d !== undefined) {
     if (a === 0) {
       let D = c*c - 4*b*d;
@@ -59,4 +61,3 @@ cubic = (a, b, c, d) => {
     }
   }
 };
-

@@ -1,5 +1,10 @@
 
-Ellipse = class {
+import _ from 'underscore';
+import { zeroCheck, pi, sq, pp, r3 } from './utils';
+import Intersection from './intersection';
+import { quartic } from '../quartic';
+
+export default class Ellipse {
   constructor(o) {
     this.i = o.i;
     this.name = o.name;
@@ -32,9 +37,7 @@ Ellipse = class {
 
       if (Math.abs(o.B) < 1e-10) {
 
-        const s2 = s*s;
-
-        const {A, B, C, D, E, F} = o;
+        const {A, C, D, E, F} = o;
         this.cx = -D / 2 / A;
         this.cy = -E / 2 / C;
         const n = -4 * F + D * D / A + E * E / C;
@@ -381,4 +384,4 @@ Ellipse = class {
     //console.log("unit:", this.toString(), "coeffs:", [c4,c3,c2,c1,c0].map(r3), "xs:", xs.map(r3), "ps:", pps(ps));
     return ps;
   }
-};
+}

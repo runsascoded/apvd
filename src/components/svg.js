@@ -1,14 +1,20 @@
 
+import _ from 'underscore';
 import React from 'react';
-import ReactDOM from 'react-dom';
+import SvgEllipse from './svg-ellipse';
+import { sq } from '../lib/utils';
 
-Svg = React.createClass({
-  getInitialState() {
-    return {
+export default class Svg extends React.Component {
+  constructor() {
+    super();
+    this.state = {
       dragging: false,
       pointRadius: 3
     };
-  },
+    this.onMouseMove = this.onMouseMove.bind(this);
+    this.dragStart = this.dragStart.bind(this);
+    this.onMouseUp = this.onMouseUp.bind(this);
+  }
 
   onMouseUp() {
     if (this.state.dragging) {
@@ -17,10 +23,10 @@ Svg = React.createClass({
         dragEllipse: null
       });
     }
-  },
+  }
 
   dragStart(e, k, ek) {
-    const { left, top } = this.domRect();
+    const { left, top } = this.svg.getBoundingClientRect();
     this.setState({
       dragging: true,
       dragNode: k,
@@ -28,9 +34,9 @@ Svg = React.createClass({
       dragStartX: e.clientX - left,
       dragStartY: e.clientY - top
     });
-  },
+  }
 
-  getTheta(x, y, t) {
+  static getTheta(x, y, t) {
     const r = sq(x * x + y * y);
     let theta = null;
     const pi4s = Math.round(t * 2 / Math.PI);
@@ -51,14 +57,10 @@ Svg = React.createClass({
         theta += 2*Math.PI;
     }
     return { theta, r };
-  },
-
-  domRect() {
-    return ReactDOM.findDOMNode(this).getBoundingClientRect();
-  },
+  }
 
   onMouseMove(e) {
-    const { left, top } = this.domRect();
+    const { left, top } = this.svg.getBoundingClientRect();
     const offsetX = e.clientX - left;
     const offsetY = e.clientY - top;
 
@@ -100,7 +102,7 @@ Svg = React.createClass({
           const rxy = rx * sin;
           const nxx = rxx + dx;
           const nxy = rxy - dy;
-          const { theta, r } = this.getTheta(nxx, nxy, t);
+          const { theta, r } = Svg.getTheta(nxx, nxy, t);
           this.props.onEllipseDrag(
                 dragEllipse,
                 {
@@ -119,7 +121,7 @@ Svg = React.createClass({
           let nyx = ryx + dx;
           const nyy = ryy - dy;
 
-          const { theta, r } = this.getTheta(nyy, -nyx, t);
+          const { theta, r } = Svg.getTheta(nyy, -nyx, t);
           this.props.onEllipseDrag(
                 dragEllipse,
                 {
@@ -141,7 +143,7 @@ Svg = React.createClass({
           const nfx = fx + dx;
           const nfy = fy - dy;
           const { theta, r } =
-                this.getTheta(
+                Svg.getTheta(
                       rx >= ry ? nfx : nfy,
                       rx >= ry ? nfy : -nfx,
                       t
@@ -165,14 +167,14 @@ Svg = React.createClass({
         dragStartY: offsetY
       });
     }
-  },
+  }
 
   componentDidMount() {
     this.setState({
       width: 300,
       height: 400
     });
-  },
+  }
 
   transformed(x, y) {
     if (this.props.transformBy) {
@@ -181,25 +183,25 @@ Svg = React.createClass({
     } else {
       return { x, y };
     }
-  },
+  }
 
   virtual(x, y) {
     return {
       x: (x - this.state.width / 2) / this.scale(),
       y: (y - this.state.height / 2) / -this.scale()
     };
-  },
+  }
 
   actual(x, y) {
     return {
       x: x * this.scale() + this.state.width / 2,
       y: y * this.scale() + this.state.height / 2,
     }
-  },
+  }
 
   scale() {
-    return this.props.projection && this.props.projection.s || 1
-  },
+    return (this.props.projection && this.props.projection.s) || 1;
+  }
 
   render() {
     const width = this.state.width || 300;
@@ -347,6 +349,9 @@ Svg = React.createClass({
                 ];
 
     return <svg
+          ref={svg => {
+            this.svg = svg;
+          }}
           onMouseMove={this.onMouseMove}
           onMouseUp={this.onMouseUp}
     >
@@ -368,4 +373,4 @@ Svg = React.createClass({
       {cursorVirtualCoords}
     </svg>;
   }
-});
+}

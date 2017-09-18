@@ -1,5 +1,8 @@
 
-quartic = (a, b, c, d, e) => {
+import { cubic } from './cubic';
+import { sq, cmp } from './lib/utils';
+
+export const quartic = (a, b, c, d, e) => {
 
   if (e !== undefined) {
     if (a === 0) {
@@ -75,4 +78,3 @@ quartic = (a, b, c, d, e) => {
 
   return roots.sort(cmp);
 };
-

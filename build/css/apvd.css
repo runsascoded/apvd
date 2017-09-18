@@ -1,0 +1,53 @@
+svg {
+  float: left;
+  height: 400px;
+  width: 300px;
+  border: 1px solid black;
+}
+svg .ellipses ellipse {
+  fill-opacity: 0.2;
+}
+svg .grid-line {
+  stroke: lightgrey;
+}
+svg .axis {
+  stroke: grey;
+}
+svg .cursor {
+  font-family: monospace;
+  font-size: 10px;
+  user-select: none;
+  cursor: default;
+}
+svg .projected-cursor {
+  fill: black;
+}
+svg .projected-point {
+  fill: green;
+}
+svg .edge {
+  fill-opacity: 0.2;
+}
+svg .region {
+  fill-opacity: 0.3;
+  fill: black;
+}
+svg .clear {
+  fill: transparent;
+}
+.model-text-field {
+  float: left;
+  height: 400px;
+  width: 400px;
+  font-family: monospace;
+}
+.areas {
+  float: left;
+  height: 395px;
+  width: 200px;
+  font-family: monospace;
+  font-size: 1.4em;
+}
+.malformed {
+  background-color: #FFF2F2;
+}

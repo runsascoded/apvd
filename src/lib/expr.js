@@ -1,5 +1,6 @@
 
-Expr = class {
+/*
+export class Expr {
   constructor(o) {
     this.o = o;
   }
@@ -53,66 +54,67 @@ Expr = class {
   }
 
   derivative(n) {
-    var k;
-    var o = this.o;
+    let k;
+    const o = this.o;
     for (k in o) {
       break;
     }
-    var v = o[k];
-    if (k == 'n') {
-      if (o.n == n) {
+    const v = o[k];
+    if (k === 'n') {
+      if (o.n === n) {
         return one;
       }
       return zero;
-    } else if (k == 'v') {
+    } else if (k === 'v') {
       return zero;
-    } else if (k == 'add1' || k == 'add2') {
+    } else if (k === 'add1' || k === 'add2') {
       return o.add1.derivative(n).plus(o.add2.derivative(n));
-    } else if (k == 'mul1' || k == 'mul2') {
+    } else if (k === 'mul1' || k === 'mul2') {
       return o.mul1.derivative(n).mult(o.mul2).plus(o.mul2.derivative(n).mult(o.mul1));
-    } else if (k == 'base' || k == 'exp') {
+    } else if (k === 'base' || k === 'exp') {
       return o.base.pow(o.exp - 1).mult(o.base.derivative(n)).mult(C(o.exp));
-    } else if (k == 'cos') {
+    } else if (k === 'cos') {
       return o.cos.derivative(n).neg.mult(o.cos.sin);
-    } else if (k == 'acos') {
-      var e = o.acos;
+    } else if (k === 'acos') {
+      const e = o.acos;
       return e.derivative(n).neg.div(one.sub(e.pow(2)).sqrt)
     }
     throw new Error("Unrecognized Expr in derivative: " + js(o));
   }
 
   eval(vs) {
-    var k;
-    var o = this.o;
+    let k;
+    const o = this.o;
     for (k in o) {
       break;
     }
-    var v = o[k];
-    if (k == 'n') {
+    const v = o[k];
+    if (k === 'n') {
       if (!(o.n in vs)) {
         throw new Error("Not found: " + o.n + " in " + JSON.stringify(vs));
       }
       return vs[o.n];
-    } else if (k == 'v') {
+    } else if (k === 'v') {
       return o.v;
-    } else if (k == 'add1' || k == 'add2') {
+    } else if (k === 'add1' || k === 'add2') {
       return o.add1.eval(vs) + o.add2.eval(vs);
-    } else if (k == 'mul1' || k == 'mul2') {
+    } else if (k === 'mul1' || k === 'mul2') {
       return o.mul1.eval(vs) * o.mul2.eval(vs);
-    } else if (k == 'base' || k == 'exp') {
+    } else if (k === 'base' || k === 'exp') {
       return Math.pow(o.base.eval(vs), o.exp);
-    } else if (k == 'cos') {
+    } else if (k === 'cos') {
       return Math.cos(o.cos.eval(vs));
-    } else if (k == 'acos') {
-      var e = o.acos;
+    } else if (k === 'acos') {
+      const e = o.acos;
       return Math.acos(o.acos.eval(vs));
-    } else if (k == 'sin') {
+    } else if (k === 'sin') {
       return Math.sin(o.sin.eval(vs));
     }
   }
 };
 
-C = (v) => { return new Expr({ v: v }); };
-V = (n) => { return new Expr({ n: n }); };
-zero = C(0);
-one = C(1);
+export C = (v) => { return new Expr({ v: v }); };
+export V = (n) => { return new Expr({ n: n }); };
+export zero = C(0);
+export one = C(1);
+*/

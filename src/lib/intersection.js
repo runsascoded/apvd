@@ -1,5 +1,7 @@
 
-Intersection = class {
+import { pp, r3, deg } from './utils';
+
+export default class Intersection {
   constructor(o) {
     //console.log("Int:", o);
     this.e1 = o.e1;
@@ -84,4 +86,4 @@ Intersection = class {
   s() {
     return "I" + pp(this.x, this.y);
   }
-};
+}

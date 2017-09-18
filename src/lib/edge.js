@@ -1,5 +1,9 @@
 
-Edge = class {
+import _ from 'underscore';
+import React from 'react';
+import { tpi, pp, pd, pi, pc, deg } from './utils';
+
+export default class Edge {
   constructor(o) {
     this.e = o.e;
     this.i = this.e.i;
@@ -20,7 +24,7 @@ Edge = class {
     this.y2 = this.p2.y;
     this.o2 = this.p2.o[this.i];
     this.t2 = this.o2.t;
-    if (this.p2 != this.p1) {
+    if (this.p2 !== this.p1) {
       this.p2.addEdge(this);
     }
 
@@ -31,7 +35,7 @@ Edge = class {
     this.mp = this.e.getPoint(this.mt);
 
     this.dt = this.t2 - this.t1;
-    if (this.p1 == this.p2) {
+    if (this.p1 === this.p2) {
       this.dt = tpi;
     } else if (this.dt < 0) {
       this.dt += tpi;
@@ -52,20 +56,20 @@ Edge = class {
   }
 
   hasContainers(containers) {
-    for (var c in containers) {
-      if (!(c in this.containers) && c != this.i) return false;
+    for (let c in containers) {
+      if (!(c in this.containers) && c !== this.i) return false;
     }
     return true;
   }
 
   other(p) {
-    if (p == this.p1) return this.p2;
-    if (p == this.p2) return this.p1;
+    if (p === this.p1) return this.p2;
+    if (p === this.p2) return this.p1;
     throw new Error("Invalid p: " + p.toString() + " in " + this.toString());
   }
 
   get ellipses() {
-    var o = _.extend({}, this.containers);
+    const o = _.extend({}, this.containers);
     o[this.i] = true;
     return o;
   }
@@ -83,13 +87,13 @@ Edge = class {
   }
 
   arcpath(from) {
-    var {rx, ry, e} = this;
+    const {rx, ry, e} = this;
 
-    var to = this.other(from);
-    var [xt,yt] = [to.x, to.y];
+    const to = this.other(from);
+    const [xt,yt] = [to.x, to.y];
 
-    var largeArc = (this.dt > pi) ? 1 : 0;
-    var sweepFlag = (from == this.p1) ? 1 : 0;
+    const largeArc = (this.dt > pi) ? 1 : 0;
+    const sweepFlag = (from === this.p1) ? 1 : 0;
     return [
       "A" + pc(rx, ry),
       deg(e.t),
@@ -112,4 +116,4 @@ Edge = class {
           fill={this.e.color}
     />;
   }
-};
+}

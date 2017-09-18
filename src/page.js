@@ -1,8 +1,15 @@
 
+import _ from 'underscore';
 import React from 'react';
+import Svg from './components/svg';
+import ModelTextField from './components/model-text-field';
+import Ellipse from './lib/ellipse';
+import Ellipses from './lib/ellipses';
+import { lengthCmp, pi, powerset, r3, spaces } from './lib/utils';
 
-Page = React.createClass({
-  getInitialState() {
+export default class Page extends React.Component {
+  constructor() {
+    super();
     let ellipses = [
       {
         cx: -0.82,
@@ -50,10 +57,10 @@ Page = React.createClass({
     ellipses.forEach((e) => {
       ellipsesObj[e.i] = e;
     });
-    return {
-      ellipses: ellipsesObj
-    };
-  },
+    this.state = { ellipses: ellipsesObj };
+    this.onCursor = this.onCursor.bind(this);
+    this.onEllipseDrag = this.onEllipseDrag.bind(this);
+  }
 
   onTextFieldChange(value) {
     try {
@@ -65,27 +72,26 @@ Page = React.createClass({
     } catch(err) {
       this.setState({ malformedEllipses: true });
     }
-  },
+  }
 
   onEllipseDrag(k, change) {
     const newEllipseK = this.state.ellipses[k].modify(change);
     const o = {}; o[k] = newEllipseK;
     const newEllipses = _.extend(this.state.ellipses, o);
     this.setState({ ellipses: newEllipses });
-  },
+  }
 
   onCursor(p, svgIdx) {
     this.setState({
       virtualCursor: p,
       activeSvg: svgIdx
     });
-  },
+  }
 
   render() {
     const { ellipses, malformedEllipses, activeSvg } = this.state;
     const e = new Ellipses(ellipses);
     const { intersections, regions } = e;
-
     const areaKeys =
           powerset(_.keys(ellipses))
                 .map(s => { return {
@@ -155,14 +161,4 @@ Page = React.createClass({
       />
     </div>
   }
-});
-
-import { Meteor } from 'meteor/meteor';
-import { render } from 'react-dom';
-
-Meteor.startup(() => {
-  render(
-        <Page />,
-        document.getElementById('page')
-  );
-});
+}

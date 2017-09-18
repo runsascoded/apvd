@@ -1,15 +1,21 @@
 
+import _ from 'underscore';
 import React from 'react';
 
-Region = React.createClass({
+export default class Region extends React.Component {
+
+  constructor() {
+    super();
+    this.onMouseEnter = this.onMouseEnter.bind(this);
+  }
 
   onMouseEnter() {
     console.log("enter:", this.props.k, this.props.polygonArea, this.props.secantArea, this.props.area);
-  },
+  }
 
   onMouseLeave(e) {
     //console.log("leave:", this.props.k, this);
-  },
+  }
 
   render() {
     const {i, width, points, edges} = this.props;
@@ -46,4 +52,4 @@ Region = React.createClass({
           onMouseLeave={this.onMouseLeave}
     />;
   }
-});
+}
