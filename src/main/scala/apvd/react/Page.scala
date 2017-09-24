@@ -1,30 +1,16 @@
 package apvd.react
 
-import japgolly.scalajs.react._
+import apvd.lib.Ellipse.toTheta
+import apvd.lib.{ Ellipse, Point }
 import japgolly.scalajs.react.vdom.html_<^._
-
-import japgolly.scalajs.react.vdom.TagMod
-import japgolly.scalajs.react.{ BackendScope, Callback, CallbackTo }
+import japgolly.scalajs.react.{ BackendScope, Callback, CallbackTo, _ }
 import org.scalajs.dom.html
-
-import scala.collection.mutable.ArrayBuffer
-
-case class Point(x: Double, y: Double)
 
 object Page {
 
   case class State(ellipses: Seq[Ellipse],
                    cursor: Point = Point(0, 0),
                    activeSvg: Int = 0)
-
-  case class Ellipse(cx: Double,
-                     cy: Double,
-                     rx: Double,
-                     ry: Double,
-                     degrees: Double,
-                     color: String,
-                     name: String
-                    )
 
   object State {
     val empty =
@@ -35,7 +21,7 @@ object Page {
             cy = 0.38,
             rx = 1,
             ry = 2,
-            degrees = 0,
+            theta = 0,
             color = "red",
             name = "A"
           ),
@@ -44,7 +30,7 @@ object Page {
             cy = 0.12,
             rx = 1.3,
             ry = 0.4,
-            degrees = 114,
+            theta = 114,
             color = "blue",
             name = "B"
           ),
@@ -53,7 +39,7 @@ object Page {
             cy = 1.52,
             rx = .94,
             ry = .48,
-            degrees = 18,
+            theta = toTheta(18),
             color = "darkgoldenrod",
             name = "C"
           ),
@@ -62,7 +48,7 @@ object Page {
             cy = 0,
             rx = .6,
             ry = .48,
-            degrees = -44,
+            theta = toTheta(-44),
             color = "green",
             name = "D"
           )
@@ -95,12 +81,13 @@ object Page {
         ),
         ellipses
           .toTagMod(
-            _ ⇒
+            ellipse ⇒
               Panel.component(
                 Panel.Props(
                   ellipses,
                   cursor,
-                  CallbackTo(point ⇒ updateCursor(point))
+                  CallbackTo(point ⇒ updateCursor(point)),
+                  transformBy = Some(ellipse)
                 )
               )
           )

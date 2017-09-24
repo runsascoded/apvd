@@ -1,12 +1,12 @@
 package apvd.react
 
 import apvd.css.Style
-import apvd.react.Page.Ellipse
+import apvd.lib.{ Ellipse, Point }
+import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.Attr.ValueType
 import japgolly.scalajs.react.vdom.HtmlAttrs.{ key, onMouseMove }
 import japgolly.scalajs.react.vdom.svg_<^._
 import japgolly.scalajs.react.vdom.{ Attr, SvgTags, TagMod }
-import japgolly.scalajs.react.{ Callback, _ }
 import org.scalajs.dom.raw.SVGSVGElement
 
 object ClassName extends Attr[String]("class") {
@@ -19,6 +19,7 @@ object Panel {
   case class Props(ellipses: Seq[Ellipse],
                    cursor: Point,
                    onCursor: CallbackTo[Point ⇒ Callback],
+                   transformBy: Option[Ellipse] = None,
                    width: Int = 300,
                    height: Int = 400,
                    scale: Double = 50,
@@ -78,7 +79,7 @@ object Panel {
 
     def render(p: Props, state: Unit) = {
       implicit val props = p
-      val Props(ellipses, cursor, onCursor, width, height, scale, gridLineWidth, cursorDotRadius) = p
+      val Props(ellipses, cursor, onCursor, transformBy, width, height, scale, gridLineWidth, cursorDotRadius) = p
 
       val maxX = width / scale / 2
       val maxY = height / scale / 2
@@ -116,6 +117,14 @@ object Panel {
 
       import SvgTags._
 
+      val transformedEllipses =
+        transformBy
+          .map {
+            transformBy ⇒
+              ellipses.map(_.project(transformBy))
+          }
+          .getOrElse(ellipses)
+
       svg(
         panel,
         ^.width := width,
@@ -123,14 +132,16 @@ object Panel {
         g(
           ^.transform := s"translate(${width / 2.0},${height / 2.0}) scale($scale,-$scale)",
           g(
-            verticalLines :+ (ClassName := "vertical-lines"): _*
+            ClassName := "vertical-lines",
+            verticalLines.toTagMod
           ),
           g(
-            horizontalLines :+ (ClassName := "horizontal-lines"): _*
+            ClassName := "horizontal-lines",
+            horizontalLines.toTagMod
           ),
           g(
             ClassName := "ellipses",
-            ellipses.toVdomArray {
+            transformedEllipses.toVdomArray {
               e ⇒
                 g(
                   key := e.name,
@@ -149,7 +160,7 @@ object Panel {
             Style.cursor,
             ^.cx := cursor.x,
             ^.cy := cursor.y,
-            ^.r := cursorDotRadius / scale
+            ^.r  := cursorDotRadius / scale
           )
         ),
         onMouseMove ==> mouseMove
