@@ -28,12 +28,10 @@ object Style extends StyleSheet.Standalone {
   }
 
   val gridLine = Class("grid-line")
-  gridLine -
-    svgStroke.lightgray
+  gridLine - svgStroke.lightgray
 
   val axis = Class("axis")
-  axis -
-    svgStroke.grey
+  axis - svgStroke.grey
 
   val panel = Class("panel")
   panel - (
@@ -48,6 +46,8 @@ object Style extends StyleSheet.Standalone {
   }
 
   val cursor = Class("cursor")
-  cursor -
-    fill.black
+  cursor - fill.black
+
+  val ellipse = Class("ellipse")
+  ellipse - svgFillOpacity(0.2)
 }

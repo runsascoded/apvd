@@ -128,6 +128,23 @@ object Panel {
           g(
             horizontalLines :+ (ClassName := "horizontal-lines"): _*
           ),
+          g(
+            ClassName := "ellipses",
+            ellipses.toVdomArray {
+              e ⇒
+                g(
+                  key := e.name,
+                  ^.transform := s"translate(${e.cx},${e.cy}) rotate(${e.degrees})",
+                  ellipse(
+                    Style.ellipse,
+                    ^.rx := e.rx,
+                    ^.ry := e.ry,
+                    ^.fill := e.color,
+                    ^.strokeWidth := 1.0 / scale
+                  )
+                )
+            }
+          ),
           circle(
             Style.cursor,
             ^.cx := cursor.x,
@@ -135,18 +152,7 @@ object Panel {
             ^.r := cursorDotRadius / scale
           )
         ),
-        onMouseMove ==> mouseMove,
-        ellipses.toVdomArray {
-          e ⇒
-            ellipse(
-              key := e.name,
-              ^.cx := e.cx,
-              ^.cy := e.cy,
-              ^.rx := e.rx,
-              ^.ry := e.ry,
-              ^.fill := e.color
-            )
-        }
+        onMouseMove ==> mouseMove
       )
       .ref(ref = _)
     }
