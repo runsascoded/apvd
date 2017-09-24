@@ -4,6 +4,8 @@ import japgolly.scalajs.react.vdom.ReactAttr.ValueType
 
 import scala.scalajs.js
 import scalacss.DevDefaults._
+import scalacss.internal.Attr
+import scalacss.internal.ValueT.TypedAttr_Color
 
 object Style extends StyleSheet.Standalone {
   import dsl._
@@ -36,4 +38,12 @@ object Style extends StyleSheet.Standalone {
   )
 
   "body" - margin(8 px)
+
+  object fill extends TypedAttr_Color {
+    override val attr = Attr.real("fill")
+  }
+
+  val cursor = Class("cursor")
+  cursor -
+    fill.black
 }

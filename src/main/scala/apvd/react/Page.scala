@@ -6,9 +6,13 @@ import japgolly.scalajs.react.{ BackendScope, Callback, ReactComponentB, ReactEv
 
 import scala.collection.mutable.ArrayBuffer
 
+case class Point(x: Double, y: Double)
+
 object Page {
 
-  case class State(ellipses: Seq[Ellipse])
+  case class State(ellipses: Seq[Ellipse],
+                   cursor: Point = Point(0, 0),
+                   activeSvg: Int = 0)
 
   case class Ellipse(cx: Double,
                      cy: Double,
@@ -75,19 +79,19 @@ object Page {
 //    }
 
     def render(s: State) = {
-      val State(ellipses) = s
+      val State(ellipses, cursor, activeSvg) = s
 
       val panels = ArrayBuffer[TagMod]()
 
       // Main panel
-      panels += Panel.component(Panel.Props(ellipses))
+      panels += Panel.component(Panel.Props(ellipses, cursor))
 
       // Per-ellipse projected panels
       panels ++=
         ellipses
           .map(
             _ ⇒
-              Panel.component(Panel.Props(ellipses)): TagMod
+              Panel.component(Panel.Props(ellipses, cursor)): TagMod
           )
 
       <.div(

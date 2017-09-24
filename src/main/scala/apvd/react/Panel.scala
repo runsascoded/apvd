@@ -10,10 +10,12 @@ import japgolly.scalajs.react.vdom.svg.prefix_<^._
 object Panel {
 
   case class Props(ellipses: Seq[Ellipse],
+                   cursor: Point,
                    width: Int = 300,
                    height: Int = 400,
                    scale: Double = 50,
-                   gridLineWidth: Int = 1
+                   gridLineWidth: Int = 1,
+                   cursorDotRadius: Int = 3
                   )
 
   import Style._
@@ -44,7 +46,7 @@ object Panel {
                   .renderPS(
                     (c, p, s) ⇒ {
                       implicit val props = p
-                      val Props(ellipses, width, height, scale, gridLineWidth) = p
+                      val Props(ellipses, cursor, width, height, scale, gridLineWidth, cursorDotRadius) = p
 
                       val maxX = width / scale / 2
                       val maxY = height / scale / 2
@@ -66,7 +68,7 @@ object Panel {
 
                       val horizontalLines =
                         (
-                          (1.0 until height by 1)
+                          (1.0 until maxY by 1)
                             .flatMap {
                               y ⇒
                                 Vector(
@@ -85,8 +87,20 @@ object Panel {
                         ^.height := height,
                         <.g(
                           ^.transform := s"translate(${width / 2.0},${height / 2.0}) scale($scale,-$scale)",
-                          verticalLines,
-                          horizontalLines
+                          <.g(
+                            ClassName := "vertical-lines",
+                            verticalLines
+                          ),
+                          <.g(
+                            ClassName := "horizontal-lines",
+                            horizontalLines
+                          ),
+                          <.circle(
+                            ClassName := Style.cursor,
+                            ^.cx := cursor.x,
+                            ^.cy := cursor.y,
+                            ^.r := cursorDotRadius / scale
+                          )
                         ),
                         ellipses.map {
                           e ⇒
