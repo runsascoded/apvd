@@ -1,7 +1,10 @@
 package apvd.react
 
+import japgolly.scalajs.react.vdom.TagMod
 import japgolly.scalajs.react.vdom.prefix_<^._
 import japgolly.scalajs.react.{ BackendScope, Callback, ReactComponentB, ReactEventI }
+
+import scala.collection.mutable.ArrayBuffer
 
 object Page {
 
@@ -72,7 +75,24 @@ object Page {
 //    }
 
     def render(s: State) = {
-      Panel.component(Panel.Props(s.ellipses))
+      val State(ellipses) = s
+
+      val panels = ArrayBuffer[TagMod]()
+
+      // Main panel
+      panels += Panel.component(Panel.Props(ellipses))
+
+      // Per-ellipse projected panels
+      panels ++=
+        ellipses
+          .map(
+            _ ⇒
+              Panel.component(Panel.Props(ellipses)): TagMod
+          )
+
+      <.div(
+        panels
+      )
     }
   }
 }

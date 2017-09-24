@@ -4,6 +4,7 @@ import apvd.css.Style
 import apvd.react.Page.Ellipse
 import japgolly.scalajs.react.ReactComponentB
 import japgolly.scalajs.react.vdom.ReactAttr
+import japgolly.scalajs.react.vdom.ReactAttr.ClassName
 import japgolly.scalajs.react.vdom.svg.prefix_<^._
 
 object Panel {
@@ -17,24 +18,26 @@ object Panel {
 
   import Style._
 
-  def keyedVLine(x: Double, extraClasses: Class*)(implicit props: Props) =
+  def keyedVLine(x: Double, maxY: Double, extraClasses: Class*)(implicit props: Props) =
     x →
       <.line(
-        ReactAttr.ClassName := (gridLine :: extraClasses.toList).mkString(" "),
+        ClassName := (gridLine :: extraClasses.toList).mkString(" "),
         ^.x1 := x,
         ^.x2 := x,
-        ^.y1 := 0,
-        ^.y2 := props.height
+        ^.y1 := -maxY,
+        ^.y2 := maxY,
+        ^.strokeWidth := props.gridLineWidth / props.scale
       )
 
-  def keyedHLine(y: Double, extraClasses: Class*)(implicit props: Props) =
+  def keyedHLine(y: Double, maxX: Double, extraClasses: Class*)(implicit props: Props) =
     y →
       <.line(
-        ReactAttr.ClassName := (gridLine :: extraClasses.toList).mkString(" "),
-        ^.x1 := 0,
-        ^.x2 := props.width,
+        ClassName := (gridLine :: extraClasses.toList).mkString(" "),
+        ^.x1 := -maxX,
+        ^.x2 := maxX,
         ^.y1 := y,
-        ^.y2 := y
+        ^.y2 := y,
+        ^.strokeWidth := props.gridLineWidth / props.scale
       )
 
   val component = ReactComponentB[Props]("Svg panel")
@@ -43,42 +46,49 @@ object Panel {
                       implicit val props = p
                       val Props(ellipses, width, height, scale, gridLineWidth) = p
 
+                      val maxX = width / scale / 2
+                      val maxY = height / scale / 2
+
                       val verticalLines =
                         (
-                          (scale until width by scale)
+                          (1.0 until maxX by 1)
                             .flatMap {
                               x ⇒
                                 Vector(
-                                  keyedVLine( x),
-                                  keyedVLine(-x)
+                                  keyedVLine( x, maxY),
+                                  keyedVLine(-x, maxY)
                                 )
                             } :+
-                            keyedVLine(0, axis)
+                            keyedVLine(0, maxY, axis)
                         )
                         .sortBy(_._1)
                         .map(_._2)
 
                       val horizontalLines =
                         (
-                          (scale until height by scale)
+                          (1.0 until height by 1)
                             .flatMap {
                               y ⇒
                                 Vector(
-                                  keyedHLine( y),
-                                  keyedHLine(-y)
+                                  keyedHLine( y, maxX),
+                                  keyedHLine(-y, maxX)
                                 )
                             } :+
-                            keyedHLine(0, axis)
+                            keyedHLine(0, maxX, axis)
                         )
                         .sortBy(_._1)
                         .map(_._2)
 
                       <.svg(
-                        ^.width := p.width,
-                        ^.height := p.height,
-                        verticalLines,
-                        horizontalLines,
-                        p.ellipses.map {
+                        ClassName := panel,
+                        ^.width := width,
+                        ^.height := height,
+                        <.g(
+                          ^.transform := s"translate(${width / 2.0},${height / 2.0}) scale($scale,-$scale)",
+                          verticalLines,
+                          horizontalLines
+                        ),
+                        ellipses.map {
                           e ⇒
                             <.ellipse(
                               ^.cx := e.cx,
