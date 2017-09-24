@@ -6,3 +6,6 @@ packages
 node_modules
 docs/_site
 build/_site
+target
+project/target
+project/project

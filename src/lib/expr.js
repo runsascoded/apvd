@@ -1,6 +1,6 @@
 
-/*
-export class Expr {
+
+export class Dual {
   constructor(o) {
     this.o = o;
   }
@@ -117,4 +117,3 @@ export C = (v) => { return new Expr({ v: v }); };
 export V = (n) => { return new Expr({ n: n }); };
 export zero = C(0);
 export one = C(1);
-*/

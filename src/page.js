@@ -42,19 +42,19 @@ export default class Page extends React.Component {
         name: "C"
       },
       {
-        cx: 0,
-        cy: 0,
-        rx: .6,
-        ry: .48,
-        degrees: -44,
-        color: 'green',
-        i: 3,
-        name: "D"
+          cx: 0,
+          cy: 0,
+          rx: .6,
+          ry: .48,
+          degrees: -44,
+          color: 'green',
+          i: 3,
+          name: "D"
       }
     ].map(e => new Ellipse(e));
 
     const ellipsesObj = {};
-    ellipses.forEach((e) => {
+    ellipses.forEach(e => {
       ellipsesObj[e.i] = e;
     });
     this.state = { ellipses: ellipsesObj };
@@ -159,6 +159,6 @@ export default class Page extends React.Component {
             {...{ellipses, malformedEllipses}}
             onChange={this.onTextFieldChange}
       />
-    </div>
+    </div>;
   }
 }
