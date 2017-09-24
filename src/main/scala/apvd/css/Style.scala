@@ -1,6 +1,8 @@
 package apvd.css
 
-import japgolly.scalajs.react.vdom.ReactAttr.ValueType
+import apvd.react.ClassName
+import japgolly.scalajs.react.vdom.Attr.ValueType
+import japgolly.scalajs.react.vdom.TagMod
 
 import scala.scalajs.js
 import scalacss.DevDefaults._
@@ -19,8 +21,10 @@ object Style extends StyleSheet.Standalone {
 
     implicit def toJSAny(cls: Class): js.Any = cls.value.asInstanceOf[js.Any]
 
-    implicit val valueType: ValueType[Class] =
+    implicit val valueType: ValueType[Class, Nothing] =
       ValueType((fn, v) ⇒ fn(v))
+
+    implicit def toTagMod(cls: Class): TagMod = ClassName := cls
   }
 
   val gridLine = Class("grid-line")

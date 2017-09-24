@@ -1,8 +1,11 @@
 package apvd.react
 
+import japgolly.scalajs.react._
+import japgolly.scalajs.react.vdom.html_<^._
+
 import japgolly.scalajs.react.vdom.TagMod
-import japgolly.scalajs.react.vdom.prefix_<^._
-import japgolly.scalajs.react.{ BackendScope, Callback, ReactComponentB, ReactEventI }
+import japgolly.scalajs.react.{ BackendScope, Callback, CallbackTo }
+import org.scalajs.dom.html
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -67,36 +70,42 @@ object Page {
       )
   }
 
-  val component = ReactComponentB[Unit]("Area-proportional venn-diagrams dashboad")
+  val component = ScalaComponent.builder[Unit]("Area-proportional venn-diagrams dashboad")
                   .initialState(State.empty)
                   .renderBackend[Ops]
                   .build
 
   class Ops($: BackendScope[Unit, State]) {
 
-//    def updateMsg(e: ReactEventI): Callback = {
-//      $.zoom(_.msg)((s, msg) ⇒ s.copy(msg = msg)).setState(e.target.value)
-//    }
+    private var divRef: html.Element = _
+
+    def updateCursor(cursor: Point): Callback =
+      $.modState(_.copy(cursor = cursor))
 
     def render(s: State) = {
       val State(ellipses, cursor, activeSvg) = s
 
-      val panels = ArrayBuffer[TagMod]()
-
-      // Main panel
-      panels += Panel.component(Panel.Props(ellipses, cursor))
-
-      // Per-ellipse projected panels
-      panels ++=
-        ellipses
-          .map(
-            _ ⇒
-              Panel.component(Panel.Props(ellipses, cursor)): TagMod
-          )
-
       <.div(
-        panels
+        Panel.component(
+          Panel.Props(
+            ellipses,
+            cursor,
+            CallbackTo(point ⇒ updateCursor(point))
+          )
+        ),
+        ellipses
+          .toTagMod(
+            _ ⇒
+              Panel.component(
+                Panel.Props(
+                  ellipses,
+                  cursor,
+                  CallbackTo(point ⇒ updateCursor(point))
+                )
+              )
+          )
       )
+      .ref(divRef = _)
     }
   }
 }

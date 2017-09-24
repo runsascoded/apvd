@@ -2,7 +2,6 @@ package apvd
 
 import apvd.css.Style
 import apvd.react.Page
-import japgolly.scalajs.react.ReactDOM
 import org.scalajs.dom
 
 import scala.scalajs.js.annotation.JSExportTopLevel
@@ -17,9 +16,8 @@ object Main {
         Style.render
       )
     )
-    ReactDOM.render(
-      Page.component(),
-      dom.document.getElementById("playground")
-    )
+    Page
+      .component()
+      .renderIntoDOM(dom.document.getElementById("playground"))
   }
 }
