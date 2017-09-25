@@ -80,7 +80,6 @@ object Page {
           )
         ),
         ellipses
-          .take(1)
           .toTagMod(
             ellipse ⇒
               Panel.component(

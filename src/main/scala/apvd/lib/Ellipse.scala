@@ -2,7 +2,7 @@ package apvd.lib
 
 import apvd.lib.Ellipse.toDegrees
 
-import scala.math.{ Pi, sqrt }
+import scala.math.{ Pi, atan, cos, sin, sqrt }
 
 sealed trait Ellipse {
   def color: String
@@ -14,6 +14,7 @@ sealed trait Ellipse {
   def ry: Double
   def theta: Double
 
+  // Coefficients of this ellipse when represented as the locus of points satisfying Ax² + Bxy + Cy² + Dx + Ey + F = 0
   def A: Double
   def B: Double
   def C: Double
@@ -25,6 +26,9 @@ sealed trait Ellipse {
 
   lazy val degrees = toDegrees(theta)
 
+  /**
+   * Express this ellipse in "coordinate" form (center x/y, radius x/y, CCW rotation)
+   */
   def toCoords: Coords =
     Coords(
       cx = cx,
@@ -36,6 +40,9 @@ sealed trait Ellipse {
       name = name
     )
 
+  /**
+   * Express this ellipse in "coefficient" form (Ax² + Bxy + Cy² + Dx + Ey + F = 0)
+   */
   def toCoeffs: Coeffs =
     Coeffs(
       A = A,
@@ -48,6 +55,9 @@ sealed trait Ellipse {
       name = name
     )
 
+  /**
+   * Project this ellipse according to a transform that would turn the argument ellipse into the unit circle
+   */
   def project(e: Ellipse): Ellipse =
     affine(
       1 / e.rx,
@@ -57,6 +67,9 @@ sealed trait Ellipse {
       -e.cy
     )
 
+  /**
+   * Translate, rotate, and scale this ellipse
+   */
   def affine(sx: Double,
              sy: Double,
              theta: Double,
@@ -80,13 +93,10 @@ case class Coords(cx: Double,
                   name: String)
   extends Ellipse {
 
-  lazy val cos = Math.cos(theta)
-  lazy val sin = Math.sin(theta)
-
   lazy val rx2 = rx * rx
   lazy val ry2 = ry * ry
-  lazy val c = cos
-  lazy val s = sin
+  lazy val c = cos(theta)
+  lazy val s = sin(theta)
   lazy val c2 = c*c
   lazy val s2 = s*s
   lazy val cs = c*s
@@ -107,13 +117,13 @@ case class Coords(cx: Double,
   lazy val E = -2 * (cy*c1 + cx*c*s*r1)
   lazy val F = -d
 
-  def translate(tx: Double, ty: Double): Ellipse =
+  override def translate(tx: Double, ty: Double): Ellipse =
     copy(
       cx = cx + tx,
       cy = cy + ty
     )
 
-  def rotate(theta: Double): Ellipse = {
+  override def rotate(theta: Double): Ellipse = {
     val Point(cx, cy) = center.rotate(theta)
     copy(
       cx = cx,
@@ -122,7 +132,7 @@ case class Coords(cx: Double,
     )
   }
 
-  def scale(sx: Double, sy: Double): Ellipse = Coeffs(A, B, C, D, E, F, color, name).scale(sx, sy)
+  override def scale(sx: Double, sy: Double): Ellipse = toCoeffs.scale(sx, sy)
 }
 
 case class Coeffs(A: Double,
@@ -134,36 +144,32 @@ case class Coeffs(A: Double,
                   color: String,
                   name: String)
   extends Ellipse {
-  lazy val theta = if (B == 0) 0 else Math.atan(B / (A - C)) / 2
-  lazy val (c, s) = (Math.cos(theta), Math.sin(theta))
+  lazy val theta = if (B == 0) 0 else atan(B / (A - C)) / 2
+  lazy val (c, s) = (cos(theta), sin(theta))
   lazy val c2 = c * c
   lazy val s2 = s * s
   lazy val cs = c * s
 
-  lazy val (nA, nB, nC, nD, nE) = (
-    A*c2 + B*cs + C*s2,
-    (A - C)*2*cs + B*(c2 - s2),
-    A*s2 - B*cs + C*c2,
-    D*c + E*s,
-    -D*s + E*c
-  )
+  lazy val leveled = this.rotate(-theta)
 
-  lazy val Point(cx, cy) = Point(-nD / sqrt(nA), -nE / sqrt(nC)).rotate(-theta)
+  lazy val Coeffs(nA, nB, nC, nD, nE, _, _, _) = leveled
 
-  lazy val discrim = nD*nD/sqrt(nA) + nE*nE/sqrt(nC) - F
+  lazy val Point(cx, cy) = Point(-nD / nA / 2, -nE / nC / 2).rotate(theta)
 
-  lazy val rx = sqrt(discrim / nA)
-  lazy val ry = sqrt(discrim / nC)
+  lazy val (rx, ry) = {
+    val discrim = nD * nD / nA / 4 + nE * nE / nC / 4 - F
+    (sqrt(discrim / nA), sqrt(discrim / nC))
+  }
 
-  override def translate(tx: Double, ty: Double): Ellipse =
+  override def translate(tx: Double, ty: Double): Coeffs =
     copy(
       D = D - 2*A*tx - B*ty,
       E = E - 2*C*ty - B*tx,
       F = F + A*tx*tx + B*tx*ty + C*ty*ty - D*tx - E*ty
     )
 
-  override def rotate(theta: Double): Ellipse = {
-    val (c, s) = (math.cos(theta), math.sin(theta))
+  override def rotate(theta: Double): Coeffs = {
+    val (c, s) = (cos(theta), sin(theta))
     val (c2, cs, s2) = (c*c, c*s, s*s)
     copy(
       A = A*c2 - B*cs + C*s2,
@@ -174,7 +180,7 @@ case class Coeffs(A: Double,
     )
   }
 
-  override def scale(sx: Double, sy: Double): Ellipse =
+  override def scale(sx: Double, sy: Double): Coeffs =
     copy(
       A = A / sx / sx,
       B = B / sx / sy,
