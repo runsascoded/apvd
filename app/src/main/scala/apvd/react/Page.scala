@@ -30,7 +30,7 @@ object Page {
             cy = 0.12,
             rx = 1.3,
             ry = 0.4,
-            theta = 114,
+            theta = toTheta(114),
             color = "blue",
             name = "B"
           ),
@@ -80,6 +80,7 @@ object Page {
           )
         ),
         ellipses
+          .take(1)
           .toTagMod(
             ellipse ⇒
               Panel.component(
