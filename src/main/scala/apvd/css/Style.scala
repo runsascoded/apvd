@@ -1,6 +1,5 @@
 package apvd.css
 
-import apvd.react.ClassName
 import japgolly.scalajs.react.vdom.Attr.ValueType
 import japgolly.scalajs.react.vdom.TagMod
 

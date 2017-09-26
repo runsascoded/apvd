@@ -1,14 +1,15 @@
 package apvd.react
 
+import apvd.lib
 import apvd.lib.Ellipse.toTheta
-import apvd.lib.{ Ellipse, Point }
+import apvd.lib.Point
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{ BackendScope, Callback, CallbackTo, _ }
 import org.scalajs.dom.html
 
 object Page {
 
-  case class State(ellipses: Seq[Ellipse],
+  case class State(ellipses: Seq[lib.Ellipse],
                    cursor: Point = Point(0, 0),
                    activeSvg: Int = 0)
 
@@ -16,7 +17,7 @@ object Page {
     val empty =
       State(
         List(
-          Ellipse(
+          lib.Ellipse(
             cx = -0.82,
             cy = 0.38,
             rx = 1,
@@ -25,7 +26,7 @@ object Page {
             color = "red",
             name = "A"
           ),
-          Ellipse(
+          lib.Ellipse(
             cx = -0.7,
             cy = 0.12,
             rx = 1.3,
@@ -34,7 +35,7 @@ object Page {
             color = "blue",
             name = "B"
           ),
-          Ellipse(
+          lib.Ellipse(
             cx = 0.5,
             cy = 1.52,
             rx = .94,
@@ -43,7 +44,7 @@ object Page {
             color = "darkgoldenrod",
             name = "C"
           ),
-          Ellipse(
+          lib.Ellipse(
             cx = 0,
             cy = 0,
             rx = .6,
@@ -56,7 +57,7 @@ object Page {
       )
   }
 
-  val component = ScalaComponent.builder[Unit]("Area-proportional venn-diagrams dashboad")
+  val component = ScalaComponent.builder[Unit]("Area-proportional venn-diagrams dashboard")
                   .initialState(State.empty)
                   .renderBackend[Ops]
                   .build
@@ -69,7 +70,7 @@ object Page {
       $.modState(_.copy(cursor = cursor))
 
     def render(s: State) = {
-      val State(ellipses, cursor, activeSvg) = s
+      val State(ellipses, cursor, _) = s
 
       <.div(
         Panel.component(

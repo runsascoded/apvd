@@ -1,25 +1,20 @@
 package apvd.react
 
-import apvd.css.Style
-import apvd.lib.{ Ellipse, Point }
+import apvd.css.{ ClassName, Style }
+import apvd.lib
+import apvd.lib.Point
 import japgolly.scalajs.react._
-import japgolly.scalajs.react.vdom.Attr.ValueType
 import japgolly.scalajs.react.vdom.HtmlAttrs.{ key, onMouseMove }
+import japgolly.scalajs.react.vdom.SvgTags
 import japgolly.scalajs.react.vdom.svg_<^._
-import japgolly.scalajs.react.vdom.{ Attr, SvgTags, TagMod }
 import org.scalajs.dom.raw.SVGSVGElement
-
-object ClassName extends Attr[String]("class") {
-  override def :=[A](a: A)(implicit t: ValueType[A, String]): TagMod =
-    TagMod.fn(b => t.fn(b.addClassName, a))
-}
 
 object Panel {
 
-  case class Props(ellipses: Seq[Ellipse],
+  case class Props(ellipses: Seq[lib.Ellipse],
                    cursor: Point,
                    onCursor: CallbackTo[Point ⇒ Callback],
-                   transformBy: Option[Ellipse] = None,
+                   transformBy: Option[lib.Ellipse] = None,
                    width: Int = 300,
                    height: Int = 400,
                    scale: Double = 50,
@@ -79,7 +74,7 @@ object Panel {
 
     def render(p: Props, state: Unit) = {
       implicit val props = p
-      val Props(ellipses, cursor, onCursor, transformBy, width, height, scale, gridLineWidth, cursorDotRadius) = p
+      val Props(ellipses, cursor, _, transformBy, width, height, scale, _, cursorDotRadius) = p
 
       val maxX = width / scale / 2
       val maxY = height / scale / 2
@@ -149,20 +144,17 @@ object Panel {
           ),
           g(
             ClassName := "ellipses",
-            transformedEllipses.toVdomArray {
+            ellipses.toTagMod(
               e ⇒
-                g(
-                  key := e.name,
-                  ^.transform := s"translate(${e.cx},${e.cy}) rotate(${e.degrees})",
-                  ellipse(
-                    Style.ellipse,
-                    ^.rx := e.rx,
-                    ^.ry := e.ry,
-                    ^.fill := e.color,
-                    ^.strokeWidth := 1.0 / scale
+                Ellipse.component(
+                  Ellipse.Props(
+                    e,
+                    transformBy,
+                    strokeWidth = 1.0 / scale,
+                    active = false
                   )
                 )
-            }
+            )
           ),
           circle(
             Style.cursor,

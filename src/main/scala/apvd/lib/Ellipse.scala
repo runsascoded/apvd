@@ -22,6 +22,23 @@ sealed trait Ellipse {
   def E: Double
   def F: Double
 
+  lazy val c = cos(theta)
+  lazy val s = sin(theta)
+
+  lazy val (rM, rm) = if (rx > ry) (rx, ry) else (ry, rx)
+
+  lazy val fd = sqrt(rM*rM - rm*rm)
+  lazy val fr = fd / rM
+
+  lazy val (vx1, vx2) = center ± (rx * c, rx * s)
+
+  lazy val (vy1, vy2) = center ± (ry - s, rx * c)
+
+  lazy val (f1, f2) = {
+    val delta = (if (rx > ry) Point(rM, 0) else Point(0, rM)) * fd
+    center ± delta
+  }
+
   def center = Point(cx, cy)
 
   lazy val degrees = toDegrees(theta)
@@ -67,6 +84,8 @@ sealed trait Ellipse {
       -e.cy
     )
 
+  def project(e: Option[Ellipse]): Ellipse = e.map(project).getOrElse(this)
+
   def project(p: Point): Point =
     p.-(cx, cy).rotate(-theta).*(1 / rx, 1 / ry)
 
@@ -87,6 +106,21 @@ sealed trait Ellipse {
   def scale(sx: Double, sy: Double): Ellipse
 }
 
+/*
+object Ellipse {
+  object coeffs {
+    def unapply(e: Ellipse): Option[(
+      Double,
+        Double,
+        Double,
+        Double,
+        Double,
+        Double)] =
+      Some((e.A, e.B, e.C, e.D, e.E, e.F))
+  }
+}
+*/
+
 case class Coords(cx: Double,
                   cy: Double,
                   rx: Double,
@@ -98,8 +132,6 @@ case class Coords(cx: Double,
 
   lazy val rx2 = rx * rx
   lazy val ry2 = ry * ry
-  lazy val c = cos(theta)
-  lazy val s = sin(theta)
   lazy val c2 = c*c
   lazy val s2 = s*s
   lazy val cs = c*s
@@ -148,7 +180,6 @@ case class Coeffs(A: Double,
                   name: String)
   extends Ellipse {
   lazy val theta = if (B == 0) 0 else atan(B / (A - C)) / 2
-  lazy val (c, s) = (cos(theta), sin(theta))
   lazy val c2 = c * c
   lazy val s2 = s * s
   lazy val cs = c * s
