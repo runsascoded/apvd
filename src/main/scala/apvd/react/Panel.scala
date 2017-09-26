@@ -2,7 +2,7 @@ package apvd.react
 
 import apvd.css.{ ClassName, Style }
 import apvd.lib
-import apvd.lib.Point
+import apvd.lib.{ Point, Transform }
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.HtmlAttrs.{ key, onMouseMove }
 import japgolly.scalajs.react.vdom.SvgTags
@@ -14,7 +14,7 @@ object Panel {
   case class Props(ellipses: Seq[lib.Ellipse],
                    cursor: Point,
                    onCursor: CallbackTo[Point ⇒ Callback],
-                   transformBy: Option[lib.Ellipse] = None,
+                   transform: Option[Transform] = None,
                    width: Int = 300,
                    height: Int = 400,
                    scale: Double = 50,
@@ -69,7 +69,8 @@ object Panel {
           props ⇒
             val raw = Point(event.clientX, event.clientY)
             val virtual = transform(raw, props)
-            props.onCursor.flatMap(_(virtual))
+            val inverted = virtual(props.transform.map(_.invert))
+            props.onCursor.flatMap(_(inverted))
         }
 
     def render(p: Props, state: Unit) = {
@@ -117,8 +118,8 @@ object Panel {
           .map {
             transformBy ⇒
               (
-                transformBy.project(cursor),
-                ellipses.map(_.project(transformBy))
+                cursor(transformBy),
+                ellipses.map(_(transformBy))
               )
           }
           .getOrElse(

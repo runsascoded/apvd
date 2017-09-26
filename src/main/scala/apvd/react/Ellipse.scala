@@ -2,6 +2,7 @@ package apvd.react
 
 import apvd.css.Style
 import apvd.lib
+import apvd.lib.Transform
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.HtmlAttrs.key
 import japgolly.scalajs.react.vdom.SvgTags.{ ellipse, g }
@@ -10,7 +11,7 @@ import japgolly.scalajs.react.vdom.svg_<^._
 object Ellipse {
 
   case class Props(e: lib.Ellipse,
-                   transformBy: Option[lib.Ellipse],
+                   transformBy: Option[Transform],
                    strokeWidth: Double,
                    active: Boolean)
 
@@ -21,7 +22,7 @@ object Ellipse {
   class Ops($: BackendScope[Props, Unit]) {
     def render(p: Props, state: Unit) = {
       val Props(originalEllipse, transformBy, strokeWidth, active) = p
-      val e = originalEllipse.project(transformBy)
+      val e = originalEllipse(transformBy)
       g(
         key := e.name,
         ^.transform := s"translate(${e.cx},${e.cy}) rotate(${e.degrees})",

@@ -88,7 +88,7 @@ object Page {
                   ellipses,
                   cursor,
                   CallbackTo(point ⇒ updateCursor(point)),
-                  transformBy = Some(ellipse)
+                  transform = Some(ellipse.projection)
                 )
               )
           )

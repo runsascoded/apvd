@@ -73,21 +73,32 @@ sealed trait Ellipse {
     )
 
   /**
-   * Project this ellipse according to a transform that would turn the argument ellipse into the unit circle
+   * Projection that would turn this ellipse into the unit circle.
    */
-  def project(e: Ellipse): Ellipse =
-    affine(
-      1 / e.rx,
-      1 / e.ry,
-      -e.theta,
-      -e.cx,
-      -e.cy
+  lazy val projection =
+    Transforms(
+      Seq(
+        Translate(-cx, -cy),
+        Rotate(-theta),
+        Scale(1 / rx, 1 / ry)
+      )
     )
 
-  def project(e: Option[Ellipse]): Ellipse = e.map(project).getOrElse(this)
+  lazy val inversion = projection.invert
+
+  def invert(p: Point): Point = p(inversion)
 
   def project(p: Point): Point =
     p.-(cx, cy).rotate(-theta).*(1 / rx, 1 / ry)
+
+  def apply(transform: Option[Transform]): Ellipse = transform.map(apply).getOrElse(this)
+  def apply(transform: Transform): Ellipse =
+    transform match {
+      case Translate(x, y) ⇒ translate(x, y)
+      case Rotate(theta) ⇒ rotate(theta)
+      case Scale(x, y) ⇒ scale(x, y)
+      case Transforms(transforms) ⇒ transforms.foldLeft(this)(_ apply _)
+    }
 
   /**
    * Translate, rotate, and scale this ellipse
