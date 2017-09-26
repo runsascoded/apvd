@@ -44,6 +44,53 @@ sealed trait Ellipse {
 
   lazy val degrees = toDegrees(theta)
 
+  def moveCenter(dx: Double, dy: Double): Ellipse =
+    Coords(cx + dx, cy + dy, rx, ry, theta, color, name)
+
+  import Ellipse.angle
+
+  def moveVx(dx: Double, dy: Double): Ellipse = {
+    val vx = vx1 + (dx, dy)
+    val d = vx - center
+    val rx = d.magnitude
+    Coords(
+      cx, cy,
+      rx, ry,
+      angle(d),
+      color,
+      name
+    )
+  }
+
+  def moveVy(dx: Double, dy: Double): Ellipse = {
+    val vy = vy1 + (dx, dy)
+    val d = vy - center
+    val ry = d.magnitude
+    Coords(
+      cx, cy,
+      rx, ry,
+      angle(d) - Pi/2,
+      color,
+      name
+    )
+  }
+
+  def moveFocus(dx: Double, dy: Double): Ellipse = {
+    val f = f1 + (dx, dy)
+    val fd = center - f
+    val fl = fd.magnitude
+    val rM = sqrt(rm*rm + fl*fl)
+    val (rX, rY) = if (rx >= ry) (rM, rm) else (rm, rM)
+    val theta = angle(fd) + (if (rx >= ry) 0 else -Pi/2)
+    Coords(
+      cx, cy,
+      rX, rY,
+      theta,
+      color,
+      name
+    )
+  }
+
   /**
    * Express this ellipse in "coordinate" form (center x/y, radius x/y, CCW rotation)
    */
@@ -117,21 +164,6 @@ sealed trait Ellipse {
   def rotate(theta: Double): Ellipse
   def scale(sx: Double, sy: Double): Ellipse
 }
-
-/*
-object Ellipse {
-  object coeffs {
-    def unapply(e: Ellipse): Option[(
-      Double,
-        Double,
-        Double,
-        Double,
-        Double,
-        Double)] =
-      Some((e.A, e.B, e.C, e.D, e.E, e.F))
-  }
-}
-*/
 
 case class Coords(cx: Double,
                   cy: Double,
@@ -248,4 +280,23 @@ object Ellipse {
             color: String,
             name: String): Ellipse =
     Coords(cx, cy, rx, ry, theta, color, name)
+
+  def angle(d: Point): Double = angle(d.x, d.y)
+  def angle(dx: Double, dy: Double): Double =
+    (
+      if (dx == 0)
+        if (dy < 0)
+          -Pi / 2
+        else
+          Pi / 2
+      else
+        atan(dy / dx)
+    ) + (
+      (dx < 0, dy < 0) match {
+        case (true, true) ⇒ Pi
+        case (_, true) ⇒ 2*Pi
+        case (true, false) ⇒ Pi
+        case _ ⇒ 0
+      }
+    )
 }

@@ -62,7 +62,7 @@ export default class SvgEllipse extends React.Component {
           transform={"translate(" + cx + "," + cy + ") rotate(" + degrees + ")"}
           onMouseEnter={this.onMouseEnter}
           onMouseLeave={this.onMouseLeave}
-          onMouseDown={(e) => { this.dragStart(e, 'c'); }}
+          onMouseDown={e => { this.dragStart(e, 'c'); }}
     >
       <ellipse rx={rx} ry={ry} style={{ fill: color }} />
       {points}

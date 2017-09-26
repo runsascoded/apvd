@@ -12,6 +12,8 @@ case class Point(x: Double, y: Double) {
     )
   }
 
+  lazy val magnitude = sqrt(x*x + y*y)
+
   def translate(x: Double, y: Double): Point = Point(this.x + x, this.y + y)
   def scale(x: Double, y: Double): Point = Point(this.x + x, this.y + y)
 
@@ -23,6 +25,8 @@ case class Point(x: Double, y: Double) {
       case Scale(x, y) ⇒ this * (x, y)
       case Transforms(transforms) ⇒ transforms.foldLeft(this)(_ apply _)
     }
+
+  def unary_- : Point = Point(-x, -y)
 
   def +(o: Point): Point = Point(x + o.x, y + o.y)
   def +(sx: Double, sy: Double): Point = Point(x + sx, y + sy)

@@ -75,13 +75,23 @@ object Page {
         )
       )
 
-    def activateEllipse(idx: Int, active: Boolean): Callback =
+    def activateEllipse(idx: Option[Int]): Callback =
+      $.modState(
+        _.copy(activeEllipse = {
+          println(s"activate: $idx")
+          idx
+        })
+      )
+
+    def updateEllipse(idx: Int, e: lib.Ellipse): Callback =
       $.modState(
         s ⇒
-          if (active)
-            s.copy(activeEllipse = Some(idx))
-          else
-            s.copy(activeEllipse = None)
+          s.copy(
+            ellipses =
+              s
+                .ellipses
+                .patch(idx, Seq(e), 1)
+          )
       )
 
     def render(s: State) = {
@@ -96,7 +106,8 @@ object Page {
             updateCursor,
             activeEllipse = activeEllipse,
             activateEllipse = activateEllipse,
-            hideCursor = activeSvg.contains(0)
+            hideCursor = activeSvg.contains(0),
+            updateEllipse = updateEllipse
           )
         ),
         ellipses
@@ -112,7 +123,8 @@ object Page {
                   activeEllipse = activeEllipse,
                   activateEllipse = activateEllipse,
                   transform = Some(ellipse.projection),
-                  hideCursor = activeSvg.contains(idx + 1)
+                  hideCursor = activeSvg.contains(idx + 1),
+                  updateEllipse = updateEllipse
                 )
               )
           }

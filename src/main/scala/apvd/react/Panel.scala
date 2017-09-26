@@ -3,8 +3,9 @@ package apvd.react
 import apvd.css.{ ClassName, Style }
 import apvd.lib
 import apvd.lib.{ Point, Transform }
+import apvd.react.Ellipse.Drag
 import japgolly.scalajs.react._
-import japgolly.scalajs.react.vdom.HtmlAttrs.{ key, onMouseMove, onMouseLeave }
+import japgolly.scalajs.react.vdom.HtmlAttrs.{ key, onMouseLeave, onMouseMove, onMouseUp }
 import japgolly.scalajs.react.vdom.SvgTags
 import japgolly.scalajs.react.vdom.svg_<^._
 import org.scalajs.dom.raw.SVGSVGElement
@@ -15,7 +16,7 @@ object Panel {
                    ellipses: Seq[lib.Ellipse],
                    cursor: Option[Point],
                    onCursor: Option[(Point, Int)] ⇒ Callback,
-                   activateEllipse: (Int, Boolean) ⇒ Callback,
+                   activateEllipse: Option[Int] ⇒ Callback,
                    transform: Option[Transform] = None,
                    width: Int = 300,
                    height: Int = 400,
@@ -24,8 +25,13 @@ object Panel {
                    gridLineWidth: Int = 1,
                    cursorDotRadius: Int = 3,
                    hideCursor: Boolean = false,
-                   activeEllipse: Option[Int] = None
-                  )
+                   activeEllipse: Option[Int] = None,
+                   updateEllipse: (Int, lib.Ellipse) ⇒ Callback
+                  ) {
+    lazy val invert = transform.map(_.invert)
+  }
+
+  case class State(drag: Option[Drag] = None)
 
   import Style._
 
@@ -54,10 +60,11 @@ object Panel {
       )
 
   val component = ScalaComponent.builder[Props]("Svg panel")
+                  .initialState(State())
                   .renderBackend[Ops]
                   .build
 
-  class Ops($: BackendScope[Props, Unit]) {
+  class Ops($: BackendScope[Props, State]) {
 
     private var ref: SVGSVGElement = _
 
@@ -67,20 +74,65 @@ object Panel {
         (props.height / 2.0 - p.y + ref.getBoundingClientRect().top) / props.scale
       )
 
-    def mouseMove(event: ReactMouseEvent): Callback =
+    def client(e: ReactMouseEvent): Point =
+      Point(e.clientX, e.clientY)
+
+    def toVirtual(e: ReactMouseEvent, props: Props): Point =
+      transform(client(e), props)(props.invert)
+
+    def mouseMove(e: ReactMouseEvent): Callback =
       $
         .props
         .flatMap {
           props ⇒
-            val raw = Point(event.clientX, event.clientY)
-            val virtual = transform(raw, props)
-            val inverted = virtual(props.transform.map(_.invert))
-            props.onCursor(Some((inverted, props.idx)))
+            println(s"panel move (${e.target == ref}):", e.target, ref)
+            props.onCursor(
+              Some(
+                (
+                  toVirtual(e, props),
+                  props.idx
+                )
+              )
+            )
+            .flatMap(_ ⇒
+              if (e.target == ref) {
+                println("deactivating ellipse")
+                props.activateEllipse(None)
+              }
+              else {
+                println("leaving activation")
+                Callback {}
+              }
+            )
+        }
+        .flatMap {
+          _ ⇒ onDrag(e)
         }
 
-    def render(p: Props, state: Unit) = {
+    def setDrag(drag: Option[Drag]) = $.modState(_.copy(drag = drag))
+
+    def mouseUp = setDrag(None)
+
+    def onDrag(e: ReactMouseEvent): Callback =
+      $.state.flatMap(
+        s ⇒
+          $.props.flatMap(
+            props ⇒
+              s
+                .drag
+                .map {
+                  case Drag(start, ellipseIdx, onDrag) ⇒
+                    val draggedVector = toVirtual(e, props) - start
+                    val newEllipse = onDrag(draggedVector)
+                    props.updateEllipse(ellipseIdx, newEllipse)
+                }
+                .getOrElse(Callback {})
+          )
+      )
+
+    def render(p: Props, state: State) = {
       implicit val props = p
-      val Props(_, ellipses, cursor, onCursor, activateEllipse, transform, width, height, scale, dotSize, _, cursorDotRadius, hideCursor, activeEllipse) = p
+      val Props(_, ellipses, cursor, onCursor, activateEllipse, transform, width, height, scale, dotSize, _, cursorDotRadius, hideCursor, activeEllipse, _) = p
 
       val maxX = width / scale / 2
       val maxY = height / scale / 2
@@ -159,12 +211,16 @@ object Panel {
                 case (e, idx) ⇒
                   Ellipse.component(
                     Ellipse.Props(
+                      idx,
                       e,
                       transform,
                       strokeWidth = 1.0 / scale,
                       dotSize = dotSize / scale,
                       active = activeEllipse.contains(idx),
-                      activate = active ⇒ activateEllipse(idx, active)
+                      activate = activateEllipse(Some(idx)),
+                      toVirtual = toVirtual(_, props),
+                      startDrag = setDrag,
+                      onDrag = onDrag
                     )
                   )
               }
@@ -172,7 +228,10 @@ object Panel {
           projectedCursor.toTagMod
         ),
         onMouseMove ==> mouseMove,
-        onMouseLeave --> onCursor(None)
+        onMouseLeave --> {
+          onCursor(None).flatMap(_ ⇒ setDrag(None))
+        },
+        onMouseUp --> mouseUp
       )
       .ref(ref = _)
     }
