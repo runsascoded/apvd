@@ -10,8 +10,8 @@ import org.scalajs.dom.html
 object Page {
 
   case class State(ellipses: Seq[lib.Ellipse],
-                   cursor: Point = Point(0, 0),
-                   activeSvg: Int = 0,
+                   cursor: Option[Point] = None,
+                   activeSvg: Option[Int] = None,
                    activeEllipse: Option[Int] = None)
 
   object State {
@@ -67,11 +67,11 @@ object Page {
 
     private var divRef: html.Element = _
 
-    def updateCursor(cursor: Point, svgIdx: Int): Callback =
+    def updateCursor(cursor: Option[(Point, Int)]): Callback =
       $.modState(
         _.copy(
-          cursor = cursor,
-          activeSvg = svgIdx
+          cursor = cursor.map(_._1),
+          activeSvg = cursor.map(_._2)
         )
       )
 
@@ -96,7 +96,7 @@ object Page {
             updateCursor,
             activeEllipse = activeEllipse,
             activateEllipse = activateEllipse,
-            hideCursor = 0 == activeSvg
+            hideCursor = activeSvg.contains(0)
           )
         ),
         ellipses
@@ -112,7 +112,7 @@ object Page {
                   activeEllipse = activeEllipse,
                   activateEllipse = activateEllipse,
                   transform = Some(ellipse.projection),
-                  hideCursor = idx + 1 == activeSvg
+                  hideCursor = activeSvg.contains(idx + 1)
                 )
               )
           }

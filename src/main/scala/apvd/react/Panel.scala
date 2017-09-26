@@ -4,7 +4,7 @@ import apvd.css.{ ClassName, Style }
 import apvd.lib
 import apvd.lib.{ Point, Transform }
 import japgolly.scalajs.react._
-import japgolly.scalajs.react.vdom.HtmlAttrs.{ key, onMouseMove }
+import japgolly.scalajs.react.vdom.HtmlAttrs.{ key, onMouseMove, onMouseLeave }
 import japgolly.scalajs.react.vdom.SvgTags
 import japgolly.scalajs.react.vdom.svg_<^._
 import org.scalajs.dom.raw.SVGSVGElement
@@ -13,8 +13,8 @@ object Panel {
 
   case class Props(idx: Int,
                    ellipses: Seq[lib.Ellipse],
-                   cursor: Point,
-                   onCursor: (Point, Int) ⇒ Callback,
+                   cursor: Option[Point],
+                   onCursor: Option[(Point, Int)] ⇒ Callback,
                    activateEllipse: (Int, Boolean) ⇒ Callback,
                    transform: Option[Transform] = None,
                    width: Int = 300,
@@ -75,12 +75,12 @@ object Panel {
             val raw = Point(event.clientX, event.clientY)
             val virtual = transform(raw, props)
             val inverted = virtual(props.transform.map(_.invert))
-            props.onCursor(inverted, props.idx)
+            props.onCursor(Some((inverted, props.idx)))
         }
 
     def render(p: Props, state: Unit) = {
       implicit val props = p
-      val Props(_, ellipses, cursor, _, activateEllipse, transform, width, height, scale, dotSize, _, cursorDotRadius, hideCursor, activeEllipse) = p
+      val Props(_, ellipses, cursor, onCursor, activateEllipse, transform, width, height, scale, dotSize, _, cursorDotRadius, hideCursor, activeEllipse) = p
 
       val maxX = width / scale / 2
       val maxY = height / scale / 2
@@ -118,20 +118,25 @@ object Panel {
 
       import SvgTags._
 
-      val projectedCursor = cursor(transform)
-
-      val cursorCircle =
-        if (hideCursor)
-          None
-        else
-          Some(
-            circle(
-              Style.cursor,
-              ^.cx := projectedCursor.x,
-              ^.cy := projectedCursor.y,
-              ^.r  := cursorDotRadius / scale
-            )
+      val projectedCursor =
+        cursor
+          .map(_(transform))
+          .flatMap(
+            cursor ⇒
+              if (hideCursor)
+                None
+              else
+                Some(
+                  circle(
+                    Style.cursor,
+                    ^.cx := cursor.x,
+                    ^.cy := cursor.y,
+                    ^.r  := cursorDotRadius / scale
+                  )
+                )
           )
+          .toList
+
       svg(
         panel,
         ^.width := width,
@@ -164,9 +169,10 @@ object Panel {
                   )
               }
           ),
-          cursorCircle.toList.toTagMod
+          projectedCursor.toTagMod
         ),
-        onMouseMove ==> mouseMove
+        onMouseMove ==> mouseMove,
+        onMouseLeave --> onCursor(None)
       )
       .ref(ref = _)
     }
