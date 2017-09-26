@@ -117,13 +117,21 @@ object Panel {
 
       import SvgTags._
 
-      val transformedEllipses =
+      val (projectedCursor, transformedEllipses) =
         transformBy
           .map {
             transformBy ⇒
-              ellipses.map(_.project(transformBy))
+              (
+                transformBy.project(cursor),
+                ellipses.map(_.project(transformBy))
+              )
           }
-          .getOrElse(ellipses)
+          .getOrElse(
+            (
+              cursor,
+              ellipses
+            )
+          )
 
       svg(
         panel,
@@ -158,8 +166,8 @@ object Panel {
           ),
           circle(
             Style.cursor,
-            ^.cx := cursor.x,
-            ^.cy := cursor.y,
+            ^.cx := projectedCursor.x,
+            ^.cy := projectedCursor.y,
             ^.r  := cursorDotRadius / scale
           )
         ),

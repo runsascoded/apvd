@@ -67,6 +67,9 @@ sealed trait Ellipse {
       -e.cy
     )
 
+  def project(p: Point): Point =
+    p.-(cx, cy).rotate(-theta).*(1 / rx, 1 / ry)
+
   /**
    * Translate, rotate, and scale this ellipse
    */
