@@ -2,7 +2,7 @@ package apvd.react
 
 import apvd.css.Style
 import apvd.lib
-import apvd.lib.Transform
+import apvd.lib.{ Point, Transform }
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.HtmlAttrs.{ key, onMouseEnter, onMouseLeave, onMouseMove }
 import japgolly.scalajs.react.vdom.SvgTags.{ circle, ellipse, g }
@@ -26,40 +26,63 @@ object Ellipse {
 
   class Ops($: BackendScope[Props, State]) {
 
-    def mouseEnter(e: ReactMouseEvent): Callback =
+    def mouseEnter: Callback =
       $.props.flatMap(_.activate(true))
 
-    def mouseLeave(e: ReactMouseEvent): Callback =
+    def mouseLeave: Callback =
       $.props.flatMap(_.activate(false))
 
     def render(p: Props, state: State) = {
       val Props(originalEllipse, transformBy, strokeWidth, dotSize, active, activate) = p
       val e = originalEllipse(transformBy)
 
+      val (frx, fry) =
+        if (e.rx > e.ry)
+          (e.fd, 0.0)
+        else
+          (0.0, e.fd)
+
+      import Style.{ focus, vertex }
+
       val points =
         if (active) {
           List(
-            circle(
-              ^.r := dotSize,
-              ^.fill := "black"
-            )
+            vertex → originalEllipse.vx1,
+            vertex → originalEllipse.vx2,
+            vertex → originalEllipse.vy1,
+            vertex → originalEllipse.vy2,
+             focus → originalEllipse.f1,
+             focus → originalEllipse.f2
           )
+          .map { case (cls, p) ⇒ cls → p(transformBy) }
+          .toTagMod {
+            case (cls, Point(x, y)) ⇒
+              circle(
+                cls,
+                ^.cx := x,
+                ^.cy := y,
+                ^.r := dotSize,
+                ^.fill := "black"
+              )
+          }
         } else
-          Nil
+          Nil.toTagMod
 
       g(
         key := e.name,
-        ^.transform := s"translate(${e.cx},${e.cy}) rotate(${e.degrees})",
-        onMouseEnter ==> mouseEnter,
-        onMouseLeave ==> mouseLeave,
-        onMouseMove ==> mouseEnter,
-        points.toTagMod,
-        ellipse(
-          Style.ellipse,
-          ^.rx := e.rx,
-          ^.ry := e.ry,
-          ^.fill := e.color,
-          ^.strokeWidth := strokeWidth
+        points,
+        g(
+          ^.transform := s"translate(${e.cx},${e.cy}) rotate(${e.degrees})",
+          onMouseEnter --> mouseEnter,
+          onMouseMove  --> mouseEnter,
+          onMouseLeave --> mouseLeave,
+          ellipse(
+            Style.ellipse,
+            ^.rx := e.rx,
+            ^.ry := e.ry,
+            ^.fill := e.color,
+            ^.strokeWidth := strokeWidth
+          )
         )
       )
     }

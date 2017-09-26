@@ -49,4 +49,10 @@ object Style extends StyleSheet.Standalone {
 
   val ellipse = Class("ellipse")
   ellipse - svgFillOpacity(0.2)
+
+  val vertex = Class("vertex")
+  vertex - fill.black
+
+  val focus = Class("focus")
+  focus - fill.grey
 }

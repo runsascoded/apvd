@@ -30,14 +30,15 @@ sealed trait Ellipse {
   lazy val fd = sqrt(rM*rM - rm*rm)
   lazy val fr = fd / rM
 
-  lazy val (vx1, vx2) = center ± (rx * c, rx * s)
+  lazy val xdir = Point(c, s)
+  lazy val ydir = Point(-s, c)
+  lazy val fdir = if (rx > ry) xdir else ydir
 
-  lazy val (vy1, vy2) = center ± (ry - s, rx * c)
+  lazy val (vx1, vx2) = center ± (xdir * rx)
 
-  lazy val (f1, f2) = {
-    val delta = (if (rx > ry) Point(rM, 0) else Point(0, rM)) * fd
-    center ± delta
-  }
+  lazy val (vy1, vy2) = center ± (ydir * ry)
+
+  lazy val ( f1,  f2) = center ± (fdir * fd)
 
   def center = Point(cx, cy)
 
