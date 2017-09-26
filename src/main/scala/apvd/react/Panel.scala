@@ -11,15 +11,20 @@ import org.scalajs.dom.raw.SVGSVGElement
 
 object Panel {
 
-  case class Props(ellipses: Seq[lib.Ellipse],
+  case class Props(idx: Int,
+                   ellipses: Seq[lib.Ellipse],
                    cursor: Point,
-                   onCursor: CallbackTo[Point ⇒ Callback],
+                   onCursor: (Point, Int) ⇒ Callback,
+                   activateEllipse: (Int, Boolean) ⇒ Callback,
                    transform: Option[Transform] = None,
                    width: Int = 300,
                    height: Int = 400,
                    scale: Double = 50,
+                   dotSize: Double = 5,
                    gridLineWidth: Int = 1,
-                   cursorDotRadius: Int = 3
+                   cursorDotRadius: Int = 3,
+                   hideCursor: Boolean = false,
+                   activeEllipse: Option[Int] = None
                   )
 
   import Style._
@@ -70,12 +75,12 @@ object Panel {
             val raw = Point(event.clientX, event.clientY)
             val virtual = transform(raw, props)
             val inverted = virtual(props.transform.map(_.invert))
-            props.onCursor.flatMap(_(inverted))
+            props.onCursor(inverted, props.idx)
         }
 
     def render(p: Props, state: Unit) = {
       implicit val props = p
-      val Props(ellipses, cursor, _, transformBy, width, height, scale, _, cursorDotRadius) = p
+      val Props(_, ellipses, cursor, _, activateEllipse, transform, width, height, scale, dotSize, _, cursorDotRadius, hideCursor, activeEllipse) = p
 
       val maxX = width / scale / 2
       val maxY = height / scale / 2
@@ -113,22 +118,20 @@ object Panel {
 
       import SvgTags._
 
-      val (projectedCursor, transformedEllipses) =
-        transformBy
-          .map {
-            transformBy ⇒
-              (
-                cursor(transformBy),
-                ellipses.map(_(transformBy))
-              )
-          }
-          .getOrElse(
-            (
-              cursor,
-              ellipses
+      val projectedCursor = cursor(transform)
+
+      val cursorCircle =
+        if (hideCursor)
+          None
+        else
+          Some(
+            circle(
+              Style.cursor,
+              ^.cx := projectedCursor.x,
+              ^.cy := projectedCursor.y,
+              ^.r  := cursorDotRadius / scale
             )
           )
-
       svg(
         panel,
         ^.width := width,
@@ -145,24 +148,23 @@ object Panel {
           ),
           g(
             ClassName := "ellipses",
-            ellipses.toTagMod(
-              e ⇒
-                Ellipse.component(
-                  Ellipse.Props(
-                    e,
-                    transformBy,
-                    strokeWidth = 1.0 / scale,
-                    active = false
+            ellipses
+              .zipWithIndex
+              .toTagMod {
+                case (e, idx) ⇒
+                  Ellipse.component(
+                    Ellipse.Props(
+                      e,
+                      transform,
+                      strokeWidth = 1.0 / scale,
+                      dotSize = dotSize / scale,
+                      active = activeEllipse.contains(idx),
+                      activate = active ⇒ activateEllipse(idx, active)
+                    )
                   )
-                )
-            )
+              }
           ),
-          circle(
-            Style.cursor,
-            ^.cx := projectedCursor.x,
-            ^.cy := projectedCursor.y,
-            ^.r  := cursorDotRadius / scale
-          )
+          cursorCircle.toList.toTagMod
         ),
         onMouseMove ==> mouseMove
       )

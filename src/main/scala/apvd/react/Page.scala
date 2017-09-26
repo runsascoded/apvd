@@ -3,15 +3,16 @@ package apvd.react
 import apvd.lib
 import apvd.lib.Ellipse.toTheta
 import apvd.lib.Point
+import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{ BackendScope, Callback, CallbackTo, _ }
 import org.scalajs.dom.html
 
 object Page {
 
   case class State(ellipses: Seq[lib.Ellipse],
                    cursor: Point = Point(0, 0),
-                   activeSvg: Int = 0)
+                   activeSvg: Int = 0,
+                   activeEllipse: Option[Int] = None)
 
   object State {
     val empty =
@@ -66,32 +67,55 @@ object Page {
 
     private var divRef: html.Element = _
 
-    def updateCursor(cursor: Point): Callback =
-      $.modState(_.copy(cursor = cursor))
+    def updateCursor(cursor: Point, svgIdx: Int): Callback =
+      $.modState(
+        _.copy(
+          cursor = cursor,
+          activeSvg = svgIdx
+        )
+      )
+
+    def activateEllipse(idx: Int, active: Boolean): Callback =
+      $.modState(
+        s ⇒
+          if (active)
+            s.copy(activeEllipse = Some(idx))
+          else
+            s.copy(activeEllipse = None)
+      )
 
     def render(s: State) = {
-      val State(ellipses, cursor, _) = s
+      val State(ellipses, cursor, activeSvg, activeEllipse) = s
 
       <.div(
         Panel.component(
           Panel.Props(
+            idx = 0,
             ellipses,
             cursor,
-            CallbackTo(point ⇒ updateCursor(point))
+            updateCursor,
+            activeEllipse = activeEllipse,
+            activateEllipse = activateEllipse,
+            hideCursor = 0 == activeSvg
           )
         ),
         ellipses
-          .toTagMod(
-            ellipse ⇒
+          .zipWithIndex
+          .toTagMod {
+            case (ellipse, idx) ⇒
               Panel.component(
                 Panel.Props(
+                  idx + 1,
                   ellipses,
                   cursor,
-                  CallbackTo(point ⇒ updateCursor(point)),
-                  transform = Some(ellipse.projection)
+                  updateCursor,
+                  activeEllipse = activeEllipse,
+                  activateEllipse = activateEllipse,
+                  transform = Some(ellipse.projection),
+                  hideCursor = idx + 1 == activeSvg
                 )
               )
-          )
+          }
       )
       .ref(divRef = _)
     }
