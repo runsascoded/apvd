@@ -3,7 +3,7 @@ package apvd.react
 import apvd.css.Style.Class
 import apvd.lib.Point
 import japgolly.scalajs.react._
-import japgolly.scalajs.react.vdom.HtmlAttrs.{ onMouseDown, onMouseMove, onMouseUp }
+import japgolly.scalajs.react.vdom.HtmlAttrs.onMouseDown
 import japgolly.scalajs.react.vdom.SvgTags.circle
 import japgolly.scalajs.react.vdom.svg_<^._
 

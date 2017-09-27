@@ -3,7 +3,6 @@ package apvd.react
 import apvd.css.{ ClassName, Style }
 import apvd.lib
 import apvd.lib.{ Point, Transform }
-import apvd.react.Ellipse.Drag
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.HtmlAttrs.{ key, onMouseLeave, onMouseMove, onMouseUp }
 import japgolly.scalajs.react.vdom.SvgTags
@@ -81,32 +80,28 @@ object Panel {
       transform(client(e), props)(props.invert)
 
     def mouseMove(e: ReactMouseEvent): Callback =
-      $
-        .props
-        .flatMap {
+      $.props >>=
+        {
           props ⇒
-            println(s"panel move (${e.target == ref}):", e.target, ref)
-            props.onCursor(
-              Some(
-                (
-                  toVirtual(e, props),
-                  props.idx
-                )
-              )
-            )
-            .flatMap(_ ⇒
-              if (e.target == ref) {
-                println("deactivating ellipse")
-                props.activateEllipse(None)
-              }
-              else {
-                println("leaving activation")
-                Callback {}
-              }
-            )
-        }
-        .flatMap {
-          _ ⇒ onDrag(e)
+            $.state >>= {
+              state ⇒
+                props.onCursor(
+                  Some(
+                    (
+                      toVirtual(e, props),
+                      props.idx
+                    )
+                  )
+                ) >>= {
+                  _ ⇒
+                    if (e.target == ref && state.drag.isEmpty)
+                      props.activateEllipse(None)
+                    else
+                      Callback {}
+                } >>= {
+                  _ ⇒ onDrag(e)
+                }
+            }
         }
 
     def setDrag(drag: Option[Drag]) = $.modState(_.copy(drag = drag))
@@ -217,7 +212,11 @@ object Panel {
                       strokeWidth = 1.0 / scale,
                       dotSize = dotSize / scale,
                       active = activeEllipse.contains(idx),
-                      activate = activateEllipse(Some(idx)),
+                      activate =
+                        if (!state.drag.exists(_.ellipseIdx != idx))
+                          activateEllipse(Some(idx))
+                        else
+                          Callback {},
                       toVirtual = toVirtual(_, props),
                       startDrag = setDrag,
                       onDrag = onDrag
@@ -228,12 +227,15 @@ object Panel {
           projectedCursor.toTagMod
         ),
         onMouseMove ==> mouseMove,
-        onMouseLeave --> {
-          onCursor(None).flatMap(_ ⇒ setDrag(None))
-        },
+        onMouseLeave -->
+          ( onCursor(None) >>= { _ ⇒ setDrag(None) } ),
         onMouseUp --> mouseUp
       )
       .ref(ref = _)
     }
   }
 }
+
+case class Drag(start: Point,
+                ellipseIdx: Int,
+                onDrag: Point ⇒ lib.Ellipse)

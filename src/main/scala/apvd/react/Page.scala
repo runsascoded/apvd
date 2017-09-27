@@ -56,6 +56,14 @@ object Page {
           )
         )
       )
+
+    val blue = empty.ellipses(1)
+
+    println(blue)
+    val coeffs = blue.toCoeffs
+    println(coeffs)
+    val coords = coeffs.toCoords
+    println(coords)
   }
 
   val component = ScalaComponent.builder[Unit]("Area-proportional venn-diagrams dashboard")
@@ -77,10 +85,7 @@ object Page {
 
     def activateEllipse(idx: Option[Int]): Callback =
       $.modState(
-        _.copy(activeEllipse = {
-          println(s"activate: $idx")
-          idx
-        })
+        _.copy(activeEllipse = idx)
       )
 
     def updateEllipse(idx: Int, e: lib.Ellipse): Callback =

@@ -223,7 +223,31 @@ case class Coeffs(A: Double,
                   color: String,
                   name: String)
   extends Ellipse {
-  lazy val theta = if (B == 0) 0 else atan(B / (A - C)) / 2
+  /**
+   * TODO: a given (A,B,C,D,E,F) ellipse's "rx" and "ry" vectors can be interpreted as being in any of 4 "cardinal"
+   * directions.
+   *
+   * The [[theta]] below will be the one in [0,π/2), but this creates a possibility for discontinuous jumps in
+   * representations of similar ellipses that straddle a boundary where e.g. [[theta]] jumps from π/2-ε to π/2+ε and
+   * then is "warped" to ε, with corresponding swaps in the derived "x"- and "y"-values (e.g. [[rx]]/[[ry]],
+   * {[[vx1]],[[vx2]]}/{[[vy1]],[[vy2]]}).
+   *
+   * This isn't currently causing issues as the marginal-ellipse-updating methods ([[moveFocus]], [[moveVx]],
+   * [[moveVy]]) emit [[Coords]] and so [[Coeffs]] representations aren't stressed in ways that reveal such artifacts.
+   *
+   * One manifestation is that [[Coords]] whose [[theta]] is outside the interval [0,π/2) will be effectively rotated
+   * 90º, 180º, or 270º when round-tripped through [[Coeffs]] (e.g. using [[toCoeffs]] followed by [[toCoords]]).
+   *
+   * Longer term, a [[theta]] be added to the [[Coeffs]] ctor to disambiguate the derived [[rx]]/[[ry]]/[[vx1]]/etc.
+   * members, or the distinct "vx"/"vy" vertex-fields should be blurred into a ring of four vertices without a
+   * prescribed notion of "x"- and "y"-axes.
+   */
+  lazy val theta =
+    if (B == 0)
+      0
+    else
+      atan(B / (A - C)) / 2
+
   lazy val c2 = c * c
   lazy val s2 = s * s
   lazy val cs = c * s
