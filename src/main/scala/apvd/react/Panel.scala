@@ -2,12 +2,14 @@ package apvd.react
 
 import apvd.css.{ ClassName, Style }
 import apvd.lib
-import apvd.lib.{ Point, Transform }
+import apvd.lib.{ Line, Point, Rectangle, Segment, Transform }
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.HtmlAttrs.{ key, onMouseLeave, onMouseMove, onMouseUp }
-import japgolly.scalajs.react.vdom.SvgTags
+import japgolly.scalajs.react.vdom.{ HtmlAttrs, SvgTags }
 import japgolly.scalajs.react.vdom.svg_<^._
 import org.scalajs.dom.raw.SVGSVGElement
+
+import math.{ ceil, floor }
 
 object Panel {
 
@@ -28,6 +30,18 @@ object Panel {
                    updateEllipse: (Int, lib.Ellipse) ⇒ Callback
                   ) {
     lazy val invert = transform.map(_.invert)
+
+    lazy val rect = {
+      val d = 2 * scale
+      val x = width / d
+      val y = height / d
+      Rectangle(
+        Point(-x, -y),
+        Point( x,  y)
+      )
+    }
+
+    lazy val segments = rect.segments
   }
 
   case class State(drag: Option[Drag] = None)
@@ -129,39 +143,69 @@ object Panel {
       implicit val props = p
       val Props(_, ellipses, cursor, onCursor, activateEllipse, transform, width, height, scale, dotSize, _, cursorDotRadius, hideCursor, activeEllipse, _) = p
 
-      val maxX = width / scale / 2
-      val maxY = height / scale / 2
+      // Real coordinates of the corners of this panel
+      val corners = props.rect.corners.map(_(props.invert))
+
+      // Real {min,max} ⨯ {x,y} values of this panel
+      val bounds = Rectangle.bounding(corners)
+
+      // Helper for generating a <line> node given a projected segment
+      def domLine(s: Segment, key: Double) = {
+        val Segment(p1, p2) = s
+        val classes =
+          gridLine ::
+            (if (key == 0) List(axis) else Nil)
+
+        <.line(
+          ClassName := classes.mkString(" "),
+          HtmlAttrs.key := key,
+          ^.x1 := p1.x,
+          ^.y1 := p1.y,
+          ^.x2 := p2.x,
+          ^.y2 := p2.y,
+          ^.strokeWidth := props.gridLineWidth / props.scale
+        )
+      }
+
+      import Line.{horizontal, vertical}
 
       val verticalLines =
-        (
-          (1.0 until maxX by 1)
-            .toVector
-            .flatMap {
-              x ⇒
-                Vector(
-                  keyedVLine( x, maxY),
-                  keyedVLine(-x, maxY)
-                )
-            } :+
-            keyedVLine(0, maxY, axis)
-        )
-        .sortBy(_._1)
-        .map(_._2)
+        (ceil(bounds.l) to floor(bounds.r) by 1)
+          .map {
+            x ⇒
+              val line = vertical(x)
+              val segment = bounds.intersect(line)
+              val projected =
+                segment
+                  .map(_(transform))
+                  .getOrElse(
+                    throw new IllegalStateException(
+                      s"No intersection found for bounding rect $bounds with line $line"
+                    )
+                  )
+
+              domLine(projected, x)
+          }
 
       val horizontalLines =
-        (
-          (1.0 until maxY by 1)
-            .flatMap {
-              y ⇒
-                Vector(
-                  keyedHLine( y, maxX),
-                  keyedHLine(-y, maxX)
-                )
-            } :+
-            keyedHLine(0, maxX, axis)
-        )
-        .sortBy(_._1)
-        .map(_._2)
+        (ceil(bounds.b) to floor(bounds.t) by 1)
+          .map {
+            y ⇒
+              val line = horizontal(y)
+              val segment =
+                bounds.intersect(line)
+
+              val projected =
+                segment
+                  .map(_(transform))
+                  .getOrElse(
+                    throw new IllegalStateException(
+                      s"No intersection found for bounding rect $bounds with line $line"
+                    )
+                  )
+
+              domLine(projected, y)
+          }
 
       import SvgTags._
 

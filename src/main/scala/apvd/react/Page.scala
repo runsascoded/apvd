@@ -2,7 +2,7 @@ package apvd.react
 
 import apvd.lib
 import apvd.lib.Ellipse.toTheta
-import apvd.lib.Point
+import apvd.lib.{ Line, Point, Rectangle }
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.html
@@ -56,14 +56,6 @@ object Page {
           )
         )
       )
-
-    val blue = empty.ellipses(1)
-
-    println(blue)
-    val coeffs = blue.toCoeffs
-    println(coeffs)
-    val coords = coeffs.toCoords
-    println(coords)
   }
 
   val component = ScalaComponent.builder[Unit]("Area-proportional venn-diagrams dashboard")
