@@ -10,7 +10,7 @@ export const cubic = (a, b, c, d) => {
         D = 0;
       }
       if (D >= 0) {
-        var sqD = sq(D);
+        const sqD = sq(D);
         return [ (-c + sqD) / 2 / b, (-c - sqD) / 2 / b ];
       }
       return [];

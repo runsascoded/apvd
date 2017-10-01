@@ -51,27 +51,6 @@ class EllipseTest
       )
     )
 
-  case class Tolerance(v: Double)
-  object Tolerance {
-    implicit def unwrap(t: Tolerance): Double = t.v
-  }
-
-  implicit val tolerance = Tolerance(1e-6)
-
-  implicit def doubleEq(implicit tolerance: Tolerance): Eq[Double] =
-    new Eq[Double] {
-      override def eqv(x: Double, y: Double) =
-        x + tolerance >= y && y + tolerance >= x
-    }
-
-  import cats.implicits.catsKernelStdOrderForString
-  import cats.derived.eq._
-
-  def ===[T](t1: T, t2: T)(implicit e: Eq[T]): Unit = {
-    if (!e.eqv(t1, t2))
-      fail(s"$t1 didn't match $t2")
-  }
-
   test("project") {
     val projected = ellipses(2)(ellipses(0).projection).toCoords
     val expected =
@@ -117,7 +96,3 @@ class EllipseTest
   }
 
 }
-
-//class EqMatcher[T](right: T) extends Matcher[T] {
-//  override def apply(left: T) = ???
-//}

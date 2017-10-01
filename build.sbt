@@ -7,7 +7,7 @@ enablePlugins(
 scalaVersion := "2.12.3"
 scalaJSUseMainModuleInitializer := true
 
-lazy val apvd = rootProject(app, libJS, libJVM)
+lazy val apvd = rootProject(app, libJS, libJVM, cubicJS, cubicJVM, testsJS, testsJVM)
 
 lazy val app = project.settings(
   libraryDependencies ++= Seq(
@@ -36,3 +36,20 @@ lazy val lib = crossProject.in(file("lib")).settings().jvmSettings(
 
 lazy val libJS = lib.js
 lazy val libJVM = lib.jvm
+
+lazy val cubic = crossProject.in(file("cubic")).dependsOn(tests % "test")
+lazy val cubicJS = cubic.js
+lazy val cubicJVM = cubic.jvm
+
+lazy val tests = crossProject.in(file("tests")).settings(
+  libraryDependencies ++= Seq(
+    "org.typelevel" %%% "kittens" % "1.0.0-RC0",
+    "org.typelevel" %%% "cats-core" % "1.0.0-MF",
+    "com.chuusai" %%% "shapeless" % "2.3.2",
+    "org.scalatest" %%% "scalatest" % "3.0.2"
+  ),
+  testDeps := Nil
+)
+
+lazy val testsJS = tests.js
+lazy val testsJVM = tests.jvm
