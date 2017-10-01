@@ -4,16 +4,16 @@ import com.runsascoded.tests.Suite
 import cubic.Root.Single
 
 import scala.math.{ cbrt, sqrt }
+import Numeric._
 
 class DepressedCubicTest
   extends Suite {
 
   implicit val ε = cubic.Tolerance(1e-10)
 
-  import Dbl.numeric._
-
-  implicit def intToSingl(d: Int): Root[Dbl] = Single(d)
-  implicit def doubleToSingl(d: Double): Root[Dbl] = Single(d)
+  implicit def intToDbl(d: Int): Dbl = Dbl(d)
+  implicit def intToSingle(d: Int): Root[Dbl] = Single(d)
+  implicit def doubleToSingle(d: Double): Root[Dbl] = Single(Dbl(d))
 
   def chk(p: Dbl, q: Dbl)(expected: Root[Dbl]*): Unit =
     ===(

@@ -1,15 +1,13 @@
 package cubic
 
 import scala.math.Pi
+import Numeric._
 
 object DepressedCubic {
-  def apply[D <: Numeric[D]](p: D, q: D)(
-      implicit
-      cc: NumericCC[D],
-      ε: Tolerance
+  def apply[D: Numeric](p: D, q: D)(
+      implicit ε: Tolerance
   ): Seq[Root[D]] = {
 
-    import cc.fromInt
     import Root._
 
 //    println(s"p: $p, q: $q")
@@ -18,7 +16,7 @@ object DepressedCubic {
         val r = (-p).sqrt
         Seq(
           Single(-r),
-          Single(0),
+          Single[D](0),
           Single(r)
         )
       } else if (p === 0)

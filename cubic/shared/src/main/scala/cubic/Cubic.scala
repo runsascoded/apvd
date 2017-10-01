@@ -1,15 +1,14 @@
 package cubic
 
+import Numeric._
+
 object Cubic {
-  def apply[D <: Numeric[D]](a: D,
-                             b: D,
-                             c: D,
-                             d: D)(
-      implicit
-      cc: NumericCC[D],
-      ε: Tolerance
+  def apply[D: Numeric](a: D,
+                        b: D,
+                        c: D,
+                        d: D)(
+      implicit ε: Tolerance
   ): Seq[Root[D]] = {
-    import cc.fromInt
     val a3 = 3 * a * a
     val ac3 = 3 * a * c
     val b3a = b / (3 * a)

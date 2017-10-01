@@ -2,6 +2,7 @@ package cubic
 
 import com.runsascoded.tests.Suite
 import cubic.Root.{ Double, Single, Triple }
+import Numeric._
 
 class CubicTest
   extends Suite {
