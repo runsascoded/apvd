@@ -31,11 +31,4 @@ object Root {
     override def degree = 3
     override def toString = s"$value·3"
   }
-
-//  def gen[D <: Numeric[D]] = Generic[R[D]]
-//  implicit def singleGen[D <: Numeric[D]]: Generic.Aux[Single[D], D :: HNil] = the[Generic.Aux[Single[D], D :: HNil]]
-
-//  implicit class Ops[D <: Numeric[D], R <: Root[D]](val root: R)(implicit gen: Generic.Aux[R, D :: HNil]) {
-//    def -(o: D): R = gen.from((root.value - o) :: HNil)
-//  }
 }

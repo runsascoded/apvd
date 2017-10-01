@@ -53,12 +53,12 @@ class DepressedCubicTest
         roots: _*
       )
 
-      val wm = implicitly[WrapperMap[Root[Dbl], Dbl]]
+      val wm = shapeless.the[WrapperMap.Aux[Root[Dbl], Dbl]]
 
       chk(
         p, -q
       )(
-        roots.map(r ⇒ wm.map(r, -_)).reverse: _*
+        roots.map(wm.map(_, -_)).reverse: _*
       )
     }
 

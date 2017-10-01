@@ -1,0 +1,5 @@
+package cubic
+
+class Tolerance {
+
+}

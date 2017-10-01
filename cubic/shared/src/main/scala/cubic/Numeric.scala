@@ -1,5 +1,7 @@
 package cubic
 
+import shapeless._
+
 trait Numeric[D <: Numeric[D]] extends Any {
 
   implicit def fromDouble(d: Double): D
@@ -28,30 +30,34 @@ trait Numeric[D <: Numeric[D]] extends Any {
 
   type T = Tolerance
 
-  def >=(o:    D)(implicit ε: T): Boolean = value + ε >= o.value
-  def > (o:    D)(implicit ε: T): Boolean = value + ε >  o.value
-  def <=(o:    D)(implicit ε: T): Boolean = value - ε <= o.value
-  def < (o:    D)(implicit ε: T): Boolean = value - ε <  o.value
-  def ===(o:    D)(implicit ε: T): Boolean = value <= o && value >= o
+  def >= (o:      D)(implicit ε: T): Boolean = value + ε >= o.value
+  def >  (o:      D)(implicit ε: T): Boolean = value + ε >  o.value
+  def <= (o:      D)(implicit ε: T): Boolean = value - ε <= o.value
+  def <  (o:      D)(implicit ε: T): Boolean = value - ε <  o.value
+  def ===(o:      D)(implicit ε: T): Boolean = value <= o && value >= o
 
-  def >=(o: Double)(implicit ε: T): Boolean = value + ε >= o
-  def > (o: Double)(implicit ε: T): Boolean = value + ε >  o
-  def <=(o: Double)(implicit ε: T): Boolean = value + ε <= o
-  def < (o: Double)(implicit ε: T): Boolean = value + ε <  o
+  def >= (o: Double)(implicit ε: T): Boolean = value + ε >= o
+  def >  (o: Double)(implicit ε: T): Boolean = value + ε >  o
+  def <= (o: Double)(implicit ε: T): Boolean = value + ε <= o
+  def <  (o: Double)(implicit ε: T): Boolean = value + ε <  o
   def ===(o: Double)(implicit ε: T): Boolean = value - ε <= o && value + ε >= o
 
-  def >=(o: Long)(implicit ε: T): Boolean = value + ε >= o
-  def > (o: Long)(implicit ε: T): Boolean = value + ε >  o
-  def <=(o: Long)(implicit ε: T): Boolean = value + ε <= o
-  def < (o: Long)(implicit ε: T): Boolean = value + ε <  o
-  def ===(o: Long)(implicit ε: T): Boolean = value - ε <= o && value + ε >= o
+  def >= (o:   Long)(implicit ε: T): Boolean = value + ε >= o
+  def >  (o:   Long)(implicit ε: T): Boolean = value + ε >  o
+  def <= (o:   Long)(implicit ε: T): Boolean = value + ε <= o
+  def <  (o:   Long)(implicit ε: T): Boolean = value + ε <  o
+  def ===(o:   Long)(implicit ε: T): Boolean = value - ε <= o && value + ε >= o
 
-  def >=(o:  Int)(implicit ε: T): Boolean = value + ε >= o
-  def > (o:  Int)(implicit ε: T): Boolean = value + ε >  o
-  def <=(o:  Int)(implicit ε: T): Boolean = value + ε <= o
-  def < (o:  Int)(implicit ε: T): Boolean = value + ε <  o
-  def ===(o:  Int)(implicit ε: T): Boolean = value - ε <= o && value + ε >= o
+  def >= (o:    Int)(implicit ε: T): Boolean = value + ε >= o
+  def >  (o:    Int)(implicit ε: T): Boolean = value + ε >  o
+  def <= (o:    Int)(implicit ε: T): Boolean = value + ε <= o
+  def <  (o:    Int)(implicit ε: T): Boolean = value + ε <  o
+  def ===(o:    Int)(implicit ε: T): Boolean = value - ε <= o && value + ε >= o
 }
+
+//object Numeric {
+//  implicit def generic[T, L <: HList](implicit gen: Generic.Aux[T, L])
+//}
 
 trait NumericCC[D <: Numeric[D]] {
   implicit def fromDouble(d: Double): D
