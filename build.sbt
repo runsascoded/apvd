@@ -37,7 +37,11 @@ lazy val lib = crossProject.in(file("lib")).settings().jvmSettings(
 lazy val libJS = lib.js
 lazy val libJVM = lib.jvm
 
-lazy val cubic = crossProject.in(file("cubic")).dependsOn(tests % "test")
+lazy val cubic = crossProject.in(file("cubic")).settings(
+  libraryDependencies += "com.chuusai" %%% "shapeless" % "2.3.2"
+).dependsOn(
+  tests % "test"
+)
 lazy val cubicJS = cubic.js
 lazy val cubicJVM = cubic.jvm
 
