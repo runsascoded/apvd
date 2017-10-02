@@ -2,18 +2,7 @@ package cubic
 
 trait Numeric[D] extends Any {
 
-  implicit def fromDouble(d: Double): D
-  implicit def fromInt(i: Int): D
-
-  def +(t: D, b: D): D
-  def -(t: D, b: D): D
-  def *(t: D, b: D): D
-  def /(t: D, b: D): D
-
-  def +(t: D, o: Double): D// = value + o
-  def -(t: D, o: Double): D// = value - o
-  def *(t: D, o: Double): D// = value * o
-  def /(t: D, o: Double): D// = value / o
+  def apply(d: Double): D
 
   def ^(t: D, p: Double): D
 
@@ -27,47 +16,37 @@ trait Numeric[D] extends Any {
 
   type T = Tolerance
 
-  def >= (t: D, o:      D)(implicit ε: T): Boolean// = value + ε >= o.value
-  def >  (t: D, o:      D)(implicit ε: T): Boolean// = value + ε >  o.value
-  def <= (t: D, o:      D)(implicit ε: T): Boolean// = value - ε <= o.value
-  def <  (t: D, o:      D)(implicit ε: T): Boolean// = value - ε <  o.value
-  def ===(t: D, o:      D)(implicit ε: T): Boolean// = value <= o && value >= o
+  def >= (t: D, o:      D)(implicit ε: T): Boolean
+  def >  (t: D, o:      D)(implicit ε: T): Boolean
+  def <= (t: D, o:      D)(implicit ε: T): Boolean
+  def <  (t: D, o:      D)(implicit ε: T): Boolean
+  def ===(t: D, o:      D)(implicit ε: T): Boolean
 
-  def >= (t: D, o: Double)(implicit ε: T): Boolean// = value + ε >= o
-  def >  (t: D, o: Double)(implicit ε: T): Boolean// = value + ε >  o
-  def <= (t: D, o: Double)(implicit ε: T): Boolean// = value + ε <= o
-  def <  (t: D, o: Double)(implicit ε: T): Boolean// = value + ε <  o
-  def ===(t: D, o: Double)(implicit ε: T): Boolean// = value - ε <= o && value + ε >= o
+  def >= (t: D, o: Double)(implicit ε: T): Boolean
+  def >  (t: D, o: Double)(implicit ε: T): Boolean
+  def <= (t: D, o: Double)(implicit ε: T): Boolean
+  def <  (t: D, o: Double)(implicit ε: T): Boolean
+  def ===(t: D, o: Double)(implicit ε: T): Boolean
 
-  def >= (t: D, o:   Long)(implicit ε: T): Boolean// = value + ε >= o
-  def >  (t: D, o:   Long)(implicit ε: T): Boolean// = value + ε >  o
-  def <= (t: D, o:   Long)(implicit ε: T): Boolean// = value + ε <= o
-  def <  (t: D, o:   Long)(implicit ε: T): Boolean// = value + ε <  o
-  def ===(t: D, o:   Long)(implicit ε: T): Boolean// = value - ε <= o && value + ε >= o
+  def >= (t: D, o:   Long)(implicit ε: T): Boolean
+  def >  (t: D, o:   Long)(implicit ε: T): Boolean
+  def <= (t: D, o:   Long)(implicit ε: T): Boolean
+  def <  (t: D, o:   Long)(implicit ε: T): Boolean
+  def ===(t: D, o:   Long)(implicit ε: T): Boolean
 
-  def >= (t: D, o:    Int)(implicit ε: T): Boolean// = value + ε >= o
-  def >  (t: D, o:    Int)(implicit ε: T): Boolean// = value + ε >  o
-  def <= (t: D, o:    Int)(implicit ε: T): Boolean// = value + ε <= o
-  def <  (t: D, o:    Int)(implicit ε: T): Boolean// = value + ε <  o
-  def ===(t: D, o:    Int)(implicit ε: T): Boolean// = value - ε <= o && value + ε >= o
+  def >= (t: D, o:    Int)(implicit ε: T): Boolean
+  def >  (t: D, o:    Int)(implicit ε: T): Boolean
+  def <= (t: D, o:    Int)(implicit ε: T): Boolean
+  def <  (t: D, o:    Int)(implicit ε: T): Boolean
+  def ===(t: D, o:    Int)(implicit ε: T): Boolean
 }
 
 object Numeric {
-//  implicit def generic[T, L <: HList](implicit gen: Generic.Aux[T, L])
-  //implicit val
+
+  def apply[T](implicit n: Numeric[T]): Numeric[T] = n
 
   implicit class Ops[D](d: D)(implicit n: Numeric[D]) {
     type T = Tolerance
-
-    def +(o: D): D = n.+(d, o)
-    def -(o: D): D = n.-(d, o)
-    def *(o: D): D = n.*(d, o)
-    def /(o: D): D = n./(d, o)
-
-    def +(o: Double): D = n.+(d, o)
-    def -(o: Double): D = n.-(d, o)
-    def *(o: Double): D = n.*(d, o)
-    def /(o: Double): D = n./(d, o)
 
     def ^(p: Double): D = n.^(d, p)
 
@@ -104,14 +83,8 @@ object Numeric {
     def ===(o:    Int)(implicit ε: T): Boolean = n.===(d, o)
   }
 
-  implicit def makeInt[T](i: Int)(implicit n: Numeric[T]): T = n.fromInt(i)
-
   implicit class IntOps(val i: Int) extends AnyVal {
-    def *[T](t: T)(implicit n: Numeric[T]): T = n.fromInt(i) * t
+    import Arithmetic._
+    def *[T: Arithmetic.I](t: T)(implicit n: Numeric[T]): T = n(i) * t
   }
-}
-
-trait NumericCC[D <: Numeric[D]] {
-  implicit def fromDouble(d: Double): D
-  implicit def fromInt(i: Int): D
 }

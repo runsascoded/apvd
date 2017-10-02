@@ -1,14 +1,15 @@
 package cubic
 
 import com.runsascoded.tests.Suite
+import cubic.Numeric._
+import Arithmetic._
 import cubic.Root.{ Double, Single, Triple }
-import Numeric._
 
 class CubicTest
   extends Suite {
 
   implicit val ε = cubic.Tolerance(1e-10)
-  import Dbl.numeric._
+  import Dbl.fromInt
 
   val scales = Seq(1, 2, 3)
 

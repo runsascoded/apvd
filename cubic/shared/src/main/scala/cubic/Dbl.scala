@@ -8,8 +8,34 @@ object Dbl {
   type T = Tolerance
   type D = Dbl
 
+  implicit val arithmeticDblDbl: Arithmetic[Dbl, Dbl] =
+    new Arithmetic[Dbl, Dbl] {
+      override def +(l: D, r: D) = l.value + r.value
+      override def -(l: D, r: D) = l.value - r.value
+      override def *(l: D, r: D) = l.value * r.value
+      override def /(l: D, r: D) = l.value / r.value
+    }
+
+  implicit val arithmeticDblInt: Arithmetic[Dbl, Int] =
+    new Arithmetic[Dbl, Int] {
+      override def +(l: D, r: Int) = l.value + r
+      override def -(l: D, r: Int) = l.value - r
+      override def *(l: D, r: Int) = l.value * r
+      override def /(l: D, r: Int) = l.value / r
+    }
+
+  implicit val arithmeticDblDouble: Arithmetic[Dbl, Double] =
+    new Arithmetic[Dbl, Double] {
+      override def +(l: D, r: Double) = l.value + r
+      override def -(l: D, r: Double) = l.value - r
+      override def *(l: D, r: Double) = l.value * r
+      override def /(l: D, r: Double) = l.value / r
+    }
+
   implicit val numeric: Numeric[Dbl] =
     new Numeric[Dbl] {
+
+      override def apply(d: Double) = Dbl(d)
 
       def >= (t: D, o:      D)(implicit ε: T): Boolean = t.value + ε >= o.value
       def >  (t: D, o:      D)(implicit ε: T): Boolean = t.value + ε >  o.value
@@ -69,18 +95,8 @@ object Dbl {
       override def ^(t: D, p: Double): D = math.pow(t.value, p)
 
       override def unary_-(t: D): D = -t.value
-
-      override def +(t: D, o: D): D = t.value + o.value
-      override def -(t: D, o: D): D = t.value - o.value
-      override def *(t: D, o: D): D = t.value * o.value
-      override def /(t: D, o: D): D = t.value / o.value
-
-      override def +(t: D, o: Double): D = t.value + o
-      override def -(t: D, o: Double): D = t.value - o
-      override def *(t: D, o: Double): D = t.value * o
-      override def /(t: D, o: Double): D = t.value / o
-
-      override implicit def fromDouble(d: Double): D = new Dbl(d)
-      override implicit def fromInt(i: Int): D = new Dbl(i)
     }
+
+  implicit def fromDouble(d: Double): D = new Dbl(d)
+  implicit def fromInt(i: Int): D = new Dbl(i)
 }

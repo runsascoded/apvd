@@ -1,13 +1,17 @@
 package cubic
 
 import Numeric._
+import Arithmetic._
 
 object Cubic {
-  def apply[D: Numeric](a: D,
-                        b: D,
-                        c: D,
-                        d: D)(
-      implicit ε: Tolerance
+  def apply[D: Numeric: Arithmetic.I](a: D,
+                                      b: D,
+                                      c: D,
+                                      d: D)(
+      implicit
+      ε: Tolerance,
+      dia: Arithmetic[D, Int],
+      dda: Arithmetic[D, Double]
   ): Seq[Root[D]] = {
     val a3 = 3 * a * a
     val ac3 = 3 * a * c
@@ -20,10 +24,27 @@ object Cubic {
       q = 2 * b3a2 * b3a - b3a*ca + d/a
     )
     .map {
-      r ⇒
-        import WrapperMap.wrap
-        implicit val wm = implicitly[WrapperMap.Aux[Root[D], D]]
-        r.map(_ - b3a)
+      _ - b3a
     }
+  }
+}
+
+
+trait Arithmetic[L, R] {
+  def +(l: L, r: R): L
+  def -(l: L, r: R): L
+  def *(l: L, r: R): L
+  def /(l: L, r: R): L
+}
+
+object Arithmetic {
+
+  type I[D] = Arithmetic[D, D]
+
+  implicit class ArithmeticOps[L](val l: L) extends AnyVal {
+    def +[R](r: R)(implicit a: Arithmetic[L, R]): L = a.+(l, r)
+    def -[R](r: R)(implicit a: Arithmetic[L, R]): L = a.-(l, r)
+    def *[R](r: R)(implicit a: Arithmetic[L, R]): L = a.*(l, r)
+    def /[R](r: R)(implicit a: Arithmetic[L, R]): L = a./(l, r)
   }
 }

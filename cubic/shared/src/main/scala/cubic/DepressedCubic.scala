@@ -2,29 +2,26 @@ package cubic
 
 import scala.math.Pi
 import Numeric._
+import Arithmetic._
 
 object DepressedCubic {
   def apply[D: Numeric](p: D, q: D)(
-      implicit ε: Tolerance
+      implicit
+      ε: Tolerance,
+      dia: Arithmetic[D, Int],
+      dda: Arithmetic[D, Double],
+      dda2: Arithmetic[D, D]
   ): Seq[Root[D]] = {
 
     import Root._
 
 //    println(s"p: $p, q: $q")
-    if (q === 0)
-      if (p < 0) {
-        val r = (-p).sqrt
-        Seq(
-          Single(-r),
-          Single[D](0),
-          Single(r)
+    if (q === 0 && p === 0)
+      Seq(
+        Triple(
+          (p + q) / 2.0
         )
-      } else if (p === 0)
-        Seq(Triple[D](0))
-      else
-        Seq(Single[D](0))
-    else if (p === 0)
-      Seq(Single(-q.cbrt))
+      )
     else {
       val p3 = -p/3
       val p33 = p3 ^ 3
@@ -47,7 +44,7 @@ object DepressedCubic {
             Double(sqp3)
           )
         else {
-          val t0 = cos.acos / 3
+          val t0 = cos.acos / 3.0
           val t1 = t0 - pi23
           val t2 = t1 - pi23
           def root(t: D): D = sqp32 * t.cos

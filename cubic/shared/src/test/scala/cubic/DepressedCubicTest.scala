@@ -1,10 +1,12 @@
 package cubic
 
 import com.runsascoded.tests.Suite
+import cubic.Arithmetic._
+import cubic.Numeric._
 import cubic.Root.Single
 
+import scala.Array.fill
 import scala.math.{ cbrt, sqrt }
-import Numeric._
 
 class DepressedCubicTest
   extends Suite {
@@ -43,7 +45,7 @@ class DepressedCubicTest
   test("3 roots") {
 
     def check(roots: Root[Dbl]*) = {
-      val Seq(r1, r2, r3) = roots.flatMap(r ⇒ Array.fill(r.degree)(r.value))
+      val Seq(r1, r2, r3) = roots.flatMap(r ⇒ fill(r.degree)(r.value))
       val p = r1*r2 + r1*r3 + r2*r3
       val q = -r1 * r2 * r3
 
@@ -53,12 +55,10 @@ class DepressedCubicTest
         roots: _*
       )
 
-      val wm = shapeless.the[WrapperMap.Aux[Root[Dbl], Dbl]]
-
       chk(
         p, -q
       )(
-        roots.map(wm.map(_, -_)).reverse: _*
+        roots.map(map[Dbl](-_)(_)).reverse: _*
       )
     }
 
