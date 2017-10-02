@@ -11,9 +11,12 @@ class CubicTest
   implicit val ε = cubic.Tolerance(1e-10)
   import Dbl.fromInt
 
+  /**
+   * Values of the "a" coefficient (of the x³ term) to test for each case; "b", "c", and "d" coefficients get multiplied
+   * by this value.
+   */
   val scales = Seq(1, 2, 3)
 
-//  def check(triple: Dbl) = check(Tripl(triple))
   def check(dbl: Dbl, other: Dbl): Unit = check(Double(dbl), Single(other))
 
   def check(r1: Dbl, r2: Dbl, r3: Dbl): Unit = check(Single(r1), Single(r2), Single(r3))
@@ -23,6 +26,10 @@ class CubicTest
     val b = -r1 - r2 - r3
     val c = r1*r2 + r1*r3 + r2*r3
     val d = -r1 * r2 * r3
+    coeffs(b, c, d)(roots: _*)
+  }
+
+  def coeffs(b: Dbl, c: Dbl, d: Dbl)(roots: Root[Dbl]*) = {
     scales foreach {
       a ⇒
         ===(
@@ -77,7 +84,41 @@ class CubicTest
   }
 
   test("single root") {
+    def chk(root: Dbl, a: Dbl, c: Dbl) = {
+      val c2 = -(root + 2 * a)
+      val c1 = 2 * root * a + a*a + c*c
+      val c0 = -root * (a*a + c*c)
+      withClue(s"(x-$root)(x-$a-${c}i)(x-$a+${c}i") {
+        coeffs(c2, c1, c0)(Single(root))
+      }
+    }
 
+    def checkSigns(root: Dbl, a: Dbl, c: Dbl) = {
+      chk( root,  a,  c)
+      chk( root,  a, -c)
+      chk( root, -a,  c)
+      chk( root, -a, -c)
+      chk(-root,  a,  c)
+      chk(-root,  a, -c)
+      chk(-root, -a,  c)
+      chk(-root, -a, -c)
+    }
+
+    def checkPermutations(a: Dbl, b: Dbl, c: Dbl) = {
+      checkSigns(a, b, c)
+      checkSigns(a, c, b)
+      checkSigns(b, a, c)
+      checkSigns(b, c, a)
+      checkSigns(c, a, b)
+      checkSigns(c, b, a)
+    }
+
+    checkSigns(0, 1, 1)
+    checkSigns(1, 0, 1)
+    checkSigns(1, 1, 1)
+
+    checkPermutations( 1, 2,  3)
+    checkPermutations(.1, 1, 10)
   }
 
 }
