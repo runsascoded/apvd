@@ -8,28 +8,17 @@ object Dbl {
   type T = Tolerance
   type D = Dbl
 
-  implicit val arithmeticDblDbl: Arithmetic[Dbl, Dbl] =
-    new Arithmetic[Dbl, Dbl] {
-      override def +(l: D, r: D) = l.value + r.value
-      override def -(l: D, r: D) = l.value - r.value
-      override def *(l: D, r: D) = l.value * r.value
-      override def /(l: D, r: D) = l.value / r.value
+  implicit def arithmeticDbl[T](implicit di: Doubleish[T]): Arithmetic[Dbl, T] =
+    new Arithmetic[Dbl, T] {
+      override def +(l: D, r: T) = l.value + di(r)
+      override def -(l: D, r: T) = l.value - di(r)
+      override def *(l: D, r: T) = l.value * di(r)
+      override def /(l: D, r: T) = l.value / di(r)
     }
 
-  implicit val arithmeticDblInt: Arithmetic[Dbl, Int] =
-    new Arithmetic[Dbl, Int] {
-      override def +(l: D, r: Int) = l.value + r
-      override def -(l: D, r: Int) = l.value - r
-      override def *(l: D, r: Int) = l.value * r
-      override def /(l: D, r: Int) = l.value / r
-    }
-
-  implicit val arithmeticDblDouble: Arithmetic[Dbl, Double] =
-    new Arithmetic[Dbl, Double] {
-      override def +(l: D, r: Double) = l.value + r
-      override def -(l: D, r: Double) = l.value - r
-      override def *(l: D, r: Double) = l.value * r
-      override def /(l: D, r: Double) = l.value / r
+  implicit val dbl: Doubleish[Dbl] =
+    new Doubleish[Dbl] {
+      override def apply(t: Dbl): Double = t.value
     }
 
   implicit val numeric: Numeric[Dbl] =

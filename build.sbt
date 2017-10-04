@@ -26,11 +26,11 @@ lazy val app = project.settings(
   ScalaJSBundlerPlugin
 )
 
-lazy val lib = crossProject.in(file("lib")).settings().jvmSettings(
+lazy val lib = crossProject.in(file("lib")).settings(
   libraryDependencies ++= Seq(
-    "org.typelevel" %% "kittens" % "1.0.0-RC0" % "test",
-    "org.typelevel" %% "cats-core" % "1.0.0-MF" % "test",
-    "com.chuusai" %% "shapeless" % "2.3.2" % "test"
+    "org.typelevel" %%% "kittens" % "1.0.0-RC0" % "test",
+    "org.typelevel" %%% "cats-core" % "1.0.0-MF" % "test",
+    "com.chuusai" %%% "shapeless" % "2.3.2" % "test"
   )
 )
 
