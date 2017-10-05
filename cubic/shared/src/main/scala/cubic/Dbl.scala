@@ -26,30 +26,6 @@ object Dbl {
 
       override def apply(d: Double) = Dbl(d)
 
-      def >= (t: D, o:      D)(implicit ε: T): Boolean = t.value + ε >= o.value
-      def >  (t: D, o:      D)(implicit ε: T): Boolean = t.value + ε >  o.value
-      def <= (t: D, o:      D)(implicit ε: T): Boolean = t.value - ε <= o.value
-      def <  (t: D, o:      D)(implicit ε: T): Boolean = t.value - ε <  o.value
-      def ===(t: D, o:      D)(implicit ε: T): Boolean = t.value <= o.value && t.value >= o.value
-
-      def >= (t: D, o: Double)(implicit ε: T): Boolean = t.value + ε >= o
-      def >  (t: D, o: Double)(implicit ε: T): Boolean = t.value + ε >  o
-      def <= (t: D, o: Double)(implicit ε: T): Boolean = t.value + ε <= o
-      def <  (t: D, o: Double)(implicit ε: T): Boolean = t.value + ε <  o
-      def ===(t: D, o: Double)(implicit ε: T): Boolean = t.value - ε <= o && t.value + ε >= o
-
-      def >= (t: D, o:   Long)(implicit ε: T): Boolean = t.value + ε >= o
-      def >  (t: D, o:   Long)(implicit ε: T): Boolean = t.value + ε >  o
-      def <= (t: D, o:   Long)(implicit ε: T): Boolean = t.value + ε <= o
-      def <  (t: D, o:   Long)(implicit ε: T): Boolean = t.value + ε <  o
-      def ===(t: D, o:   Long)(implicit ε: T): Boolean = t.value - ε <= o && t.value + ε >= o
-
-      def >= (t: D, o:    Int)(implicit ε: T): Boolean = t.value + ε >= o
-      def >  (t: D, o:    Int)(implicit ε: T): Boolean = t.value + ε >  o
-      def <= (t: D, o:    Int)(implicit ε: T): Boolean = t.value + ε <= o
-      def <  (t: D, o:    Int)(implicit ε: T): Boolean = t.value + ε <  o
-      def ===(t: D, o:    Int)(implicit ε: T): Boolean = t.value - ε <= o && t.value + ε >= o
-
       override def cos(t: D): D = math.cos(t.value)
       override def acos(t: D)(implicit ε: T): D =
         if (t.value > 1)

@@ -3,23 +3,24 @@ package cubic
 import scala.math.Pi
 import Numeric._
 import Arithmetic._
+import FuzzyCmp._
 
 object DepressedCubic {
-  def apply[D: Numeric](p: D, q: D)(
+  def apply[D : Numeric : Arithmetic.I : Doubleish](p: D, q: D)(
       implicit
       ε: Tolerance,
       dia: Arithmetic[D, Int],
-      dda: Arithmetic[D, Double],
-      dda2: Arithmetic[D, D]
+      dda: Arithmetic[D, Double]
   ): Seq[Root[D]] = {
 
     import Root._
 
 //    println(s"p: $p, q: $q")
+
     if (q === 0 && p === 0)
       Seq(
         Triple(
-          (p + q) / 2.0
+          (p + q) / 2
         )
       )
     else {
@@ -44,7 +45,7 @@ object DepressedCubic {
             Double(sqp3)
           )
         else {
-          val t0 = cos.acos / 3.0
+          val t0 = cos.acos / 3
           val t1 = t0 - pi23
           val t2 = t1 - pi23
           def root(t: D): D = sqp32 * t.cos

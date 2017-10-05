@@ -4,10 +4,10 @@ import Numeric._
 import Arithmetic._
 
 object Cubic {
-  def apply[D: Numeric: Arithmetic.I](a: D,
-                                      b: D,
-                                      c: D,
-                                      d: D)(
+  def apply[D : Numeric : Arithmetic.I : Doubleish](a: D,
+                                                    b: D,
+                                                    c: D,
+                                                    d: D)(
       implicit
       ε: Tolerance,
       dia: Arithmetic[D, Int],
@@ -28,7 +28,6 @@ object Cubic {
     }
   }
 }
-
 
 trait Arithmetic[L, R] {
   def +(l: L, r: R): L

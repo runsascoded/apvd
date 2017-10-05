@@ -15,30 +15,6 @@ trait Numeric[D] extends Any {
   def acos(t: D)(implicit ε: Tolerance): D
 
   type T = Tolerance
-
-  def >= (t: D, o:      D)(implicit ε: T): Boolean
-  def >  (t: D, o:      D)(implicit ε: T): Boolean
-  def <= (t: D, o:      D)(implicit ε: T): Boolean
-  def <  (t: D, o:      D)(implicit ε: T): Boolean
-  def ===(t: D, o:      D)(implicit ε: T): Boolean
-
-  def >= (t: D, o: Double)(implicit ε: T): Boolean
-  def >  (t: D, o: Double)(implicit ε: T): Boolean
-  def <= (t: D, o: Double)(implicit ε: T): Boolean
-  def <  (t: D, o: Double)(implicit ε: T): Boolean
-  def ===(t: D, o: Double)(implicit ε: T): Boolean
-
-  def >= (t: D, o:   Long)(implicit ε: T): Boolean
-  def >  (t: D, o:   Long)(implicit ε: T): Boolean
-  def <= (t: D, o:   Long)(implicit ε: T): Boolean
-  def <  (t: D, o:   Long)(implicit ε: T): Boolean
-  def ===(t: D, o:   Long)(implicit ε: T): Boolean
-
-  def >= (t: D, o:    Int)(implicit ε: T): Boolean
-  def >  (t: D, o:    Int)(implicit ε: T): Boolean
-  def <= (t: D, o:    Int)(implicit ε: T): Boolean
-  def <  (t: D, o:    Int)(implicit ε: T): Boolean
-  def ===(t: D, o:    Int)(implicit ε: T): Boolean
 }
 
 object Numeric {
@@ -58,29 +34,6 @@ object Numeric {
     def cos: D = n.cos(d)
     def acos(implicit ε: T): D = n.acos(d)
 
-    def >= (o:      D)(implicit ε: T): Boolean = n.>= (d, o)
-    def >  (o:      D)(implicit ε: T): Boolean = n.>  (d, o)
-    def <= (o:      D)(implicit ε: T): Boolean = n.<= (d, o)
-    def <  (o:      D)(implicit ε: T): Boolean = n.<  (d, o)
-    def ===(o:      D)(implicit ε: T): Boolean = n.===(d, o)
-
-    def >= (o: Double)(implicit ε: T): Boolean = n.>= (d, o)
-    def >  (o: Double)(implicit ε: T): Boolean = n.>  (d, o)
-    def <= (o: Double)(implicit ε: T): Boolean = n.<= (d, o)
-    def <  (o: Double)(implicit ε: T): Boolean = n.<  (d, o)
-    def ===(o: Double)(implicit ε: T): Boolean = n.===(d, o)
-
-    def >= (o:   Long)(implicit ε: T): Boolean = n.>= (d, o)
-    def >  (o:   Long)(implicit ε: T): Boolean = n.>  (d, o)
-    def <= (o:   Long)(implicit ε: T): Boolean = n.<= (d, o)
-    def <  (o:   Long)(implicit ε: T): Boolean = n.<  (d, o)
-    def ===(o:   Long)(implicit ε: T): Boolean = n.===(d, o)
-
-    def >= (o:    Int)(implicit ε: T): Boolean = n.>= (d, o)
-    def >  (o:    Int)(implicit ε: T): Boolean = n.>  (d, o)
-    def <= (o:    Int)(implicit ε: T): Boolean = n.<= (d, o)
-    def <  (o:    Int)(implicit ε: T): Boolean = n.<  (d, o)
-    def ===(o:    Int)(implicit ε: T): Boolean = n.===(d, o)
   }
 
   implicit class IntOps(val i: Int) extends AnyVal {
