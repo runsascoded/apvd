@@ -15,7 +15,7 @@ object FuzzyCmp {
       override def >  (l: L, r: R)(implicit ε: Tolerance) = ldi(l) + ε >  rdi(r)
       override def <= (l: L, r: R)(implicit ε: Tolerance) = ldi(l) - ε <= rdi(r)
       override def <  (l: L, r: R)(implicit ε: Tolerance) = ldi(l) - ε <  rdi(r)
-      override def ===(l: L, r: R)(implicit ε: Tolerance) = ldi(l) <= rdi(r) && ldi(l) >= rdi(r)
+      override def ===(l: L, r: R)(implicit ε: Tolerance) = l <= r && l >= r
     }
 
   implicit class FuzzyCmpOps[L](l: L) {

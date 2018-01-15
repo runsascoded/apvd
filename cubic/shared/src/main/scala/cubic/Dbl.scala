@@ -21,8 +21,8 @@ object Dbl {
       override def apply(t: Dbl): Double = t.value
     }
 
-  implicit val numeric: Numeric[Dbl] =
-    new Numeric[Dbl] {
+  implicit val dblMath: Math[Dbl] =
+    new Math[Dbl] {
 
       override def apply(d: Double) = Dbl(d)
 

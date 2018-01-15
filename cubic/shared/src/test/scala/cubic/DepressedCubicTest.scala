@@ -2,7 +2,7 @@ package cubic
 
 import com.runsascoded.tests.Suite
 import cubic.Arithmetic._
-import cubic.Numeric._
+import cubic.Math._
 import cubic.Root.Single
 
 import scala.Array.fill

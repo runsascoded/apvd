@@ -1,6 +1,6 @@
 package cubic
 
-trait Numeric[D] extends Any {
+trait Math[D] extends Any {
 
   def apply(d: Double): D
 
@@ -17,11 +17,11 @@ trait Numeric[D] extends Any {
   type T = Tolerance
 }
 
-object Numeric {
+object Math {
 
-  def apply[T](implicit n: Numeric[T]): Numeric[T] = n
+  def apply[T](implicit n: Math[T]): Math[T] = n
 
-  implicit class Ops[D](d: D)(implicit n: Numeric[D]) {
+  implicit class MathOps[D](d: D)(implicit n: Math[D]) {
     type T = Tolerance
 
     def ^(p: Double): D = n.^(d, p)
@@ -38,6 +38,6 @@ object Numeric {
 
   implicit class IntOps(val i: Int) extends AnyVal {
     import Arithmetic._
-    def *[T: Arithmetic.I](t: T)(implicit n: Numeric[T]): T = n(i) * t
+    def *[T: Arithmetic.I](t: T)(implicit n: Math[T]): T = n(i) * t
   }
 }

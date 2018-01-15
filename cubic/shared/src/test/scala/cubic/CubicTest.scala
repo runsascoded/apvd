@@ -1,7 +1,7 @@
 package cubic
 
 import com.runsascoded.tests.Suite
-import cubic.Numeric._
+import cubic.Math._
 import Arithmetic._
 import cubic.Root.{ Double, Single, Triple }
 

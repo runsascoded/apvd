@@ -1,12 +1,12 @@
 package cubic
 
 import scala.math.Pi
-import Numeric._
+import Math._
 import Arithmetic._
 import FuzzyCmp._
 
 object DepressedCubic {
-  def apply[D : Numeric : Arithmetic.I : Doubleish](p: D, q: D)(
+  def apply[D : Math : Arithmetic.I : Doubleish](p: D, q: D)(
       implicit
       ε: Tolerance,
       dia: Arithmetic[D, Int],

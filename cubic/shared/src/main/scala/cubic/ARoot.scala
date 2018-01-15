@@ -5,28 +5,24 @@ package cubic
  * due to [[https://github.com/scala/bug/issues/10222#issuecomment-333397589 scala/bug#10222]].
  */
 
-sealed trait Root[D] {
+sealed abstract class Root[D](val degree: Int) {
   def value: D
-  def degree: Int
 }
 
 object Root {
 
   case class Single[D](value: D)
-    extends Root[D] {
-    override def degree = 1
+    extends Root[D](1) {
     override def toString = value.toString
   }
 
   case class Double[D](value: D)
-    extends Root[D] {
-    override def degree = 2
+    extends Root[D](2) {
     override def toString = s"$value·2"
   }
 
   case class Triple[D](value: D)
-    extends Root[D] {
-    override def degree = 3
+    extends Root[D](3) {
     override def toString = s"$value·3"
   }
 
