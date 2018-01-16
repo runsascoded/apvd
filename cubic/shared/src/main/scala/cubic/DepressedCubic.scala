@@ -17,7 +17,7 @@ object DepressedCubic {
 
 //    println(s"p: $p, q: $q")
 
-    if (q === 0 && p === 0)
+    if (p === 0 && q === 0)
       Seq(
         Triple(
           (p + q) / 2

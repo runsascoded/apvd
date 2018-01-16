@@ -18,15 +18,19 @@ object Arithmetic {
     def /[R](r: R)(implicit a: Arithmetic[L, R]): L = a./(l, r)
   }
 
-//  implicit def fromSpire[N](n: spire.math.Numeric[N]): Arithmetic[N, N] =
-//    new Arithmetic[N, N] {
-//      override def +(l: N, r: N) = n.plus(l, r)
-//      override def -(l: N, r: N) = n.minus(l, r)
-//      override def *(l: N, r: N) = n.times(l, r)
-//      override def /(l: N, r: N) = n.divl, r)
-//    }
+  implicit val double: Arithmetic.I[Double] =
+    new Arithmetic[Double, Double] {
+      override def +(l: Double, r: Double): Double = l + r
+      override def -(l: Double, r: Double): Double = l - r
+      override def *(l: Double, r: Double): Double = l * r
+      override def /(l: Double, r: Double): Double = l / r
+    }
 
-  //  implicit val arithmeticDouble: Arithmetic[Double] = {
-//
-//  }
+  implicit val doubleInt: Arithmetic[Double, Int] =
+    new Arithmetic[Double, Int] {
+      override def +(l: Double, r: Int): Double = l + r
+      override def -(l: Double, r: Int): Double = l - r
+      override def *(l: Double, r: Int): Double = l * r
+      override def /(l: Double, r: Int): Double = l / r
+    }
 }

@@ -1,15 +1,11 @@
 package apvd.lib
 
 import apvd.lib.Ellipse.toTheta
-import cats.Eq
-import org.hammerlab.test.Suite
-import org.scalatest.matchers.Matcher
-import shapeless.HNil
-import shapeless._
-import shapeless.ops.hlist.FlatMapper
+import org.scalatest.{ FunSuite, Matchers }
 
 class EllipseTest
-  extends Suite {
+  extends FunSuite
+    with Matchers {
 
   val ellipses =
     List(

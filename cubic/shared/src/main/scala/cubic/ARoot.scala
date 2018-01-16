@@ -32,7 +32,7 @@ object Root {
     case Triple(v) ⇒ Triple(f(v))
   }
 
-  implicit def arithmeticRootDbl[D](implicit a: Arithmetic[D, D]): Arithmetic[Root[D], D] =
+  implicit def arithmeticRootDbl[D](implicit a: Arithmetic.I[D]): Arithmetic[Root[D], D] =
     new Arithmetic[Root[D], D] {
       import Arithmetic._
       override def +(l: Root[D], r: D) = map[D](_ + r)(l)

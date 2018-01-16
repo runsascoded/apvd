@@ -1,8 +1,5 @@
 
-enablePlugins(
-  ScalaJSPlugin,
-  ScalaJSBundlerPlugin
-)
+build(testDeps := Nil)
 
 scalaVersion := "2.12.4"
 scalaJSUseMainModuleInitializer := true
@@ -16,8 +13,8 @@ lazy val app = project.settings(
     "com.github.japgolly.scalacss" %%% "core" % "0.5.3"
   ),
   npmDependencies in Compile ++= Seq(
-    "react" -> "15.6.1",
-    "react-dom" -> "15.6.1"
+    "react" → "15.6.1",
+    "react-dom" → "15.6.1"
   )
 ).dependsOn(
   libJS
@@ -45,8 +42,11 @@ lazy val cubic = crossProject.settings(
 ).dependsOn(
   tests % "test"
 )
+
 lazy val cubicJS = cubic.js
-lazy val cubicJVM = cubic.jvm
+lazy val cubicJVM = cubic.jvm.settings(
+  libraryDependencies += "org.scala-js" %% "scalajs-stubs" % scalaJSVersion % "provided"
+)
 
 /*
 lazy val quartic = crossProject.in(file("quartic")).settings(
@@ -63,7 +63,7 @@ lazy val tests = crossProject.settings(
     "org.typelevel" %%% "kittens" % "1.0.0-RC0",
     "org.typelevel" %%% "cats-core" % "1.0.0-MF",
     "com.chuusai" %%% "shapeless" % "2.3.2",
-    "org.scalatest" %%% "scalatest" % "3.0.2"
+    "org.scalatest" %%% "scalatest" % "3.0.4"
   ),
   testDeps := Nil
 )

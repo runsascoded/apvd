@@ -1,3 +1,3 @@
-addSbtPlugin("org.hammerlab" % "sbt-parent" % "3.2.0")
-addSbtPlugin("org.scala-js" % "sbt-scalajs" % "0.6.20")
-addSbtPlugin("ch.epfl.scala" % "sbt-scalajs-bundler" % "0.8.0")
+addSbtPlugin("org.hammerlab.sbt" % "parent" % "4.1.0")
+addSbtPlugin("org.scala-js" % "sbt-scalajs" % "0.6.21")
+addSbtPlugin("ch.epfl.scala" % "sbt-scalajs-bundler" % "0.9.0")

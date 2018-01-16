@@ -1,15 +1,19 @@
 package cubic
 
 import com.runsascoded.tests.Suite
+import cubic.Arithmetic._
 import cubic.Math._
-import Arithmetic._
-import cubic.Root.{ Double, Single, Triple }
+import cubic.Root._
 
+import scala.scalajs.js.annotation.JSExport
+
+@JSExport
 class CubicTest
   extends Suite {
 
+  type Dbl = scala.Double
+
   implicit val ε = cubic.Tolerance(1e-10)
-  import Dbl.fromInt
 
   /**
    * Values of the "a" coefficient (of the x³ term) to test for each case; "b", "c", and "d" coefficients get multiplied
@@ -34,7 +38,7 @@ class CubicTest
       a ⇒
         ===(
           Cubic[Dbl](a, b * a, c * a, d * a),
-          roots.sortBy(_.value.value)
+          roots.sortBy(_.value)
         )
     }
   }
@@ -120,5 +124,4 @@ class CubicTest
     checkPermutations( 1, 2,  3)
     checkPermutations(.1, 1, 10)
   }
-
 }
