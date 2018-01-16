@@ -1,5 +1,7 @@
 package cubic
 
+import cubic.Arithmetic.ReverseArithmeticOps
+
 trait Arithmetic[L, R] {
   def +(l: L, r: R): L
   def -(l: L, r: R): L
@@ -7,7 +9,12 @@ trait Arithmetic[L, R] {
   def /(l: L, r: R): L
 }
 
-object Arithmetic {
+trait LowPriArithmetic {
+  implicit def makeReverseOps[R](r: R): ReverseArithmeticOps[R] = new ReverseArithmeticOps(r)
+}
+
+object Arithmetic
+  extends LowPriArithmetic {
 
   type I[D] = Arithmetic[D, D]
 
@@ -18,19 +25,26 @@ object Arithmetic {
     def /[R](r: R)(implicit a: Arithmetic[L, R]): L = a./(l, r)
   }
 
+  class ReverseArithmeticOps[R](val r: R) extends AnyVal {
+    def +[L](l: L)(implicit a: Arithmetic[L, R]): L = a.+(l, r)
+    def -[L](l: L)(implicit a: Arithmetic[L, R]): L = a.-(l, r)
+    def *[L](l: L)(implicit a: Arithmetic[L, R]): L = a.*(l, r)
+    def /[L](l: L)(implicit a: Arithmetic[L, R]): L = a./(l, r)
+  }
+
+  implicit def intFromDouble[T](implicit a: Arithmetic[T, Double]): Arithmetic[T, Int] =
+    new Arithmetic[T, Int] {
+      override def -(l: T, r: Int): T = l - r.toDouble
+      override def +(l: T, r: Int): T = l + r.toDouble
+      override def *(l: T, r: Int): T = l * r.toDouble
+      override def /(l: T, r: Int): T = l / r.toDouble
+    }
+
   implicit val double: Arithmetic.I[Double] =
     new Arithmetic[Double, Double] {
       override def +(l: Double, r: Double): Double = l + r
       override def -(l: Double, r: Double): Double = l - r
       override def *(l: Double, r: Double): Double = l * r
       override def /(l: Double, r: Double): Double = l / r
-    }
-
-  implicit val doubleInt: Arithmetic[Double, Int] =
-    new Arithmetic[Double, Int] {
-      override def +(l: Double, r: Int): Double = l + r
-      override def -(l: Double, r: Int): Double = l - r
-      override def *(l: Double, r: Int): Double = l * r
-      override def /(l: Double, r: Int): Double = l / r
     }
 }

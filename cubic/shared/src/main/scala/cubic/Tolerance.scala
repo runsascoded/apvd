@@ -1,6 +1,6 @@
 package cubic
 
-case class Tolerance(v: Double)
+case class Tolerance(ε: Double)
 object Tolerance {
-  implicit def unwrap(t: Tolerance): Double = t.v
+  implicit def unwrap(t: Tolerance): Double = t.ε
 }

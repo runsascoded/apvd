@@ -1,8 +1,9 @@
 package cubic
 
+/**
+ * Type-class with various math-operations
+ */
 trait Math[D] extends Any {
-
-  def apply(d: Double): D
 
   def ^(base: D, exp: Double): D
 
@@ -13,8 +14,6 @@ trait Math[D] extends Any {
 
   def cos(t: D): D
   def acos(t: D)(implicit ε: Tolerance): D
-
-  type T = Tolerance
 }
 
 object Math {
@@ -22,31 +21,23 @@ object Math {
   def apply[T](implicit n: Math[T]): Math[T] = n
 
   implicit class MathOps[D](d: D)(implicit n: Math[D]) {
-    type T = Tolerance
-
     def ^(p: Double): D = n.^(d, p)
 
     def unary_- : D = n.unary_-(d)
 
-    def sqrt(implicit ε: T): D = n.sqrt(d)
+    def sqrt(implicit ε: Tolerance): D = n.sqrt(d)
     def cbrt: D = n.cbrt(d)
 
     def cos: D = n.cos(d)
-    def acos(implicit ε: T): D = n.acos(d)
+    def acos(implicit ε: Tolerance): D = n.acos(d)
 
-  }
-
-  implicit class IntOps(val i: Int) extends AnyVal {
-    import Arithmetic._
-    def *[T: Arithmetic.I](t: T)(implicit n: Math[T]): T = n(i) * t
   }
 
   implicit val double =
     new Math[Double] {
-      override def apply(d: Double): Double = d
       override def ^(base: Double, exp: Double): Double = math.pow(base, exp)
       override def unary_-(t: Double): Double = -t
-      override def sqrt(t: Double)(implicit ε: T): Double =
+      override def sqrt(t: Double)(implicit ε: Tolerance): Double =
         if (t < 0)
           if (t >= -ε)
             0
@@ -56,7 +47,7 @@ object Math {
           math.sqrt(t)
       override def cbrt(t: Double): Double = math.cbrt(t)
       override def cos(t: Double): Double = math.cos(t)
-      override def acos(t: Double)(implicit ε: T): Double =
+      override def acos(t: Double)(implicit ε: Tolerance): Double =
         if (t > 1)
           if (t <= 1 + ε)
             0

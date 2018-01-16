@@ -1,23 +1,27 @@
 package cubic
 
+import cubic.Arithmetic._
+import cubic.FuzzyCmp._
+import cubic.Math._
+
 import scala.math.Pi
-import Math._
-import Arithmetic._
-import FuzzyCmp._
 
 object DepressedCubic {
   def apply[D : Math : Arithmetic.I : Doubleish](p: D, q: D)(
       implicit
       ε: Tolerance,
-      dia: Arithmetic[D, Int],
-      dda: Arithmetic[D, Double]
+      ad: Arithmetic[D, Double]
   ): Seq[Root[D]] = {
 
     import Root._
 
-//    println(s"p: $p, q: $q")
-
     if (p === 0 && q === 0)
+      /**
+       * Only possible triple-rooted depressed-cubic: x³=0
+       *
+       * Return the average of [[p]] and [[q]] to preserve flow of any gradient information, and have an instance of
+       * [[D]], instead of just returning literal [[0]].
+       */
       Seq(
         Triple(
           (p + q) / 2
@@ -29,11 +33,10 @@ object DepressedCubic {
       val q2 = -q/2
       val q22 = q2 ^ 2
 
-//      println(s"q22: $q22, p33: $p33")
       if (q22 <= p33) {
         val cos = q2 / p33.sqrt
         val sqp3 = p3.sqrt
-        val sqp32 = 2 * sqp3
+        val sqp32: D = 2 * sqp3
         if (cos === 1)
           Seq(
             Double(-sqp3),
