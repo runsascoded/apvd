@@ -7,11 +7,29 @@ import cubic.Math._
 import scala.math.Pi
 
 object DepressedCubic {
-  def apply[D : Math : Arithmetic.I : Doubleish](p: D, q: D)(
+  /**
+   * Solve a "depressed cubic" (quadratic term of 0; x³ + px + q = 0) for a type [[D]] that conforms to various numeric
+   * type-classes
+   *
+   * @param p linear term
+   * @param q constant term
+   * @param ε fuzzy-comparison tolerance, for calling [[Root.Double double]]- and [[Root.Triple triple]]-roots
+   * @tparam D type of parameters and returned [[Root roots]]
+   * @return [[Root Roots]] in increasing order
+   */
+  def apply[
+      D: Math          // sqrt, ^, cos, acos
+       : Arithmetic.I  // arithmetic between [[D]] instances
+       : Doubleish     // lt/gt/eq comparisons to ints/doubles
+  ](
+      p: D,
+      q: D
+  )(
       implicit
-      ε: Tolerance,
-      ad: Arithmetic[D, Double]
-  ): Seq[Root[D]] = {
+       ε: Tolerance,             // fuzzy lt/gt/eq comparisons
+      ad: Arithmetic[D, Double]  // division by 2, 3
+  ):
+      Seq[Root[D]] = {
 
     import Root._
 
