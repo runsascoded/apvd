@@ -9,6 +9,7 @@ lazy val apvd = rootProject(
       libJS,     libJVM,
     cubicJS,   cubicJVM,
      mathJS,    mathJVM,
+  quarticJS, quarticJVM,
     testsJS,   testsJVM
 )
 
@@ -62,15 +63,15 @@ lazy val cubicJVM = cubic.jvm.settings(
   libraryDependencies += "org.scala-js" %% "scalajs-stubs" % scalaJSVersion % "provided"
 )
 
-/*
 lazy val quartic = crossProject.in(file("quartic")).settings(
   libraryDependencies += "com.chuusai" %%% "shapeless" % "2.3.2"
 ).dependsOn(
+  cubic,
+  math,
   tests % "test"
 )
 lazy val quarticJS = quartic.js
 lazy val quarticJVM = quartic.jvm
-*/
 
 lazy val tests = crossProject.settings(
   libraryDependencies ++= Seq(
