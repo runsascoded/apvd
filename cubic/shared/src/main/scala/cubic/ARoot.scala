@@ -9,24 +9,16 @@ import apvd.math.Arithmetic
 
 sealed abstract class Root[D](val degree: Int) {
   def value: D
+  override def toString = s"$value·$degree"
 }
 
 object Root {
 
-  case class Single[D](value: D)
-    extends Root[D](1) {
+  case class Single[D](value: D) extends Root[D](1) {
     override def toString = value.toString
   }
-
-  case class Double[D](value: D)
-    extends Root[D](2) {
-    override def toString = s"$value·2"
-  }
-
-  case class Triple[D](value: D)
-    extends Root[D](3) {
-    override def toString = s"$value·3"
-  }
+  case class Double[D](value: D) extends Root[D](2)
+  case class Triple[D](value: D) extends Root[D](3)
 
   def map[D](f: D ⇒ D): Root[D] ⇒ Root[D] = {
     case Single(v) ⇒ Single(f(v))
