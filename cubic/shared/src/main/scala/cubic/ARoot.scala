@@ -1,5 +1,7 @@
 package cubic
 
+import apvd.math.Arithmetic
+
 /**
  * This file is named ARoot.scala instead of Root.scala because it needs to come before "Cubic.scala" lexicographically,
  * due to [[https://github.com/scala/bug/issues/10222#issuecomment-333397589 scala/bug#10222]].

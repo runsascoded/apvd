@@ -1,4 +1,4 @@
-package cubic
+package apvd.math
 
 case class Tolerance(ε: Double)
 object Tolerance {

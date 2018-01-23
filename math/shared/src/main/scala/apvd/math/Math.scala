@@ -1,4 +1,4 @@
-package cubic
+package apvd.math
 
 /**
  * Type-class with various math-operations
@@ -30,7 +30,6 @@ object Math {
 
     def cos: D = n.cos(d)
     def acos(implicit ε: Tolerance): D = n.acos(d)
-
   }
 
   implicit val double =

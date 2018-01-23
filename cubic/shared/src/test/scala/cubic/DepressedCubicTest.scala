@@ -1,8 +1,8 @@
 package cubic
 
 import com.runsascoded.tests.Suite
-import cubic.Arithmetic._
-import cubic.Math._
+import apvd.math.Arithmetic._
+import apvd.math.Math._
 import cubic.Root.Single
 
 import scala.Array.fill
@@ -13,7 +13,7 @@ import scala.scalajs.js.annotation.JSExport
 class DepressedCubicTest
   extends Suite {
 
-  implicit val ε = cubic.Tolerance(1e-10)
+  implicit val ε = apvd.math.Tolerance(1e-10)
 
   type Dbl = Double
 

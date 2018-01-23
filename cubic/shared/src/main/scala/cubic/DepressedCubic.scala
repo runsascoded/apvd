@@ -1,8 +1,9 @@
 package cubic
 
-import cubic.Arithmetic._
-import cubic.FuzzyCmp._
-import cubic.Math._
+import apvd.math._
+import apvd.math.Arithmetic._
+import apvd.math.FuzzyCmp._
+import apvd.math.Math._
 
 import scala.math.Pi
 

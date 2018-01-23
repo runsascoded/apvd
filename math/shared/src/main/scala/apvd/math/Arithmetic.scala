@@ -1,6 +1,6 @@
-package cubic
+package apvd.math
 
-import cubic.Arithmetic.ReverseArithmeticOps
+import Arithmetic.ReverseArithmeticOps
 
 trait Arithmetic[L, R] {
   def +(l: L, r: R): L

@@ -1,8 +1,8 @@
 package cubic
 
 import com.runsascoded.tests.Suite
-import cubic.Arithmetic._
-import cubic.Math._
+import apvd.math.Arithmetic._
+import apvd.math.Math._
 import cubic.Root._
 
 import scala.scalajs.js.annotation.JSExport
@@ -13,7 +13,7 @@ class CubicTest
 
   type Dbl = scala.Double
 
-  implicit val ε = cubic.Tolerance(1e-10)
+  implicit val ε = apvd.math.Tolerance(1e-10)
 
   /**
    * Values of the "a" coefficient (of the x³ term) to test for each case; "b", "c", and "d" coefficients get multiplied

@@ -1,4 +1,4 @@
-package cubic
+package apvd.math
 
 trait Doubleish[T] {
   def apply(t: T): Double

@@ -1,6 +1,7 @@
 package cubic
 
-import Arithmetic._
+import apvd.math._
+import apvd.math.Arithmetic._
 
 object Cubic {
   /**

@@ -4,7 +4,13 @@ build(
   scalaVersion := "2.12.4"
 )
 
-lazy val apvd = rootProject(app, libJS, libJVM, cubicJS, cubicJVM, testsJS, testsJVM)
+lazy val apvd = rootProject(
+  app,
+      libJS,     libJVM,
+    cubicJS,   cubicJVM,
+     mathJS,    mathJVM,
+    testsJS,   testsJVM
+)
 
 lazy val app = project.settings(
   libraryDependencies ++= Seq(
@@ -30,10 +36,16 @@ lazy val lib = crossProject.settings(
     "org.typelevel" %%% "cats-core" % "1.0.0-MF" % "test",
     "com.chuusai" %%% "shapeless" % "2.3.2" % "test"
   )
+).dependsOn(
+  tests % "test"
 )
 
 lazy val libJS = lib.js
 lazy val libJVM = lib.jvm
+
+lazy val math = crossProject.settings()
+lazy val mathJS = math.js
+lazy val mathJVM = math.jvm
 
 lazy val cubic = crossProject.settings(
   libraryDependencies ++= Seq(
@@ -41,6 +53,7 @@ lazy val cubic = crossProject.settings(
     "org.spire-math" %%% "spire" % "0.13.0"
   )
 ).dependsOn(
+  math,
   tests % "test"
 )
 

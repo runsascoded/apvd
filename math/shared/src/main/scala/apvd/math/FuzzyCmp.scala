@@ -1,4 +1,4 @@
-package cubic
+package apvd.math
 
 trait FuzzyCmp[L, R] {
   def >= (l: L, r: R)(implicit ε: Tolerance): Boolean

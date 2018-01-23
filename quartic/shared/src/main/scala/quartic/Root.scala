@@ -1,0 +1,5 @@
+package quartic
+
+class Root {
+
+}
