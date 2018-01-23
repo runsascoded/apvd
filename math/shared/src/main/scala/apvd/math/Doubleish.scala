@@ -19,4 +19,7 @@ object Doubleish {
     new Doubleish[Long] {
       override def apply(t: Long): Double = t
     }
+
+  implicit def ord[D](implicit d: Doubleish[D]): Ordering[D] =
+    Ordering.by[D, Double](d(_))(Ordering.Double)
 }

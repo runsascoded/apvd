@@ -6,6 +6,7 @@ trait FuzzyCmp[L, R] {
   def <= (l: L, r: R)(implicit ε: Tolerance): Boolean
   def <  (l: L, r: R)(implicit ε: Tolerance): Boolean
   def ===(l: L, r: R)(implicit ε: Tolerance): Boolean
+  def !==(l: L, r: R)(implicit ε: Tolerance): Boolean = ! ===(l, r)
 }
 
 object FuzzyCmp {
@@ -24,5 +25,6 @@ object FuzzyCmp {
     def <= [R](r: R)(implicit cmp: FuzzyCmp[L, R], ε: Tolerance): Boolean = cmp.<= (l, r)
     def <  [R](r: R)(implicit cmp: FuzzyCmp[L, R], ε: Tolerance): Boolean = cmp.<  (l, r)
     def ===[R](r: R)(implicit cmp: FuzzyCmp[L, R], ε: Tolerance): Boolean = cmp.===(l, r)
+    def !==[R](r: R)(implicit cmp: FuzzyCmp[L, R], ε: Tolerance): Boolean = cmp.!==(l, r)
   }
 }
