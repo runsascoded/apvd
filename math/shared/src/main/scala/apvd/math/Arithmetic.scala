@@ -16,7 +16,8 @@ trait LowPriArithmetic {
 object Arithmetic
   extends LowPriArithmetic {
 
-  type I[D] = Arithmetic[D, D]
+  type I[T] = Arithmetic[T, T]
+  type D[T] = Arithmetic[T, Double]
 
   implicit class ArithmeticOps[L](val l: L) extends AnyVal {
     def +[R](r: R)(implicit a: Arithmetic[L, R]): L = a.+(l, r)

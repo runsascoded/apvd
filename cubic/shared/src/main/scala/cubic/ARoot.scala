@@ -28,7 +28,7 @@ object Root {
 
   implicit def arithmeticRootDbl[D](implicit a: Arithmetic.I[D]): Arithmetic[Root[D], D] =
     new Arithmetic[Root[D], D] {
-      import Arithmetic._
+      import Arithmetic.ArithmeticOps
       override def +(l: Root[D], r: D) = map[D](_ + r)(l)
       override def -(l: Root[D], r: D) = map[D](_ - r)(l)
       override def *(l: Root[D], r: D) = map[D](_ * r)(l)

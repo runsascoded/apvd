@@ -21,14 +21,13 @@ object DepressedCubic {
   def apply[
       D: Math          // sqrt, ^, cos, acos
        : Arithmetic.I  // arithmetic between [[D]] instances
+       : Arithmetic.D  // division by 2, 3
        : Doubleish     // lt/gt/eq comparisons to ints/doubles
   ](
       p: D,
       q: D
   )(
-      implicit
-       ε: Tolerance,             // fuzzy lt/gt/eq comparisons
-      ad: Arithmetic[D, Double]  // division by 2, 3
+      implicit ε: Tolerance  // fuzzy lt/gt/eq comparisons
   ):
       Seq[Root[D]] = {
 
