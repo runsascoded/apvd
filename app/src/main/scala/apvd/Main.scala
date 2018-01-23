@@ -8,8 +8,8 @@ import scala.scalajs.js.annotation.JSExportTopLevel
 import scalacss.DevDefaults.{ cssEnv, cssStringRenderer }
 import scalacss.defaults.PlatformExports._
 
+@JSExportTopLevel("apvd.Main")
 object Main {
-  @JSExportTopLevel("apvd.main")
   def main(args: Array[String]): Unit = {
     installStyle(
       createStyleElement(

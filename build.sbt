@@ -1,8 +1,8 @@
 
-build(testDeps := Nil)
-
-scalaVersion := "2.12.4"
-scalaJSUseMainModuleInitializer := true
+build(
+  testDeps := Nil,
+  scalaVersion := "2.12.4"
+)
 
 lazy val apvd = rootProject(app, libJS, libJVM, cubicJS, cubicJVM, testsJS, testsJVM)
 
