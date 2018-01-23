@@ -28,22 +28,36 @@ object Cubic {
   )(
       implicit ε: Tolerance  // fuzzy lt/gt/eq comparisons
   ):
-      Seq[Root[D]] = {
+      Seq[Root[D]] =
+    monic(
+      b / a,
+      c / a,
+      d / a
+    )
 
-    val b3a = b / ((3 * a: D))
-    val b3a2 = b3a * b3a
-    val ca = c / a
+  def monic[
+      D: Math          // sqrt, ^, cos, acos
+       : Arithmetic.I  // arithmetic between [[D]] instances
+       : Arithmetic.D  // division by 2, 3
+       : Doubleish     // lt/gt/eq comparisons to ints/doubles
+  ](
+      b: D,
+      c: D,
+      d: D
+   )(
+      implicit ε: Tolerance  // fuzzy lt/gt/eq comparisons
+   ):
+  Seq[Root[D]] = {
+
+    val b3 = b / 3
+    val b32 = b3 * b3
 
     DepressedCubic[D](
-      p = ca - (3*b3a2: D),
-      q = ((2 * b3a2):D) * b3a - b3a*ca + d/a
+      p = c - (3*b32: D),
+      q = ((2 * b32):D) * b3 - b3*c + d
     )
     .map {
-      _ - b3a
+      _ - b3
     }
   }
 }
-
-
-
-
