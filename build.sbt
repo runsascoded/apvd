@@ -15,7 +15,8 @@ lazy val app = project.settings(
   npmDependencies in Compile ++= Seq(
     "react" → "15.6.1",
     "react-dom" → "15.6.1"
-  )
+  ),
+  scalaJSUseMainModuleInitializer := true
 ).dependsOn(
   libJS
 ).enablePlugins(
