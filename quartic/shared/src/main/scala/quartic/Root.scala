@@ -1,6 +1,6 @@
 package quartic
 
-import apvd.math.Arithmetic
+import hammerlab.math.syntax.Arithmetic
 
 sealed abstract class Root[D](val degree: Int) {
   def value: D

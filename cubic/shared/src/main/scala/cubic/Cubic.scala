@@ -1,7 +1,7 @@
 package cubic
 
-import apvd.math._
-import apvd.math.Arithmetic._
+import hammerlab.math.syntax._
+import hammerlab.math.syntax.Arithmetic._
 
 object Cubic {
   /**

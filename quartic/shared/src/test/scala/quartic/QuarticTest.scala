@@ -1,6 +1,6 @@
 package quartic
 
-import com.runsascoded.tests.Suite
+import org.hammerlab.Suite
 import quartic.Root._
 
 import scala.Array.fill

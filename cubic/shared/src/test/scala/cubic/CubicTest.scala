@@ -1,9 +1,9 @@
 package cubic
 
-import com.runsascoded.tests.Suite
-import apvd.math.Arithmetic._
-import apvd.math.Math._
+import hammerlab.math.syntax.Arithmetic._
+import hammerlab.math.syntax.Math._
 import cubic.Root._
+import org.hammerlab.Suite
 
 import scala.scalajs.js.annotation.JSExport
 

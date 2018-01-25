@@ -1,6 +1,6 @@
 package cubic
 
-import apvd.math.Arithmetic
+import hammerlab.math.syntax.Arithmetic
 
 /**
  * This file is named ARoot.scala instead of Root.scala because it needs to come before "Cubic.scala" lexicographically,

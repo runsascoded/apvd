@@ -1,8 +1,8 @@
 package quartic
 
-import apvd.math._
-import apvd.math.Arithmetic._
-import apvd.math.Math._
+import hammerlab.math.syntax._
+import hammerlab.math.syntax.Arithmetic._
+import hammerlab.math.syntax.Math._
 
 object Quartic {
   def apply[

@@ -1,9 +1,9 @@
 package cubic
 
-import apvd.math._
-import apvd.math.Arithmetic._
-import apvd.math.FuzzyCmp._
-import apvd.math.Math._
+import hammerlab.math.syntax._
+import hammerlab.math.syntax.Arithmetic._
+import hammerlab.math.syntax.FuzzyCmp._
+import hammerlab.math.syntax.Math._
 
 import scala.math.Pi
 
