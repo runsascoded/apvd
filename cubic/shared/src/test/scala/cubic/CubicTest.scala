@@ -13,7 +13,7 @@ class CubicTest
 
   type Dbl = scala.Double
 
-  implicit val ε = apvd.math.Tolerance(1e-10)
+  ε = 1e-10
 
   /**
    * Values of the "a" coefficient (of the x³ term) to test for each case; "b", "c", and "d" coefficients get multiplied

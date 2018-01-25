@@ -10,8 +10,6 @@ class QuarticTest
 
   type Dbl = scala.Double
 
-  implicit val ε = apvd.math.Tolerance(1e-6)
-
   val M = 6
   val m = -M
 

@@ -13,7 +13,7 @@ import scala.scalajs.js.annotation.JSExport
 class DepressedCubicTest
   extends Suite {
 
-  implicit val ε = apvd.math.Tolerance(1e-10)
+  ε = 1e-10
 
   type Dbl = Double
 
