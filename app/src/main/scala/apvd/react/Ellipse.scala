@@ -2,16 +2,17 @@ package apvd.react
 
 import apvd.css.Style
 import apvd.lib
+import apvd.lib.ellipse.Ellipse
 import apvd.lib.{ Point, Transform }
 import japgolly.scalajs.react._
-import japgolly.scalajs.react.vdom.HtmlAttrs.{ key, onMouseEnter, onMouseMove, onMouseDown  }
+import japgolly.scalajs.react.vdom.HtmlAttrs.{ key, onMouseDown, onMouseEnter, onMouseMove }
 import japgolly.scalajs.react.vdom.SvgTags.{ ellipse, g }
 import japgolly.scalajs.react.vdom.svg_<^._
 
 object Ellipse {
 
   case class Props(idx: Int,
-                   e: lib.Ellipse,
+                   e: Ellipse,
                    transform: Option[Transform],
                    strokeWidth: Double,
                    dotSize: Double,
@@ -48,7 +49,7 @@ object Ellipse {
 
     def dragStart(p: Point,
                   ellipseIdx: Int,
-                  onDrag: Point ⇒ lib.Ellipse,
+                  onDrag: Point ⇒ Ellipse,
                   negate: Boolean): Callback =
       $.props.flatMap(
         _.startDrag(
@@ -73,9 +74,9 @@ object Ellipse {
       import Style.{ Class, focus, vertex }
 
       def controlPoint(cls: Class,
-                       vertexFn: lib.Ellipse ⇒ Point,
+                       vertexFn: Ellipse ⇒ Point,
                        negate: Boolean,
-                       move: lib.Ellipse ⇒ (Double, Double) ⇒ lib.Ellipse) =
+                       move: Ellipse ⇒ (Double, Double) ⇒ Ellipse) =
         Vertex.component(
           Vertex.Props(
             vertexFn(originalEllipse)(transform),

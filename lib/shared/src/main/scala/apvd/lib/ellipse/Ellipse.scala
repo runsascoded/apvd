@@ -1,6 +1,9 @@
-package apvd.lib
+package apvd.lib.ellipse
 
-import apvd.lib.Ellipse.toDegrees
+import apvd.lib.ellipse.Ellipse.toDegrees
+import apvd.lib.{ Point, Rotate, Scale, Transform, Transforms, Translate }
+import quartic.complex.Quartic
+import spire.math.Complex
 
 import scala.math.{ Pi, atan, cos, sin, sqrt }
 
@@ -48,6 +51,41 @@ sealed trait Ellipse {
     Coords(cx + dx, cy + dy, rx, ry, theta, color, name)
 
   import Ellipse.angle
+
+  import apvd.lib
+  /**
+   * [[lib.Point Points]] where this [[Ellipse]] intersects the unit circle, x² + y² = 1
+   */
+/*
+  def unit: Seq[lib.Point] = {
+    val AC = A - C
+    val BE = B * E
+    val CF = C + F
+    val (a, b, c, d, e) = (
+      B*B + AC*AC,
+      2*(D*AC + BE),
+      D*D + E*E - B*B + 2*CF*AC,
+      2*(D*CF + BE),
+      CF*CF - E*E
+    )
+
+    val roots =
+      Quartic
+        .doubleComplex[Double].apply(a, b, c, d, e)
+        .collect {
+          case Complex(real, 0) ⇒ real
+        }
+
+
+  }
+*/
+
+/*
+  def intersect(e: Ellipse): Seq[Intersection] = {
+    val proj @ Coeffs(A, B, C, D, E, F, color, name) = e(projection).toCoeffs
+
+  }
+*/
 
   def moveVx(dx: Double, dy: Double): Ellipse = {
     val vx = vx1 + (dx, dy)

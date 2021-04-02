@@ -1,7 +1,7 @@
 package apvd.react
 
 import apvd.css.{ ClassName, Style }
-import apvd.lib
+import apvd.lib.ellipse.Ellipse
 import apvd.lib.{ Line, Point, Rectangle, Segment, Transform }
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.HtmlAttrs.{ key, onMouseLeave, onMouseMove, onMouseUp }
@@ -14,7 +14,7 @@ import math.{ ceil, floor }
 object Panel {
 
   case class Props(idx: Int,
-                   ellipses: Seq[lib.Ellipse],
+                   ellipses: Seq[Ellipse],
                    cursor: Option[Point],
                    onCursor: Option[(Point, Int)] ⇒ Callback,
                    activateEllipse: Option[Int] ⇒ Callback,
@@ -27,7 +27,7 @@ object Panel {
                    cursorDotRadius: Int = 3,
                    hideCursor: Boolean = false,
                    activeEllipse: Option[Int] = None,
-                   updateEllipse: (Int, lib.Ellipse) ⇒ Callback
+                   updateEllipse: (Int, Ellipse) ⇒ Callback
                   ) {
     lazy val invert = transform.map(_.invert)
 
@@ -282,4 +282,4 @@ object Panel {
 
 case class Drag(start: Point,
                 ellipseIdx: Int,
-                onDrag: Point ⇒ lib.Ellipse)
+                onDrag: Point ⇒ Ellipse)

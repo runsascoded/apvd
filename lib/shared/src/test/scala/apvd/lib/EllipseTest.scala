@@ -1,6 +1,7 @@
 package apvd.lib
 
-import apvd.lib.Ellipse.toTheta
+import apvd.lib.ellipse.{ Coeffs, Coords, Ellipse }
+import apvd.lib.ellipse.Ellipse.toTheta
 import org.scalatest.{ FunSuite, Matchers }
 
 class EllipseTest

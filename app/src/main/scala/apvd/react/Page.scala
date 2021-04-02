@@ -1,15 +1,15 @@
 package apvd.react
 
-import apvd.lib
-import apvd.lib.Ellipse.toTheta
-import apvd.lib.{ Line, Point, Rectangle }
+import apvd.lib.Point
+import apvd.lib.ellipse.Ellipse.toTheta
+import apvd.lib.ellipse.{ Ellipse ⇒ E }
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.html
 
 object Page {
 
-  case class State(ellipses: Seq[lib.Ellipse],
+  case class State(ellipses: Seq[E],
                    cursor: Option[Point] = None,
                    activeSvg: Option[Int] = None,
                    activeEllipse: Option[Int] = None)
@@ -18,7 +18,7 @@ object Page {
     val empty =
       State(
         List(
-          lib.Ellipse(
+          E(
             cx = -0.82,
             cy = 0.38,
             rx = 1,
@@ -27,7 +27,7 @@ object Page {
             color = "red",
             name = "A"
           ),
-          lib.Ellipse(
+          E(
             cx = -0.7,
             cy = 0.12,
             rx = 1.3,
@@ -36,7 +36,7 @@ object Page {
             color = "blue",
             name = "B"
           ),
-          lib.Ellipse(
+          E(
             cx = 0.5,
             cy = 1.52,
             rx = .94,
@@ -45,7 +45,7 @@ object Page {
             color = "darkgoldenrod",
             name = "C"
           ),
-          lib.Ellipse(
+          E(
             cx = 0,
             cy = 0,
             rx = .6,
@@ -58,10 +58,12 @@ object Page {
       )
   }
 
-  val component = ScalaComponent.builder[Unit]("Area-proportional venn-diagrams dashboard")
-                  .initialState(State.empty)
-                  .renderBackend[Ops]
-                  .build
+  val component =
+    ScalaComponent
+      .builder[Unit]("Area-proportional venn-diagrams dashboard")
+      .initialState(State.empty)
+      .renderBackend[Ops]
+      .build
 
   class Ops($: BackendScope[Unit, State]) {
 
@@ -80,7 +82,7 @@ object Page {
         _.copy(activeEllipse = idx)
       )
 
-    def updateEllipse(idx: Int, e: lib.Ellipse): Callback =
+    def updateEllipse(idx: Int, e: E): Callback =
       $.modState(
         s ⇒
           s.copy(
