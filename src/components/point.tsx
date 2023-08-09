@@ -1,18 +1,18 @@
 
-import React from 'react';
+import React, { MouseEvent } from 'react';
 
 export type Point = { x: number, y: number }
 
 export type Marker = {
-    dragStart: (e: MouseEvent, k: number) => void
+    dragStart: (e: MouseEvent, k: string) => void
     color: string
     cs  : number[]
-    k   : number
+    k   : string
     scale: number
 }
 
 export default function Point({ dragStart, color, cs, k, scale }: Marker) {
-    function onMouseDown(e) {
+    function onMouseDown(e: MouseEvent) {
         dragStart(e, k);
         e.stopPropagation();
     }
