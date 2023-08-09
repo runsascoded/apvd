@@ -1,16 +1,30 @@
 {
-  "name": "apvd-react",
+  "name": "apvd",
   "version": "0.1.0",
+  "description": "Area-Proportional Venn Diagrams",
+  "author": {
+    "name": "Ryan Williams",
+    "email": "ryan@runsascoded.com"
+  },
   "dependencies": {
-    "react": "^15.6.1",
-    "react-dom": "^15.6.1",
-    "react-scripts": "1.0.13",
-    "underscore": "^1.8.3"
+    "next": "^13.4.13",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^17.0.23",
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
+    "eslint": "^8.46.0",
+    "eslint-config-next": "^13.4.13",
+    "typescript": "^5.1.6"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test --env=jsdom",
-    "eject": "react-scripts eject"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "export": "next build && next export -o out/apvd",
+    "gha-export": "next build && next export && touch out/.nojekyll"
   }
 }
