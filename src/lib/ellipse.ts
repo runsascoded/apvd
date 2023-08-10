@@ -241,7 +241,7 @@ export default class Ellipse {
     }
 
     translate(tx: number, ty: number): Ellipse {
-        const {A, B, C, D, E, F} = this;
+        const {A, B, C, D, E, F, theta, color, idx, name} = this;
         return new Ellipse({
             A: A,
             B: B,
@@ -249,10 +249,7 @@ export default class Ellipse {
             D: D - 2 * A * tx - B * ty,
             E: E - 2 * C * ty - B * tx,
             F: F + A * tx * tx + B * tx * ty + C * ty * ty - D * tx - E * ty,
-            t: this.t,
-            color: this.color,
-            i: this.idx,
-            name: this.name
+            theta, color, idx, name,
         });
     }
 
@@ -281,7 +278,7 @@ export default class Ellipse {
      * Scale this ellipse by { sx, sy }.
      */
     scale(sx: number, sy: number): Ellipse {
-        const {A, B, C, D, E, F} = this;
+        const {A, B, C, D, E, F, theta, color, idx, name} = this;
         return new Ellipse({
             A: A / sx / sx,
             B: B / sx / sy,
@@ -289,10 +286,7 @@ export default class Ellipse {
             D: D / sx,
             E: E / sy,
             F: F,
-            theta: this.theta,
-            color: this.color,
-            i: this.idx,
-            name: this.name
+            theta, color, idx, name,
         });
     }
 
