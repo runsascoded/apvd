@@ -22,14 +22,14 @@ export default class Intersection {
     y: number
     // o: Map<number, CST>
     edges: Edge[]
-    i: number | null = null
+    idx: number | null = null
 
     constructor(o: { [k: string]: any }) {
         //console.log("Int:", o);
         this.e1 = o.e1;
         this.e2 = o.e2;
-        this.i1 = this.e1.i;
-        this.i2 = this.e2.i;
+        this.i1 = this.e1.idx;
+        this.i2 = this.e2.idx;
         const {e1, e2} = o;
         // this.o = new Map<number, CST>();
         // const e1o: Partial<CST> = {};

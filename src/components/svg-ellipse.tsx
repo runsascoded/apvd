@@ -1,5 +1,5 @@
 
-import React, {MouseEvent, useState} from 'react';
+import React, {MouseEvent, useMemo, useState} from 'react';
 import { sqrt } from '../lib/utils';
 import Point from './point';
 
@@ -25,6 +25,7 @@ export default function SvgEllipse({ cx, cy, rx, ry, degrees, color, scale, elli
     }
 
     function onMouseLeave() {
+        console.log(`mouse leave: ${ellipseIdx}`)
         setMouseEntered(false)
     }
 
@@ -47,25 +48,29 @@ export default function SvgEllipse({ cx, cy, rx, ry, degrees, color, scale, elli
     const f1 = rx >= ry ? [rc, 0] : [0, rc]
     const f2 = rx >= ry ? [-rc, 0] : [0, -rc]
 
-    let points = (mouseEntered || props.dragging) &&
-        [
-            { k: "f1", cs: f1, color: "lightgrey" },
-            { k: "f2", cs: f2, color: "lightgrey" },
-            { k: "vx1", cs: vx1, color: "black" },
-            { k: "vx2", cs: vx2, color: "black" },
-            { k: "vy1", cs: vy1, color: "grey" },
-            { k: "vy2", cs: vy2, color: "grey" },
-            { k: "c", cs: c, color: "black" },
-        ].map(({ k, cs, color }) =>
-            <Point
-                key={k}
-                k={k}
-                cs={cs}
-                dragStart={dragStart}
-                scale={scale}
-                color={color}
-            />
-        )
+    const points = useMemo(
+        () =>
+            (mouseEntered || props.dragging) &&
+            [
+                {k: "f1", cs: f1, color: "lightgrey"},
+                {k: "f2", cs: f2, color: "lightgrey"},
+                {k: "vx1", cs: vx1, color: "black"},
+                {k: "vx2", cs: vx2, color: "black"},
+                {k: "vy1", cs: vy1, color: "grey"},
+                {k: "vy2", cs: vy2, color: "grey"},
+                {k: "c", cs: c, color: "black"},
+            ].map(({k, cs, color}) =>
+                    <Point
+                        key={k}
+                        k={k}
+                        cs={cs}
+                        dragStart={dragStart}
+                        scale={scale}
+                        color={color}
+                    />
+            ),
+        [ mouseEntered, props.dragging, dragStart, scale ]
+    )
 
     return <g
         transform={"translate(" + cx + "," + cy + ") rotate(" + degrees + ")"}

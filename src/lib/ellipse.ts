@@ -8,7 +8,7 @@ export type XY = [ number, number ];
 export type Polar = { r: number, t: number }
 
 export default class Ellipse {
-    i: number;
+    idx: number;
     name: string;
     A: number;
     B: number;
@@ -45,16 +45,22 @@ export default class Ellipse {
     f2: XY;
 
     constructor(o: { [k: string]: any }) {
-        this.i = o.i;
+        this.idx = o.idx;
         this.name = o.name;
         let theta: number | undefined, degrees: number | undefined;
         if ('A' in o) {
             if (isNaN(o.A)) {
                 throw new Error("Bad ellipse ctor: " + JSON.stringify(o));
             }
+            this.A = o.A;
+            this.B = o.B;
+            this.C = o.C;
+            this.D = o.D;
+            this.E = o.E;
+            this.F = o.F;
             theta = o.theta;
             if (o.C !== o.A) {
-                theta = Math.atan(o.B / (o.A - o.C)) / 2;
+                theta = this.theta = Math.atan(o.B / (o.A - o.C)) / 2;
             }
         }
 
@@ -245,7 +251,7 @@ export default class Ellipse {
             F: F + A * tx * tx + B * tx * ty + C * ty * ty - D * tx - E * ty,
             t: this.t,
             color: this.color,
-            i: this.i,
+            i: this.idx,
             name: this.name
         });
     }
@@ -254,7 +260,7 @@ export default class Ellipse {
      * Rotate this ellipse around the origin (0,0)
      */
     rotate(t: number): Ellipse {
-        const {A, B, C, D, E, F, color, i, name,} = this;
+        const {A, B, C, D, E, F, color, idx, name,} = this;
         const c = Math.cos(t);
         const s = Math.sin(t);
         const c2 = c * c;
@@ -267,7 +273,7 @@ export default class Ellipse {
             D: D*c - E*s,
             E: D*s + E*c,
             F: F,
-            color, i, name,
+            color, idx, name,
         });
     }
 
@@ -283,9 +289,9 @@ export default class Ellipse {
             D: D / sx,
             E: E / sy,
             F: F,
-            t: this.t,
+            theta: this.theta,
             color: this.color,
-            i: this.i,
+            i: this.idx,
             name: this.name
         });
     }

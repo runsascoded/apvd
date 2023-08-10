@@ -1,5 +1,5 @@
 
-import React, {ReactNode, useMemo, useRef, useState, MouseEvent} from 'react';
+import React, {ReactNode, useMemo, useRef, useState, MouseEvent, useCallback} from 'react';
 import SvgEllipse from './svg-ellipse';
 import { sqrt } from '../lib/utils';
 import Ellipse from "../lib/ellipse";
@@ -70,15 +70,18 @@ export default function Svg({ ellipses, idx, onEllipseDrag, transformBy, onCurso
         }
     }
 
-    function dragStart(e: MouseEvent, k: string, ek: number) {
-        const rect = svg.current?.getBoundingClientRect();
-        const { left, top } = rect || { left: 0, top: 0 };
-        setDragging(true);
-        setDragNode(k);
-        setDragEllipse(ek);
-        setDragStartX(e.clientX - left);
-        setDragStartY(e.clientY - top);
-    }
+    const dragStart = useCallback(
+        (e: MouseEvent, k: string, ek: number) => {
+            const rect = svg.current?.getBoundingClientRect();
+            const { left, top } = rect || { left: 0, top: 0 };
+            setDragging(true);
+            setDragNode(k);
+            setDragEllipse(ek);
+            setDragStartX(e.clientX - left);
+            setDragStartY(e.clientY - top);
+        },
+        [ svg.current ]
+    )
 
     function onMouseMove(e: MouseEvent) {
         const rect = svg.current?.getBoundingClientRect();
@@ -188,14 +191,17 @@ export default function Svg({ ellipses, idx, onEllipseDrag, transformBy, onCurso
         setHeight(400);
     }
 
-    function transformed(x: number, y: number) {
-        if (transformBy) {
-            const [ tx, ty ] = transformBy.transform([ x, y ]);
-            return { x: tx, y: ty };
-        } else {
-            return { x, y };
-        }
-    }
+    const transformed = useCallback(
+        (x: number, y: number) => {
+            if (transformBy) {
+                const [ tx, ty ] = transformBy.transform([ x, y ]);
+                return { x: tx, y: ty };
+            } else {
+                return { x, y };
+            }
+        },
+        [ transformBy ]
+    )
 
     function virtual(x: number, y: number) {
         return {
@@ -277,39 +283,46 @@ export default function Svg({ ellipses, idx, onEllipseDrag, transformBy, onCurso
         );
     }
 
-    const svgEllipses = ellipses.map((ellipse, k) => {
-        //console.log("projecting:", ellipse, "into", transformBy);
-        const transformedEllipse =
-            transformBy ?
-                ellipse.project(transformBy) :
-                ellipse;
+    const svgEllipses = useMemo(
+        () =>
+            ellipses.map((ellipse, k) => {
+                //console.log("projecting:", ellipse, "into", transformBy);
+                const transformedEllipse =
+                    transformBy ?
+                        ellipse.project(transformBy) :
+                        ellipse;
 
-        return (
-            <SvgEllipse
-                key={ellipse.name}
-                ellipseIdx={ellipse.i}
-                dragging={dragEllipse === k}
-                dragStart={dragStart}
-                {...transformedEllipse}
-                scale={s}
-            />
-        );
-    });
+                return (
+                    <SvgEllipse
+                        key={ellipse.name}
+                        ellipseIdx={ellipse.idx}
+                        dragging={dragEllipse === k}
+                        dragStart={dragStart}
+                        {...transformedEllipse}
+                        scale={s}
+                    />
+                );
+            }),
+        [ ellipses, transformBy, dragEllipse, dragStart, s ]
+    )
 
-    let svgPoints =
-        points.map(
-            (p, i) => {
-                const t = transformed(p.x, p.y);
-                //console.log("transformed point:", p, t);
-                return <circle
-                    key={i}
-                    r={pointRadius / s}
-                    className="projected-point"
-                    cx={t.x}
-                    cy={t.y}
-                />
-            }
-        );
+    let svgPoints = useMemo(
+        () =>
+            points.map(
+                (p, i) => {
+                    const t = transformed(p.x, p.y);
+                    //console.log("transformed point:", p, t);
+                    return <circle
+                        key={i}
+                        r={pointRadius / s}
+                        className="projected-point"
+                        cx={t.x}
+                        cy={t.y}
+                    />
+                }
+            ),
+    [ transformed, pointRadius, s, points, ]
+    )
 
     const transformedCursor = cursor ? transformed(cursor.x, cursor.y) : null;
     const rawCursor = transformedCursor ? actual(transformedCursor.x, transformedCursor.y) : null;

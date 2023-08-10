@@ -1,5 +1,6 @@
+import "../public/css/apvd.css"
 
-import React, {useMemo, useState} from 'react';
+import React, {useEffect, useMemo, useState} from 'react';
 import Svg from '../src/components/svg';
 import ModelTextField from '../src/components/model-text-field';
 import EllipseC from '../src/lib/ellipse';
@@ -17,7 +18,7 @@ export type Ellipse = {
     degrees: number
 };
 
-export function getInitialProps() {
+export function getStaticProps() {
     const ellipses: Ellipse[] = [
         {
             name: "A", color: 'red',
@@ -114,7 +115,7 @@ export default function Page({ ellipses: initialEllipses }: { ellipses: Ellipse[
                     showGrid={true}
                     gridSize={1}
                     projection={{ x: 0, y: 0, s: 50 }}
-                    onCursor={p => onCursor(p, k)}
+                    onCursor={p => onCursor(p, k+1)}
                     hideCursorDot={activeSvg === k+1}
                 />
         )

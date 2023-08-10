@@ -36,7 +36,7 @@ export default class Edge {
 
     constructor(o: { [key: string]: any }) {
         this.e = o.e;
-        this.i = this.e.i;
+        this.i = this.e.idx;
         this.j = o.j;
         this.rx = this.e.rx;
         this.ry = this.e.ry;
