@@ -29,7 +29,10 @@ export default class Edge {
     sector: number
     triangle: number
     secant: number
-    // containers: {[key: string]: boolean}
+    expectedEdgeVisits: number = 0
+    containers: boolean[] = []
+    prev?: Edge
+    next?: Edge
 
     constructor(o: { [key: string]: any }) {
         this.e = o.e;
@@ -79,7 +82,7 @@ export default class Edge {
         //);
 
         //console.log(this.toString())
-        // this.containers = {};
+        // this.containers = [];
     }
 
     // hasContainers(containers) {
@@ -95,11 +98,11 @@ export default class Edge {
         throw new Error("Invalid p: " + p.toString() + " in " + this.toString());
     }
 
-    // get ellipses() {
-    //     const o = { ...this.containers }
-    //     o[this.i] = true;
-    //     return o;
-    // }
+    get ellipses(): boolean[] {
+        const o = [...this.containers]
+        o[this.i] = true;
+        return o;
+    }
 
     toString() {
         const pp1 = pp(this.x1, this.y1);

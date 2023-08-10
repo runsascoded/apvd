@@ -1,5 +1,5 @@
 
-import { zeroCheck, pi, sq, pp, r3 } from './utils';
+import { zeroCheck, pi, sqrt, pp, r3 } from './utils';
 import Intersection from './intersection';
 import { quartic } from '../quartic';
 import {Point} from "../components/point";
@@ -70,8 +70,8 @@ export default class Ellipse {
                 this.cx = -D / 2 / A;
                 this.cy = -E / 2 / C;
                 const n = -4 * F + D * D / A + E * E / C;
-                this.rx = sq(n / A) / 2;
-                this.ry = sq(n / C) / 2;
+                this.rx = sqrt(n / A) / 2;
+                this.ry = sqrt(n / C) / 2;
 
             } else {
                 const e = this.rotate(-theta);
@@ -151,7 +151,7 @@ export default class Ellipse {
         this.rM = Math.max(rx, ry);
         this.rm = Math.min(rx, ry);
 
-        this.fd = sq(this.rM*this.rM - this.rm*this.rm);
+        this.fd = sqrt(this.rM*this.rM - this.rm*this.rm);
         const fr = this.fd / this.rM;
 
         this.vxx = cx + rx*cos;
@@ -187,7 +187,7 @@ export default class Ellipse {
 
     polar(x: number, y: number): Polar {
         const p = this.transform(x, y);
-        const r = sq(p[0] * p[0] + p[1] * p[1]);
+        const r = sqrt(p[0] * p[0] + p[1] * p[1]);
         //console.log("transformed:", pp(x,y), "→", pp(p), "r:", r, "p[0]/r:", p[0]/r);
         if (r === 0) return { r: r, t: 0 };
         // var atan = (p[0] == 0) ?
@@ -389,7 +389,7 @@ export default class Ellipse {
         //var ys = [];
         const ps: XY[] = [];
         xo.forEach((n, x) => {
-            let y = sq(1 - x * x);
+            let y = sqrt(1 - x * x);
             if (isNaN(y)) return;
             const b = A * x * x + C * y * y + D * x + F;
             const c = B * x * y + E * y;

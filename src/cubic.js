@@ -1,5 +1,5 @@
 
-import { sq, pi, cmp } from './lib/utils';
+import { sqrt, pi, cmp } from './lib/utils';
 
 export const cubic = (a, b, c, d) => {
   if (d !== undefined) {
@@ -10,7 +10,7 @@ export const cubic = (a, b, c, d) => {
         D = 0;
       }
       if (D >= 0) {
-        const sqD = sq(D);
+        const sqD = sqrt(D);
         return [ (-c + sqD) / 2 / b, (-c - sqD) / 2 / b ];
       }
       return [];
@@ -29,7 +29,7 @@ export const cubic = (a, b, c, d) => {
 
   if (q === 0) {
     if (p < 0) {
-      return [ -sq(-p), 0, sq(-p) ];
+      return [ -sqrt(-p), 0, sqrt(-p) ];
     }
     return [ 0 ];
   } else if (p === 0) {
@@ -45,7 +45,7 @@ export const cubic = (a, b, c, d) => {
 
   if (r < 0) {
     function tk(k) {
-      return 2 * sq(p3) * Math.cos((Math.acos(q2/sq(p33)) - 2*pi*k) / 3);
+      return 2 * sqrt(p3) * Math.cos((Math.acos(q2/sqrt(p33)) - 2*pi*k) / 3);
     }
     const roots = [ tk(0), tk(1), tk(2) ];
     roots.sort(cmp);
@@ -55,7 +55,7 @@ export const cubic = (a, b, c, d) => {
     if (r === 0) {
       return [ 3*q/p, -q2/p3, -q2/p3 ].sort(cmp);
     } else {
-      const sqr = sq(r);
+      const sqr = sqrt(r);
       //console.log("sq:", sq);
       return [ Math.cbrt(q2 + sqr) + Math.cbrt(q2 - sqr) ];
     }

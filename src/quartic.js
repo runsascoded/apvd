@@ -1,6 +1,6 @@
 
 import { cubic } from './cubic';
-import { sq, cmp } from './lib/utils';
+import { sqrt, cmp } from './lib/utils';
 
 export const quartic = (a, b, c, d, e) => {
 
@@ -31,7 +31,7 @@ export const quartic = (a, b, c, d, e) => {
       //console.log("negative d:", d);
       return [];
     }
-    const sqd = sq(d);
+    const sqd = sqrt(d);
     //console.log("d:", d, "sq:", sq);
     const q1 = (-a + sqd)/2;
     const q2 = (-a - sqd)/2;
@@ -39,12 +39,12 @@ export const quartic = (a, b, c, d, e) => {
     //console.log("biquadratic:", pp([a, c, d, sq, q1, q2]));
 
     if (q1 >= 0) {
-      const sq1 = sq(q1);
+      const sq1 = sqrt(q1);
       //console.log("pushing sq1s:", -sq1, sq1);
       roots = roots.concat([ -sq1, sq1 ]);
     }
     if (q2 >= 0) {
-      const sq2 = sq(q2);
+      const sq2 = sqrt(q2);
       //console.log("pushing sq2s:", -sq2, sq2);
       roots = roots.concat([ -sq2, sq2 ]);
     }
@@ -57,14 +57,14 @@ export const quartic = (a, b, c, d, e) => {
   //console.log("croots:", croots);
   const y = croots[0];
 
-  const sqa = sq(a + 2*y);
+  const sqa = sqrt(a + 2*y);
   //console.log("a+2y:", a+2*y, "sq:", sq);
 
   function root(s1, s2) {
     const s1sq = s1*sqa;
     const B = -(3*a + 2*y + 2*b/s1sq);
     if (B >= 0) {
-      const sq1 = sq(B);
+      const sq1 = sqrt(B);
       roots.push((s1sq + s2 * sq1) / 2);
     } else {
       //console.log("negative B:", B);

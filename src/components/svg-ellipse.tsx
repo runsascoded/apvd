@@ -1,6 +1,6 @@
 
 import React, {MouseEvent, useState} from 'react';
-import { sq } from '../lib/utils';
+import { sqrt } from '../lib/utils';
 import Point from './point';
 
 export type Props = {
@@ -10,17 +10,17 @@ export type Props = {
     ry: number
     degrees: number
     color: string
-    dragStart: (e: MouseEvent, k1: string, k2: string) => void
+    dragStart: (e: MouseEvent, node: string, ellipseIdx: number) => void
     dragging: boolean
-    k: string
+    ellipseIdx: number
     scale: number
 }
 
-export default function SvgEllipse({ cx, cy, rx, ry, degrees, color, scale, ...props }: Props) {
+export default function SvgEllipse({ cx, cy, rx, ry, degrees, color, scale, ellipseIdx, ...props }: Props) {
     const [ mouseEntered, setMouseEntered ] = useState(false)
 
     function onMouseEnter() {
-        console.log(`mouse enter: ${props.k}`)
+        console.log(`mouse enter: ${ellipseIdx}`)
         setMouseEntered(true)
     }
 
@@ -28,8 +28,8 @@ export default function SvgEllipse({ cx, cy, rx, ry, degrees, color, scale, ...p
         setMouseEntered(false)
     }
 
-    function dragStart(e: MouseEvent, k: string) {
-        props.dragStart(e, k, props.k)
+    function dragStart(e: MouseEvent, node: string) {
+        props.dragStart(e, node, ellipseIdx)
     }
 
     const vx1 = [rx, 0]
@@ -42,7 +42,7 @@ export default function SvgEllipse({ cx, cy, rx, ry, degrees, color, scale, ...p
 
     const rM = Math.max(rx, ry)
     const rm = Math.min(rx, ry)
-    const rc = sq(rM * rM - rm * rm)
+    const rc = sqrt(rM * rM - rm * rm)
 
     const f1 = rx >= ry ? [rc, 0] : [0, rc]
     const f2 = rx >= ry ? [-rc, 0] : [0, -rc]

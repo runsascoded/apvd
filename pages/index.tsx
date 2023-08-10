@@ -2,12 +2,10 @@
 import React, {useMemo, useState} from 'react';
 import Svg from '../src/components/svg';
 import ModelTextField from '../src/components/model-text-field';
-// import Ellipse from '../src/lib/ellipse';
+import EllipseC from '../src/lib/ellipse';
 import Ellipses from '../src/lib/ellipses';
 import { lengthCmp, pi, powerset, r3, spaces } from '../src/lib/utils';
 import {Point} from '../src/components/point';
-
-const { fromEntries, keys } = Object;
 
 export type Ellipse = {
     name: string
@@ -50,14 +48,14 @@ export function getInitialProps() {
 }
 
 export default function Page({ ellipses: initialEllipses }: { ellipses: Ellipse[] }) {
-    const [ ellipses, setEllipses ] = useState(initialEllipses.map(e => new Ellipse(e)));
+    const [ ellipses, setEllipses ] = useState(initialEllipses.map(e => new EllipseC(e)));
     const [ malformedEllipses, setMalformedEllipses ] = useState(false);
     const [ virtualCursor, setVirtualCursor ] = useState({ x: 0, y: 0 });
     const [ activeSvg, setActiveSvg ] = useState(0);
-    const ellipsesObj = useMemo(
-        () => fromEntries(ellipses.map((e, i) => [ i, e ] )),
-        [ ellipses ]
-    )
+    // const ellipsesObj = useMemo(
+    //     () => fromEntries(ellipses.map((e, i) => [ i, e ] )),
+    //     [ ellipses ]
+    // )
 
     function onTextFieldChange(value: string) {
         try {
@@ -70,9 +68,10 @@ export default function Page({ ellipses: initialEllipses }: { ellipses: Ellipse[
     }
 
     function onEllipseDrag(k: number, change: Partial<Ellipse>) {
-        const newEllipseK = { ...ellipses[k], ...change };
-        const o = {} as { [k: number]: Ellipse }; o[k] = newEllipseK;
-        const newEllipses = { ...ellipses, ...o };
+        const newEllipse: EllipseC = new EllipseC({ ...ellipses[k], ...change });
+        // const o = {} as { [k: number]: Ellipse }; o[k] = newEllipseK;
+        const newEllipses = [ ...ellipses ];
+        newEllipses[k] = newEllipse
         setEllipses(newEllipses);
     }
 
@@ -84,7 +83,7 @@ export default function Page({ ellipses: initialEllipses }: { ellipses: Ellipse[
     const e = useMemo(() => new Ellipses(ellipses), [ ellipses ])
     const { intersections, regions } = useMemo(() => e, [ e ])
     const areaKeys =
-        powerset(keys(ellipses))
+        powerset(Array.from(ellipses.keys()))
             .map((s: number[]) => ({
                 key: s.join(","),
                 name: s.length ? s.map(k => ellipses[k].name).join("⋂") : "*"
@@ -107,6 +106,7 @@ export default function Page({ ellipses: initialEllipses }: { ellipses: Ellipse[
         ellipses.map((ellipse, k) =>
                 <Svg
                     key={k}
+                    idx={k+1}
                     transformBy={ellipses[k]}
                     ellipses={ellipses}
                     points={intersections}
@@ -115,13 +115,14 @@ export default function Page({ ellipses: initialEllipses }: { ellipses: Ellipse[
                     gridSize={1}
                     projection={{ x: 0, y: 0, s: 50 }}
                     onCursor={p => onCursor(p, k)}
-                    hideCursorDot={activeSvg === k}
+                    hideCursorDot={activeSvg === k+1}
                 />
         )
 
     return <div>
         <Svg
             key="main"
+            idx={0}
             ellipses={ellipses}
             points={intersections}
             cursor={virtualCursor}
@@ -131,7 +132,7 @@ export default function Page({ ellipses: initialEllipses }: { ellipses: Ellipse[
             gridSize={1}
             projection={{ x: 0, y: 0, s: 50 }}
             onCursor={onCursor}
-            hideCursorDot={activeSvg === undefined}
+            hideCursorDot={activeSvg === 0}
         />
         {projectedSVGs}
         <textarea

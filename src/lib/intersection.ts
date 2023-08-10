@@ -1,13 +1,14 @@
 
 import { pp, r3, deg } from './utils';
 import Ellipse from "./ellipse";
-import Ellipses from "./ellipses";
 import Edge from "./edge";
 
 export type CST = {
-    c: number,
-    s: number,
-    t: number,
+    c: number
+    s: number
+    t: number
+    prev?: Intersection
+    next?: Intersection
 }
 
 export default class Intersection {
@@ -21,6 +22,7 @@ export default class Intersection {
     y: number
     // o: Map<number, CST>
     edges: Edge[]
+    i: number | null = null
 
     constructor(o: { [k: string]: any }) {
         //console.log("Int:", o);

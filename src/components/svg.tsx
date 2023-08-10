@@ -1,12 +1,12 @@
 
 import React, {ReactNode, useMemo, useRef, useState, MouseEvent} from 'react';
 import SvgEllipse from './svg-ellipse';
-import { sq } from '../lib/utils';
+import { sqrt } from '../lib/utils';
 import Ellipse from "../lib/ellipse";
 import {Point} from "./point";
 
 function getTheta(x: number, y: number, t: number) {
-    const r = sq(x * x + y * y);
+    const r = sqrt(x * x + y * y);
     let theta = null;
     const pi4s = Math.round(t * 2 / Math.PI);
 
@@ -36,19 +36,20 @@ export type Polar = { degrees: number } & ({ rx: number } | { ry: number })
 
 export type Props = {
     ellipses: Ellipse[]
-    onEllipseDrag: (e: number, d: { cx: number, cy: number } | Polar) => void
-    transformBy: Ellipse
-    onCursor: (p: Point) => void
+    idx: number
+    onEllipseDrag?: (e: number, d: { cx: number, cy: number } | Polar) => void
+    transformBy?: Ellipse
+    onCursor: (p: Point, svgIdx: number) => void
     projection: Projection
     gridSize: number
     cursor: Point
     points: Point[]
-    regions: ReactNode[]
+    regions?: ReactNode[]
     hideCursorDot: boolean
     showGrid: boolean
 }
 
-export default function Svg({ ellipses, onEllipseDrag, transformBy, onCursor, projection, gridSize, points, regions, hideCursorDot, cursor, showGrid }: Props) {
+export default function Svg({ ellipses, idx, onEllipseDrag, transformBy, onCursor, projection, gridSize, points, regions, hideCursorDot, cursor, showGrid }: Props) {
     const [dragging, setDragging] = useState(false);
     const [pointRadius, setPointRadius] = useState(3);
     const [dragEllipse, setDragEllipse] = useState<number | null>(null);
@@ -90,9 +91,9 @@ export default function Svg({ ellipses, onEllipseDrag, transformBy, onCursor, pr
         if (onCursor) {
             if (transformBy) {
                 const [x, y] = transformBy.invert(vOffset.x, vOffset.y);
-                onCursor({ x, y });
+                onCursor({ x, y }, idx);
             } else
-                onCursor(vOffset);
+                onCursor(vOffset, idx);
         }
 
         // TODO: single drag state object
@@ -157,7 +158,7 @@ export default function Svg({ ellipses, onEllipseDrag, transformBy, onCursor, pr
                     const { rx, ry } = ellipse;
                     const rM = Math.max(rx, ry);
                     const rm = Math.min(rx, ry);
-                    const f = sq(rM * rM - rm * rm);
+                    const f = sqrt(rM * rM - rm * rm);
                     const fx = f * (rx >= ry ? cos : -sin);
                     const fy = f * (rx >= ry ? sin : cos);
                     const nfx = fx + dx;
@@ -172,8 +173,8 @@ export default function Svg({ ellipses, onEllipseDrag, transformBy, onCursor, pr
                     const degrees = theta * 180 / Math.PI;
                     const polar =
                         (rx >= ry)
-                            ? { rx: sq(ry*ry + r*r), degrees, }
-                            : { ry: sq(rx*rx + r*r), degrees, }
+                            ? { rx: sqrt(ry*ry + r*r), degrees, }
+                            : { ry: sqrt(rx*rx + r*r), degrees, }
                     onEllipseDrag(dragEllipse, polar);
                 }
             }
@@ -285,8 +286,8 @@ export default function Svg({ ellipses, onEllipseDrag, transformBy, onCursor, pr
 
         return (
             <SvgEllipse
-                key={k}
-                k={k}
+                key={ellipse.name}
+                ellipseIdx={ellipse.i}
                 dragging={dragEllipse === k}
                 dragStart={dragStart}
                 {...transformedEllipse}
@@ -360,7 +361,7 @@ export default function Svg({ ellipses, onEllipseDrag, transformBy, onCursor, pr
             }
         >
             {gridLines}
-            <g className="regions">{regions}</g>
+            {regions && <g className="regions">{regions}</g>}
             <g className="ellipses">{svgEllipses}</g>
             <g className="points">{svgPoints}</g>
             {cursorCircle}

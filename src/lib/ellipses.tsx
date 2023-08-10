@@ -1,30 +1,43 @@
-import Region from "./region";
+import Region, {Containers, Props as RegionProps} from "./region";
 import Edge from "./edge";
 import Ellipse from "./ellipse";
 import Intersection from "./intersection";
-import {intersect, keyStr, powerset, rts, ss, sum, tpi} from "./utils";
-import React from "react";
+import {intersect, keyStr, powerset, ps, ss, sum, tpi} from "./utils";
+import React, {ReactElement, ReactNode} from "react";
+import {Point} from "../components/point";
+
+export const regionString = (r: ReactElement<RegionProps>) => ps(r.props.points, r.props.edges);
+export const rts = regionString;
+
 
 export default class Ellipses {
     ellipses: Ellipse[];
-    keys: string[];
+    keys: number[];
     n: number;
     intersections: Intersection[];
-    containments: {[i: string]: {[j: string]: boolean}};
-    intsByE: {[i: string]: Intersection[]};
-    intsByExE: {[i: string]: {[j: string]: Intersection[]}};
+    containments: boolean[][];
+    intsByE: Intersection[][];
+    intsByExE: Intersection[][][];
+    edges: Edge[];
+    edgesByE: Edge[][];
+    islands: boolean[][];
+    // edgesByExE: Edge[][][];
+    areasObj: { [key: string]: number };
+    regions: ReactNode[];
 
     constructor(ellipses: Ellipse[]) {
-        this.ellipses = ellipses;
-        this.keys = _.keys(ellipses);
-        this.n = this.keys.length;
+        this.ellipses = ellipses
+        const keys: number[] = ellipses.map(e => e.i)
+        const n = keys.length
+        this.keys = keys
+        this.n = n
 
-        const { intersections } = this.computeIntersections();
-        this.computeIslands();
-        this.computeIntersectionsByEllipse();
-        this.computeEdgesByEllipse();
-        this.computeEdgeContainments();
-        this.computeRegions();
+        // const { intersections } = this.computeIntersections();
+        // this.computeIslands();
+        // this.computeIntersectionsByEllipse();
+        // this.computeEdgesByEllipse();
+        // this.computeEdgeContainments();
+        // this.computeRegions();
 
         //console.log(
         //      this.regions.map((r) => {
@@ -33,18 +46,21 @@ export default class Ellipses {
         //);
 
         //console.log(this.regions.map(ts).join("\n"));
-    }
+    // }
 
-    computeIntersections(): { intersections: Intersection[] } {
-        const { ellipses, n, keys } = this;
+    // computeIntersections(): { intersections: Intersection[] } {
+    //     const { ellipses, n, keys } = this;
         let intersections: Intersection[] = [];
-        const intsByE: { [i: string]: Intersection[] } = {};
-        const intsByExE: { [i: string]: { [j: string]: Intersection[] } } = {};
-        const containments: { [i: string]: { [j: string]: boolean } } = {};
+        const intsByE: Intersection[][] = [];
+        const intsByExE: Intersection[][][] = []
+        const containments: boolean[][] = [];
         keys.forEach((i) => {
-            containments[i] = {};
+            containments[i] = [];
             intsByE[i] = [];
-            intsByExE[i] = {};
+            intsByExE[i] = [];
+            keys.forEach(j => {
+                intsByExE[i][j] = [];
+            })
         });
         // let retry = false;
         for (let ii = 0; ii < n - 1; ii++) {
@@ -57,7 +73,7 @@ export default class Ellipses {
                 const is = ei.intersect(ej);
                 if (is.length) {
                     is.forEach((int, k) => {
-                        int.i = intersections.length + k;
+                        // int.i = intersections.length + k;
                         intsByE[i].push(int);
                         intsByE[j].push(int);
                         if (!(j in intsByExE[i])) {
@@ -65,15 +81,18 @@ export default class Ellipses {
                         }
                         intsByExE[i][j].push(int);
                         if (!(i in intsByExE[j])) {
-                            intsByExE[j][i] = [];
+                            intsByExE[j][i] = intsByExE[i][j];
                         }
-                        intsByExE[j][i].push(int);
+                        // intsByExE[j][i].push(int);
                     });
                     intersections = intersections.concat(is);
                 } else {
                     if (ei.containsEllipse(ej)) {
                         //console.log(i, "contains", j);
                         containments[i][j] = true;
+                        if (ej.containsEllipse(ei)) {
+                            console.warn("ellipses", i, j, "mutually contain each other");
+                        }
                     } else if (ej.containsEllipse(ei)) {
                         containments[j][i] = true;
                         // if (containments[i][j]) {
@@ -101,21 +120,19 @@ export default class Ellipses {
         // if (retry) {
         //     return this.computeIntersections();
         // } else {
-        return { intersections, containments, intsByE, intsByExE };
+        // return { intersections, containments, intsByE, intsByExE };
         // }
-    }
+    // }
 
-    computeIntersectionsByEllipse() {
-        const { intersections, intsByE } = this;
+    // computeIntersectionsByEllipse() {
+    //     const { intersections, intsByE } = this;
 
         // Add degenerate [0,2pi) edges for ellipses that don't intersect with any others.
-        _.forEach(this.ellipses, (e, i) => {
+        this.ellipses.forEach((e, i) => {
             if (!intsByE[i].length) {
                 const int = new Intersection({
-                    e1: e,
-                    e2: e,
-                    t1: 0,
-                    t2: 0
+                    e1: e, e2: e,
+                    t1: 0, t2: 0
                 });
                 //console.log("adding:", int);
                 intersections.push(int);
@@ -125,50 +142,51 @@ export default class Ellipses {
 
         // Sort each ellipse's intersections in order of a CCW tour of the ellipse's border,
         // starting from -pi.
-        _.forEach(intsByE, (a, i) => {
+        intsByE.forEach((a, i) => {
             a.sort((i1, i2) => {
-                return i1.o[i].t - i2.o[i].t;
+                return i1.cst(i).t - i2.cst(i).t;
             });
             const n = a.length;
             a.forEach((p, j) => {
-                p.o[i].next = a[(j+1)%n];
-                p.o[i].prev = a[(j-1+n)%n];
+                p.cst(i).next = a[(j+1)%n];
+                p.cst(i).prev = a[(j-1+n)%n];
             });
         });
 
-    }
+    // }
 
-    computeIslands() {
-        const { intsByExE, containments } = this;
-        const intersectionClosures = {};
-        _.forEach(intsByExE, (o, i) => {
+    // computeIslands() {
+    //     const { intsByExE, containments } = this;
+        const intersectionClosures: boolean[][] = [];
+        intsByExE.forEach((o, i) => {
             if (!(i in intersectionClosures)) {
-                intersectionClosures[i] = {};
+                intersectionClosures[i] = [];
             }
-            _.forEach(o, (u, j) => {
+            o.forEach((u, j) => {
+                if (j in intersectionClosures[i]) return
+                // Ellipses i and j are connected
                 intersectionClosures[i][j] = true;
                 //console.log("adding:", j, "to", i, ";", kvs(intersectionClosures));
                 if (j in intersectionClosures) {
-                    intersectionClosures[j] = _.extend(intersectionClosures[j], intersectionClosures[i]);
-                    _.forEach(intersectionClosures[j], (o, k) => {
-                        intersectionClosures[k] = intersectionClosures[j];
+                    intersectionClosures[j].forEach((o, k) => {
+                        intersectionClosures[i][k] = true
+                        intersectionClosures[k] = intersectionClosures[i]
                     });
+                    intersectionClosures[j] = intersectionClosures[i]
                     //console.log("post-extension:", kvs(intersectionClosures));
                 } else {
-                    intersectionClosures[j] = intersectionClosures[i];
+                    intersectionClosures[j] = intersectionClosures[i]
                 }
             });
         });
 
         //console.log("closures:", kvs(intersectionClosures));
 
-        const islands = {};
-        _.forEach(this.ellipses, (e, i) => {
-            islands[i] = {};
-        });
-        _.forEach(intsByExE, (o, i) => {
+        const islands: boolean[][] = [];
+        keys.forEach(i => islands[i] = [])
+        intsByExE.forEach((o, i) => {
             const ints = intersectionClosures[i];
-            _.forEach(containments, (u, j) => {
+            containments.forEach((u, j) => {
                 if (containments[j][i] && !(j in ints)) {
                     islands[i][j] = true;
                 }
@@ -180,16 +198,15 @@ export default class Ellipses {
         //      _.map(islands, (v, k) => { return k + ": " + _.keys(v).join(""); }).join(", ")
         //);
         this.islands = islands;
-    }
 
-    computeEdgesByEllipse() {
-        const allEdges = [];
-        const edgesByE = {};
-        _.forEach(
-            this.intsByE,
+    // ### computeEdgesByEllipse
+
+        const allEdges: Edge[] = [];
+        const edgesByE: Edge[][] = [];
+        intsByE.forEach(
             (ints, i) => {
                 const edges = ints.map((p1) => {
-                    const p2 = p1.o[i].next;
+                    const p2 = p1.cst(i).next;
                     const e = this.ellipses[i];
                     if (!(i in edgesByE)) {
                         edgesByE[i] = [];
@@ -220,28 +237,21 @@ export default class Ellipses {
                 //      }).join("\n\t"));
             }
         );
-
         //console.log(this.intersections.map((i) => { return i.toString(); }).join("\n"));
-
         //console.log("edges:", "\n" + ss(allEdges, "\n"));
-
         this.edgesByE = edgesByE;
         this.edges = allEdges;
-    }
 
-    computeEdgeContainments() {
-        // Compute ellipses containing each edge.
+    // ### computeEdgeContainments: compute ellipses containing each edge.
 
-        const { ellipses, intsByE, edgesByE, containments, islands } = this;
-
-        _.forEach(edgesByE, (edges, i) => {
+        edgesByE.forEach((edges, i) => {
             const e = ellipses[i];
             const ints = intsByE[i];
             const n = edges.length;
 
             let curIdx = 0;
             let since = 0;
-            const containers = {};
+            const containers: boolean[] = []
             while (since < n) {
                 const curInt = ints[curIdx];
                 const curEdge = edges[curIdx];
@@ -257,20 +267,18 @@ export default class Ellipses {
                     since++;
                     //console.log("\t", other.i, "doesn't contain", curEdge.toString());
                 }
-                curEdge.containers = _.extend(curEdge.containers, containers);
+                containers.forEach((v, j) => curEdge.containers[j] = v)
                 //console.log("set edge containers:", curEdge.toString(), keyStr(containers));
                 curIdx = (curIdx + 1) % n;
             }
         });
 
-        this.totalEdgeVisits = 0;
+        let totalEdgeVisits: number = 0;
 
-        _.forEach(
-            edgesByE,
+        edgesByE.forEach(
             edges =>
                 edges.forEach(edge => {
-                    _.forEach(
-                        containments,
+                    containments.forEach(
                         (ci, j) => {
                             if (ci[edge.i]) {
                                 //console.log("noting", j, "contains", edge.toString());
@@ -293,44 +301,50 @@ export default class Ellipses {
                     } else {
                         edge.expectedEdgeVisits = 2;
                     }
-                    this.totalEdgeVisits += edge.expectedEdgeVisits;
+                    totalEdgeVisits += edge.expectedEdgeVisits;
                 })
         );
-    }
 
-    computeRegions() {
-        const areasObj = {};
-        const regions = [];
-        const visitedPoints = {};
-        const regionEdgePairs = {};
-        const edges = [];
-        const points = [];
-        const edgeVisits = {};
+    // ### computeRegions
 
-        function canVisit(edge) {
+        const areasObj: { [k: string]: number } = {};
+        const regions: ReactElement<RegionProps>[] = [];
+        const visitedPoints: boolean[] = [];
+        const regionEdgePairs: boolean[][] = [];
+        const edges: Edge[] = [];
+        const points: Intersection[] = [];
+        const edgeVisits: number[] = [];
+
+        function canVisit(edge: Edge) {
             return (edgeVisits[edge.j] || 0) < edge.expectedEdgeVisits;
         }
 
         let numEdgeVisits = 0;
-        function visitEdge(edge) {
+        function visitEdge(edge: Edge) {
             edgeVisits[edge.j] = (edgeVisits[edge.j] || 0) + 1;
         }
 
-        function unvisitEdge(edge) {
+        function unvisitEdge(edge: Edge) {
             edgeVisits[edge.j] = edgeVisits[edge.j] - 1;
         }
 
-        const { intersections, totalEdgeVisits, islands } = this;
-
-        function traverse(point, region, prevUnusedEllipses, nonContainerRegion, startPoint, level) {
-            function log() {
+        function traverse(
+            point: Intersection,
+            region: boolean[] = [],
+            prevUnusedEllipses: boolean[] = [],
+            nonContainerRegion: boolean[] = [],
+            startPoint?: Intersection,
+            level?: number,
+        ) {
+            function log(...args: any[]) {
                 let indent = "";
-                for (let i = 0; i < level || 0; i++) {
+                for (let i = 0; i < (level || 0); i++) {
                     indent += "  ";
                 }
+                console.log(indent, ...args)
             }
 
-            if (region && _.isEmpty(nonContainerRegion)) {
+            if (region && (!nonContainerRegion || !Object.keys(nonContainerRegion).length)) {
                 return;
             }
 
@@ -348,7 +362,7 @@ export default class Ellipses {
                 edges.forEach((e1) => {
                     edges.forEach((e2) => {
                         if (!(e1.j in regionEdgePairs)) {
-                            regionEdgePairs[e1.j] = {};
+                            regionEdgePairs[e1.j] = [];
                         }
                         regionEdgePairs[e1.j][e2.j] = true;
                     });
@@ -369,7 +383,6 @@ export default class Ellipses {
                     secantArea = secants.reduce(sum);
                     regionArea = Math.abs(secantArea);
                 } else {
-
                     polygonArea =
                         points.map((p, i) => {
                             const next = points[(i + 1) % n];
@@ -386,7 +399,7 @@ export default class Ellipses {
                     regionArea = Math.abs(polygonArea + secantArea);
                 }
 
-                const regionKey = _.keys(region);
+                const regionKey = Object.keys(region);
                 const regionStr = regionKey.sort().join("");
 
                 // "Island" containers -- those that contain this region and don't transitively intersect with any of the
@@ -397,9 +410,9 @@ export default class Ellipses {
                 // The powerset of the set of island-containers all need to skip adding the current region's area for this
                 // reason, i.e. if two ellipses both island-contain this region, each of them as well as their intersection will
                 // inadvertently count this region's area on their own, and so should skip counting it here.
-                const containers = {};
+                const containers: Containers = {};
                 if (regionKey.length > 1) {
-                    const containerKeys = _.keys(islands[edges[0].i]);
+                    const containerKeys = Object.keys(islands[edges[0].i]);
                     if (containerKeys.length) {
                         powerset(containerKeys).forEach(s => {
                             const k = s.join(',');
@@ -413,17 +426,17 @@ export default class Ellipses {
                 const r =
                     <Region
                         k={regionStr}
-                containers={containers}
-                edges={_.extend([], edges)}
-                points={_.extend([], points)}
-                i={regions.length}
-                key={regions.length}
-                width={3 / 50}
-                area={regionArea}
-                secantArea={secantArea}
-                polygonArea={polygonArea}
-                obj={region}
-                />;
+                        containers={containers}
+                        edges={[...edges]}
+                        points={[...points]}
+                        i={regions.length}
+                        key={regions.length}
+                        width={3 / 50}
+                        area={regionArea}
+                        secantArea={secantArea}
+                        polygonArea={polygonArea}
+                        // obj={region}
+                    />;
 
                 const addedRegions = [];
                 powerset(regionKey).forEach((rk) => {
@@ -447,6 +460,9 @@ export default class Ellipses {
                 regions.push(r);
                 return true;
             }
+            if (point.i === null) {
+                throw new Error("point.i is null")
+            }
             if (point.i in visitedPoints) {
                 return;
             }
@@ -461,7 +477,7 @@ export default class Ellipses {
 
                 const edgeNotSaturated = canVisit(edge);
                 const differentEllipse = (edge.e !== prevEllipse);
-                const edgeRegionPairs = regionEdgePairs[edge.j] || {};
+                const edgeRegionPairs = regionEdgePairs[edge.j] || [];
                 const notInRegionWithFirstEdge = (edges.length === 0 || !edgeRegionPairs[edges[0].j]);
 
                 log(
@@ -481,7 +497,7 @@ export default class Ellipses {
                     const [ newRegion, lostEllipses, unusedEllipses ] =
                         region ?
                             intersect(region, edge.ellipses) :
-                            [ edge.ellipses, {}, {} ];
+                            [ edge.ellipses, [], [] ];
 
                     // Update nonContainerRegion
                     if (region) {
@@ -490,18 +506,17 @@ export default class Ellipses {
                             keyStr(lostEllipses, ""),
                             keyStr(nonContainerRegion, "")
                         );
-                        _.forEach(lostEllipses, (u, i) => {
+                        lostEllipses.forEach((u, i) => {
                             delete nonContainerRegion[i];
                         });
                     } else {
-                        nonContainerRegion = {};
-
-                        _.keys(edge.ellipses).forEach((i) => {
+                        nonContainerRegion = [];
+                        edge.ellipses.forEach((_, i) => {
                             nonContainerRegion[i] = true;
                         });
-                        _.forEach(edge.ellipses, (e, i) => {
+                        edge.ellipses.forEach((_, i) => {
                             //log("checking for islands:", i, islands[i]);
-                            _.forEach(islands[i], (u, j) => {
+                            islands[i].forEach((_, j) => {
                                 //log("removing", j, "which islands", i);
                                 delete nonContainerRegion[j];
                             });
@@ -515,7 +530,7 @@ export default class Ellipses {
                         "lost:", keyStr(lostEllipses), "unused:", keyStr(unusedEllipses)
                     );
 
-                    if (edges.length >= 3 && !_.isEmpty(lostEllipses)) {
+                    if (edges.length >= 3 && lostEllipses.length) {
                         // If at least two edges precede this one and we just lost an ellipse E from the in-progress region, then the preceding ellipses all share containment by E while this one doesn't, meaning this is an invalid region; some other sibling edge to the current one must continue including E, and not including it means that edge cuts through the middle of the region we are currently building with the current edge, which is invalid.
                         //console.log(
                         //      "lost ellipses:",
@@ -523,8 +538,8 @@ export default class Ellipses {
                         //      ss(points.concat([edge.other(point)]))
                         //);
                     } else {
-                        const doublyUnused = intersect(unusedEllipses, prevUnusedEllipses || {})[0];
-                        if (!_.isEmpty(doublyUnused)) {
+                        const doublyUnused = intersect(unusedEllipses, prevUnusedEllipses || [])[0];
+                        if (doublyUnused && Object.keys(doublyUnused).length) {
                             // A converse check to the above: if two consecutive edges are contained by an ellipse E that some earlier edge is not contained by (as evidenced by the current region not including E), then that earlier edge breaks the rule above of not dropping an ellipse that two consecutive edges are contained by, and the current region (with last edge) is invalid.
                             //console.log(
                             //      "doubly-unused ellipses:",
@@ -573,11 +588,15 @@ export default class Ellipses {
                 "Fewer edge visits detected than expected: " +
                 numEdgeVisits + " " +
                 totalEdgeVisits +
-                "\n" + regions.map(rts).join("\n")
+                "\n" + regions.map(r => rts(r)).join("\n")
             );
         }
 
-        this.areasObj = areasObj;
-        this.regions = regions;
+        this.intersections = intersections
+        this.containments = containments
+        this.intsByE = intsByE
+        this.intsByExE = intsByExE
+        this.areasObj = areasObj
+        this.regions = regions
     }
 };
