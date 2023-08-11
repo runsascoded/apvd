@@ -1,7 +1,7 @@
 import { toBeDeepCloseTo,toMatchCloseTo } from 'jest-matcher-deep-close-to';
 expect.extend({toBeDeepCloseTo, toMatchCloseTo});
 
-import Ellipses from '../src/lib/ellipses'
+import Ellipses, {regionString} from '../src/lib/ellipses'
 import Ellipse from '../src/lib/ellipse'
 
 const ellipses = [
@@ -36,6 +36,37 @@ describe('test Ellipses', () => {
         expect(ellipses.length).toBe(4)
         const e = new Ellipses(ellipses);
         expect(e.intersections.length).toBe(6);
+        expect(e.intersections.map(i => i.s())).toEqual([
+            "I(0.134,0.979)",
+            "I(-0.095,1.757)",
+            "I(0.179,0.46)",
+            "I(0.068,-0.539)",
+            "I(-0.408,0.439)",
+            "I(-0.083,-0.504)",
+        ])
+        expect(e.edges.map(e => e.s())).toEqual([
+            "E(0:(0.068,-0.539),(0.179,0.46))",
+            "E(0:(0.179,0.46),(0.134,0.979))",
+            "E(0:(0.134,0.979),(-0.095,1.757))",
+            "E(0:(-0.095,1.757),(0.068,-0.539))",
+            "E(1:(-0.083,-0.504),(-0.408,0.439))",
+            "E(1:(-0.408,0.439),(-0.083,-0.504))",
+            "E(2:(0.134,0.979),(-0.095,1.757))",
+            "E(2:(-0.095,1.757),(0.134,0.979))",
+            "E(3:(-0.083,-0.504),(0.068,-0.539))",
+            "E(3:(0.068,-0.539),(0.179,0.46))",
+            "E(3:(0.179,0.46),(-0.408,0.439))",
+            "E(3:(-0.408,0.439),(-0.083,-0.504))",
+        ])
+        expect(e.regions.map(r => regionString(r))).toEqual([
+            "[0.134,0.979 0→ -0.095,1.757 2→]",
+            "[0.134,0.979 0→ -0.095,1.757 2→]",
+            "[0.134,0.979 2→ -0.095,1.757 0→ 0.068,-0.539 3→ -0.083,-0.504 1→ -0.408,0.439 3→ 0.179,0.46 0→]",
+            "[0.179,0.46 0→ 0.068,-0.539 3→ -0.083,-0.504 1→ -0.408,0.439 3→]",
+            "[0.179,0.46 0→ 0.068,-0.539 3→]",
+            "[-0.408,0.439 1→ -0.083,-0.504 3→]",
+            "[-0.408,0.439 1→ -0.083,-0.504 3→]",
+        ])
     })
     test('project', () => {
         const [ e0, e2 ] = [ellipses[0], ellipses[2]];

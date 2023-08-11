@@ -2,26 +2,26 @@ import Region, {Containers, Props as RegionProps} from "./region";
 import Edge from "./edge";
 import Ellipse from "./ellipse";
 import Intersection from "./intersection";
-import {intersect, keyStr, powerset, ps, ss, sum, tpi} from "./utils";
-import React, {ReactElement, ReactNode} from "react";
+import {intersect, keyStr, powerset, ps, ss, sum} from "./utils";
+import React, {ReactElement} from "react";
 
 export const regionString = (r: ReactElement<RegionProps>) => ps(r.props.points, r.props.edges);
 export const rts = regionString;
 
 
 export default class Ellipses {
-    ellipses: Ellipse[];
-    keys: number[];
-    n: number;
-    intersections: Intersection[];
-    containments: boolean[][];
-    intsByE: Intersection[][];
-    intsByExE: Intersection[][][];
-    edges: Edge[];
-    edgesByE: Edge[][];
-    islands: boolean[][];
-    areasObj: { [key: string]: number };
-    regions: ReactNode[];
+    ellipses: Ellipse[]
+    keys: number[]
+    n: number
+    intersections: Intersection[]
+    containments: boolean[][]
+    intsByE: Intersection[][]
+    intsByExE: Intersection[][][]
+    edges: Edge[]
+    edgesByE: Edge[][]
+    islands: boolean[][]
+    areasObj: { [key: string]: number }
+    regions: ReactElement<RegionProps>[]
 
     constructor(ellipses: Ellipse[]) {
         this.ellipses = ellipses
