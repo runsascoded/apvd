@@ -20,12 +20,12 @@ export default function SvgEllipse({ cx, cy, rx, ry, degrees, color, scale, elli
     const [ mouseEntered, setMouseEntered ] = useState(false)
 
     function onMouseEnter() {
-        console.log(`mouse enter: ${ellipseIdx}`)
+        // console.log(`mouse enter: ${ellipseIdx}`)
         setMouseEntered(true)
     }
 
     function onMouseLeave() {
-        console.log(`mouse leave: ${ellipseIdx}`)
+        // console.log(`mouse leave: ${ellipseIdx}`)
         setMouseEntered(false)
     }
 

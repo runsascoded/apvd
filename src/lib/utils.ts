@@ -55,9 +55,13 @@ export const sqrt = Math.sqrt;
 // };
 
 export const keyStr = (o: { [k: string]: any } | any[], sep?: string) => {
-    return Object.entries(o).map((v, k) => {
-        return k;
-    }).join(sep || ",");
+    const ks: string[] = [];
+    Object.entries(o).forEach(([ k, v ]) => {
+        if (v !== undefined) {
+            ks.push(k)
+        }
+    })
+    return ks.join(sep || ",");
 };
 // export const ks = keyStr;
 // export const kvs = obj => _.map(
@@ -75,19 +79,20 @@ export const eqSet = <T>(as: Set<T>, bs: Set<T>) => {
 //     b.forEach(i => a.add(i));
 // };
 
-export const intersect = <T>(a: T[], b: T[]): [ T[], T[], T[] ] => {
-    const intersection: T[] = [];
-    const aMinusB: T[] = [];
-    const bMinusA: T[] = [];
+export const intersect = (a: boolean[], b: boolean[]): [ boolean[], boolean[], boolean[] ] => {
+    const intersection: boolean[] = [];
+    const aMinusB: boolean[] = [];
+    const bMinusA: boolean[] = [];
     for (const k in b) {
-        if (k in a) {
+        if (!b[k]) continue;
+        if (a[k]) {
             intersection[k] = a[k];
         } else {
             bMinusA[k] = b[k];
         }
     }
     for (const k in a) {
-        if (!(k in b)) {
+        if (a[k] && !b[k]) {
             aMinusB[k] = a[k];
         }
     }

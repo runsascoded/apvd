@@ -50,4 +50,33 @@ describe('test Ellipses', () => {
         const e2pt = e2t.project(e0)
         expect([e2p.cx, e2p.cy]).toBeDeepCloseTo([ 2.32, 1.07 ], 5)
     })
+    test("edge visits", () => {
+        const ellipses: Ellipse[] = [
+            {
+                name: "A", color: 'red',
+                cx: 0, cy: 0,
+                rx: 1, ry: 2,
+                degrees: 0,
+            },
+            {
+                name: "B", color: 'blue',
+                cx: 0, cy: 1,
+                rx: 2, ry: 2,
+                degrees: 0,
+            },
+            {
+                name: "C", color: 'darkgoldenrod',
+                cx: 0, cy: -1,
+                rx: 2, ry: 2,
+                degrees: 0,
+            },
+            {
+                name: "D", color: 'green',
+                cx: 0, cy: 0,
+                rx: .5, ry: .5,
+                degrees: 0,
+            },
+        ].map(e => new Ellipse(e))
+        const e = new Ellipses(ellipses);
+    })
 });

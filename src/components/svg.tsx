@@ -121,7 +121,7 @@ export default function Svg({ ellipses, idx, onEllipseDrag, transformBy, onCurso
                 let dy = (offsetY - dragStartY) / scale;
                 const ellipse = ellipses[dragEllipse];
                 if (dragNode === 'c') {
-                    console.log(`onEllipseDrag(${dragEllipse}, { cx: ${ellipse.cx + dx}, cy: ${ellipse.cy - dy} })`)
+                    // console.log(`onEllipseDrag(${dragEllipse}, { cx: ${ellipse.cx + dx}, cy: ${ellipse.cy - dy} })`)
                     onEllipseDrag(
                         dragEllipse,
                         {

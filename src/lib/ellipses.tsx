@@ -129,13 +129,13 @@ export default class Ellipses {
                 intersectionClosures[i] = [];
             }
             o.forEach((u, j) => {
-                if (j in intersectionClosures[i]) return
+                if (!u.length || j in intersectionClosures[i]) return
                 // Ellipses i and j are connected
                 intersectionClosures[i][j] = true;
                 //console.log("adding:", j, "to", i, ";", kvs(intersectionClosures));
                 if (j in intersectionClosures) {
-                    intersectionClosures[j].forEach((o, k) => {
-                        intersectionClosures[i][k] = true
+                    intersectionClosures[j].forEach((v, k) => {
+                        intersectionClosures[i][k] = v
                         intersectionClosures[k] = intersectionClosures[i]
                     });
                     intersectionClosures[j] = intersectionClosures[i]
@@ -153,7 +153,7 @@ export default class Ellipses {
         intsByExE.forEach((o, i) => {
             const ints = intersectionClosures[i];
             containments.forEach((u, j) => {
-                if (containments[j][i] && !(j in ints)) {
+                if (containments[j][i] && !ints[j]) {
                     islands[i][j] = true;
                 }
             });
@@ -305,7 +305,7 @@ export default class Ellipses {
             function log(...args: any[]) {
                 let indent = "";
                 for (let i = 0; i < (level || 0); i++) {
-                    indent += "  ";
+                    indent += "   ";
                 }
                 // console.log(indent, ...args)
             }
@@ -405,7 +405,7 @@ export default class Ellipses {
                         // obj={region}
                     />;
 
-                const addedRegions = [];
+                const addedRegions: string[] = [];
                 powerset(regionKey).forEach((rk) => {
                     const rs = rk.join(",");
                     if (!(rs in containers)) {
@@ -416,13 +416,13 @@ export default class Ellipses {
                     }
                 });
 
-                //console.log(
-                //      "adding region:", regionStr,
-                //      "to (" + addedRegions.join(" ") + ")",
-                //      ps(points, edges),
-                //      "area:", r3(regionArea/pi),
-                //      edgeVisits, numEdgeVisits, totalEdgeVisits
-                //);
+                log(
+                     "adding region:", regionStr,
+                     "to (" + addedRegions.join(" ") + ")",
+                     ps(points, edges),
+                     // "area:", r3(regionArea/pi),
+                     edgeVisits, numEdgeVisits, totalEdgeVisits
+                );
 
                 regions.push(r);
                 return true;
@@ -473,13 +473,14 @@ export default class Ellipses {
                             keyStr(lostEllipses, ""),
                             keyStr(nonContainerRegion, "")
                         );
-                        lostEllipses.forEach((u, i) => {
-                            delete nonContainerRegion[i];
+                        lostEllipses.forEach((v, i) => {
+                            if (v)
+                                delete nonContainerRegion[i];
                         });
                     } else {
                         nonContainerRegion = [];
-                        edge.ellipses.forEach((_, i) => {
-                            nonContainerRegion[i] = true;
+                        edge.ellipses.forEach((v, i) => {
+                            nonContainerRegion[i] = v;
                         });
                         edge.ellipses.forEach((_, i) => {
                             //log("checking for islands:", i, islands[i]);
@@ -499,21 +500,21 @@ export default class Ellipses {
 
                     if (edges.length >= 3 && lostEllipses.length) {
                         // If at least two edges precede this one and we just lost an ellipse E from the in-progress region, then the preceding ellipses all share containment by E while this one doesn't, meaning this is an invalid region; some other sibling edge to the current one must continue including E, and not including it means that edge cuts through the middle of the region we are currently building with the current edge, which is invalid.
-                        //console.log(
-                        //      "lost ellipses:",
-                        //      keyStr(lostEllipses),
-                        //      ss(points.concat([edge.other(point)]))
-                        //);
+                        log(
+                             "lost ellipses:",
+                             keyStr(lostEllipses),
+                             ss(points.concat([edge.other(point)]))
+                        );
                     } else {
                         const doublyUnused = intersect(unusedEllipses, prevUnusedEllipses || [])[0];
                         if (doublyUnused && Object.keys(doublyUnused).length) {
                             // A converse check to the above: if two consecutive edges are contained by an ellipse E that some earlier edge is not contained by (as evidenced by the current region not including E), then that earlier edge breaks the rule above of not dropping an ellipse that two consecutive edges are contained by, and the current region (with last edge) is invalid.
-                            //console.log(
-                            //      "doubly-unused ellipses:",
-                            //      keyStr(doublyUnused),
-                            //      ss(points.concat([edge.other(point)])),
-                            //      edge.e.i, "vs.", prevEllipse.i
-                            //);
+                            log(
+                                 "doubly-unused ellipses:",
+                                 keyStr(doublyUnused),
+                                 ss(points.concat([edge.other(point)])),
+                                 edge.e.idx, "vs.", prevEllipse?.idx
+                            );
                         } else {
                             if (traverse(
                                 edge.other(point),
@@ -558,6 +559,8 @@ export default class Ellipses {
                 "\n" + regions.map(r => rts(r)).join("\n")
             );
         }
+
+        // console.log("regions", regions.map(r => rts(r)).join("\n"))
 
         this.intersections = intersections
         this.containments = containments
