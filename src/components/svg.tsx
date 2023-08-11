@@ -2,7 +2,7 @@
 import React, {ReactNode, useMemo, useRef, useState, MouseEvent, useCallback} from 'react';
 import SvgEllipse from './svg-ellipse';
 import {pp, sqrt} from '../lib/utils';
-import Ellipse from "../lib/ellipse";
+import Ellipse, {Center, RadiusVector} from "../lib/ellipse";
 import {Point} from "./point";
 
 function getTheta(x: number, y: number, t: number) {
@@ -32,12 +32,10 @@ function getTheta(x: number, y: number, t: number) {
 
 export type Projection = { x: number, y: number, s: number }
 
-export type Polar = { degrees: number } & ({ rx: number } | { ry: number })
-
 export type Props = {
     ellipses: Ellipse[]
     idx: number
-    onEllipseDrag?: (e: number, d: { cx: number, cy: number } | Polar) => void
+    onEllipseDrag?: (e: number, d: Center | RadiusVector) => void
     transformBy?: Ellipse
     onCursor: (p: Point, svgIdx: number) => void
     projection: Projection
@@ -118,7 +116,7 @@ export default function Svg({ ellipses, idx, onEllipseDrag, transformBy, onCurso
 
             // console.log(`SVG ${idx} mousemove: dragging=${dragging} dragEllipse=${dragEllipse} dragNode=${dragNode} dragStartX=${dragStartX} dragStartY=${dragStartY} offsetX=${offsetX} offsetY=${offsetY}`)
             // TODO: single drag state object
-            if (dragging && dragEllipse && dragStartX !== null && dragStartY !== null && onEllipseDrag) {
+            if (dragging && dragEllipse !== null && dragStartX !== null && dragStartY !== null && onEllipseDrag) {
                 let dx = (offsetX - dragStartX) / scale;
                 let dy = (offsetY - dragStartY) / scale;
                 const ellipse = ellipses[dragEllipse];
@@ -132,7 +130,7 @@ export default function Svg({ ellipses, idx, onEllipseDrag, transformBy, onCurso
                         }
                     );
                 } else {
-                    const t = ellipse.degrees * Math.PI / 180;  // TODO: can this be ellipse.theta?
+                    const t = ellipse.theta
                     const cos = Math.cos(t);
                     const sin = Math.sin(t);
                     if (dragNode === 'vx1' || dragNode === 'vx2') {
@@ -146,13 +144,7 @@ export default function Svg({ ellipses, idx, onEllipseDrag, transformBy, onCurso
                         const nxx = rxx + dx;
                         const nxy = rxy - dy;
                         const { theta, r } = getTheta(nxx, nxy, t);
-                        onEllipseDrag(
-                            dragEllipse,
-                            {
-                                degrees: theta * 180 / Math.PI,
-                                rx: r
-                            }
-                        );
+                        onEllipseDrag(dragEllipse, { theta, rx: r });
                     } else if (dragNode === 'vy1' || dragNode === 'vy2') {
                         if (dragNode === 'vy2') {
                             dx = -dx;
@@ -165,13 +157,7 @@ export default function Svg({ ellipses, idx, onEllipseDrag, transformBy, onCurso
                         const nyy = ryy - dy;
 
                         const { theta, r } = getTheta(nyy, -nyx, t);
-                        onEllipseDrag(
-                            dragEllipse,
-                            {
-                                degrees: theta * 180 / Math.PI,
-                                ry: r
-                            }
-                        );
+                        onEllipseDrag(dragEllipse, { theta, ry: r });
                     } else if (dragNode === 'f1' || dragNode === 'f2') {
                         if (dragNode === 'f2') {
                             dx = -dx;
@@ -192,11 +178,10 @@ export default function Svg({ ellipses, idx, onEllipseDrag, transformBy, onCurso
                                 t
                             );
 
-                        const degrees = theta * 180 / Math.PI;
                         const polar =
                             (rx >= ry)
-                                ? { rx: sqrt(ry*ry + r*r), degrees, }
-                                : { ry: sqrt(rx*rx + r*r), degrees, }
+                                ? { rx: sqrt(ry*ry + r*r), theta, }
+                                : { ry: sqrt(rx*rx + r*r), theta, }
                         onEllipseDrag(dragEllipse, polar);
                     }
                 }
@@ -294,9 +279,9 @@ export default function Svg({ ellipses, idx, onEllipseDrag, transformBy, onCurso
                         ellipse;
 
                 const dragging = dragEllipse === k
-                if (!dragging && transformBy) {
-                    console.log(`SVG${idx}, ellipse${ellipse.idx}/k${k}:${pp(ellipse.cx, ellipse.cy)} → ${pp(transformBy.cx, transformBy.cy)} = ${pp(transformedEllipse.cx, transformedEllipse.cy)}`)
-                }
+                // if (!dragging && transformBy) {
+                //     console.log(`SVG${idx}, ellipse${ellipse.idx}/k${k}:${pp(ellipse.cx, ellipse.cy)} → ${pp(transformBy.cx, transformBy.cy)} = ${pp(transformedEllipse.cx, transformedEllipse.cy)}`)
+                // }
                 return (
                     <SvgEllipse
                         key={ellipse.name}

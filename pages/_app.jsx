@@ -1,3 +1,5 @@
+import "../public/css/apvd.css"
+
 function MyApp({ Component, pageProps }) {
   return <Component {...pageProps} />
 }

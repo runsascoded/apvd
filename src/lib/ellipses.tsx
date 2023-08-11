@@ -4,7 +4,6 @@ import Ellipse from "./ellipse";
 import Intersection from "./intersection";
 import {intersect, keyStr, powerset, ps, ss, sum, tpi} from "./utils";
 import React, {ReactElement, ReactNode} from "react";
-import {Point} from "../components/point";
 
 export const regionString = (r: ReactElement<RegionProps>) => ps(r.props.points, r.props.edges);
 export const rts = regionString;
@@ -21,7 +20,6 @@ export default class Ellipses {
     edges: Edge[];
     edgesByE: Edge[][];
     islands: boolean[][];
-    // edgesByExE: Edge[][][];
     areasObj: { [key: string]: number };
     regions: ReactNode[];
 
@@ -34,19 +32,6 @@ export default class Ellipses {
         const n = keys.length
         this.keys = keys
         this.n = n
-
-        // const { intersections } = this.computeIntersections();
-        // this.computeIslands();
-        // this.computeIntersectionsByEllipse();
-        // this.computeEdgesByEllipse();
-        // this.computeEdgeContainments();
-        // this.computeRegions();
-        //console.log(
-        //      this.regions.map((r) => {
-        //        return r.props.k + ": " + r.props.area + " (" + (r.props.area/pi) + ")";
-        //      }).join("\n")
-        //);
-        //console.log(this.regions.map(ts).join("\n"));
 
     // ### computeIntersections
 
@@ -77,7 +62,6 @@ export default class Ellipses {
                 }
             })
         });
-        // let retry = false;
         for (let ii = 0; ii < n - 1; ii++) {
             const i = keys[ii];
             const ei = ellipses[i];
@@ -103,34 +87,10 @@ export default class Ellipses {
                         }
                     } else if (ej.containsEllipse(ei)) {
                         containments[j][i] = true;
-                        // if (containments[i][j]) {
-                        //     const t = Math.random() * tpi;
-                        //     const [c,s] = [Math.cos(t), Math.sin(t)];
-                        //     const eps = 1e-6;
-                        //     ellipses[i] = new Ellipse({
-                        //         cx: ei.cx + c*eps,
-                        //         cy: ei.cy + s*eps,
-                        //         rx: ei.rx,
-                        //         ry: ei.ry,
-                        //         theta: ei.theta,
-                        //         i: ei.i,
-                        //         color: ei.color,
-                        //         name: ei.name
-                        //     });
-                        //     retry = true;
-                        //     console.log("retrying:", ei.i, ej.i, ei, ej, ellipses);
-                        // }
                     }
                 }
             }
         }
-
-        // if (retry) {
-        //     return this.computeIntersections();
-        // } else {
-        // return { intersections, containments, intsByE, intsByExE };
-        // }
-    // }
 
     // ### computeIntersectionsByEllipse()
 

@@ -35,13 +35,13 @@ export default class Intersection {
         // const e1o: Partial<CST> = {};
         // const e2o: Partial<CST> = {};
 
-        const t1 = o.t1 === undefined ? e1.polar(o.x, o.y).t: o.t1;
+        const t1 = o.t1 === undefined ? e1.polar(o.x, o.y).t : o.t1;
         this.cst1 = {
             t: t1,
             c: o.c1 === undefined ? Math.cos(t1) : o.c1,
             s: o.s1 === undefined ? Math.sin(t1) : o.s1,
         }
-        const t2 = o.t2 === undefined ? e2.polar(o.x, o.y).t: o.t2;
+        const t2 = o.t2 === undefined ? e2.polar(o.x, o.y).t : o.t2;
         this.cst2 = {
             t: t2,
             c: o.c2 === undefined ? Math.cos(t2) : o.c2,

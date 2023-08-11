@@ -6,6 +6,8 @@ import {Point} from "../components/point";
 
 export type XY = [ number, number ];
 export type Polar = { r: number, t: number }
+export type Center = { cx: number, cy: number }
+export type RadiusVector = { theta: number } & ({ rx: number } | { ry: number })
 
 export default class Ellipse {
     idx: number;
@@ -191,6 +193,11 @@ export default class Ellipse {
         return this.toString();
     }
 
+    modify(o: Center | RadiusVector): Ellipse {
+        const { rx, ry, theta, cx, cy, color, idx, name } = this;
+        return new Ellipse({ ...{ rx, ry, theta, cx, cy, color, idx, name }, ...o });
+    }
+
     polar(x: number, y: number): Polar {
         const p = this.transform(x, y);
         const r = sqrt(p[0] * p[0] + p[1] * p[1]);
@@ -257,7 +264,7 @@ export default class Ellipse {
      * Rotate this ellipse around the origin (0,0)
      */
     rotate(t: number): Ellipse {
-        const {A, B, C, D, E, F, color, idx, name,} = this;
+        const {A, B, C, D, E, F, theta, color, idx, name,} = this;
         const c = Math.cos(t);
         const s = Math.sin(t);
         const c2 = c * c;
@@ -270,6 +277,7 @@ export default class Ellipse {
             D: D*c - E*s,
             E: D*s + E*c,
             F: F,
+            theta: theta + t,
             color, idx, name,
         });
     }

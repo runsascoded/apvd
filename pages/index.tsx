@@ -1,9 +1,7 @@
-import "../public/css/apvd.css"
-
 import React, {useEffect, useMemo, useState} from 'react';
 import Svg from '../src/components/svg';
 import ModelTextField from '../src/components/model-text-field';
-import EllipseC from '../src/lib/ellipse';
+import EllipseC, {Center, RadiusVector} from '../src/lib/ellipse';
 import Ellipses from '../src/lib/ellipses';
 import { lengthCmp, pi, powerset, r3, spaces } from '../src/lib/utils';
 import {Point} from '../src/components/point';
@@ -53,10 +51,6 @@ export default function Page({ ellipses: initialEllipses }: { ellipses: Ellipse[
     const [ malformedEllipses, setMalformedEllipses ] = useState(false);
     const [ virtualCursor, setVirtualCursor ] = useState({ x: 0, y: 0 });
     const [ activeSvg, setActiveSvg ] = useState(0);
-    // const ellipsesObj = useMemo(
-    //     () => fromEntries(ellipses.map((e, i) => [ i, e ] )),
-    //     [ ellipses ]
-    // )
 
     function onTextFieldChange(value: string) {
         try {
@@ -68,11 +62,9 @@ export default function Page({ ellipses: initialEllipses }: { ellipses: Ellipse[
         }
     }
 
-    function onEllipseDrag(k: number, change: Partial<Ellipse>) {
-        const newEllipse: EllipseC = new EllipseC({ ...ellipses[k], ...change });
-        // const o = {} as { [k: number]: Ellipse }; o[k] = newEllipseK;
+    function onEllipseDrag(k: number, change: Center | RadiusVector) {
         const newEllipses = [ ...ellipses ];
-        newEllipses[k] = newEllipse
+        newEllipses[k] = ellipses[k].modify(change)
         setEllipses(newEllipses);
     }
 
