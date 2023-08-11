@@ -23,7 +23,6 @@ export default class Ellipse {
     rx: number;
     ry: number;
     theta: number;
-    t: number;
     color: string;
     degrees: number;
     cos: number;
@@ -31,20 +30,12 @@ export default class Ellipse {
     rM: number;
     rm: number;
     fd: number;
-    vxx: number;
-    vxy: number;
-    vx: XY;
-    vyx: number;
-    vyy: number;
-    vy: XY;
-    vx2: XY;
-    vy2: XY;
-    f1x: number;
-    f1y: number;
-    f2x: number;
-    f2y: number;
-    f1: XY;
-    f2: XY;
+    vx1: Point;
+    vy1: Point;
+    vx2: Point;
+    vy2: Point;
+    f1: Point;
+    f2: Point;
 
     constructor(o: { [k: string]: any }) {
         this.idx = o.idx;
@@ -117,12 +108,11 @@ export default class Ellipse {
         }
         this.theta = theta
         this.degrees = degrees
-        this.t = this.theta;
 
         this.cos = Math.cos(this.theta);
         this.sin = Math.sin(this.theta);
 
-        const {cx, cy, rx, ry, cos, sin} = this;
+        const { cx, cy, rx, ry, cos, sin, } = this;
 
         if (!('A' in o)) {
             const rx2 = rx * rx;
@@ -162,24 +152,20 @@ export default class Ellipse {
         this.fd = sqrt(this.rM*this.rM - this.rm*this.rm);
         const fr = this.fd / this.rM;
 
-        this.vxx = cx + rx*cos;
-        this.vxy = cy + rx*sin;
-        this.vx = [ this.vxx, this.vxy ];
+        this.vx1 = { x: cx + rx*cos, y: cy + rx*sin }
+        this.vy1 = { x: cx - ry*sin, y: cy + ry*cos }
 
-        this.vyx = cx - ry*sin;
-        this.vyy = cy + ry*cos;
-        this.vy = [ this.vyx, this.vyy ];
+        this.vx2 = { x: 2*cx - this.vx1.x, y: 2*cy - this.vx1.y }
+        this.vy2 = { x: 2*cx - this.vy1.x, y: 2*cy - this.vy1.y }
 
-        this.vx2 = [ 2*cx - this.vxx, 2*cy - this.vxy ];
-        this.vy2 = [ 2*cx - this.vyx, 2*cy - this.vyy ];
-
-        this.f1x = cx + fr*(((rx >= ry) ? this.vxx : this.vyx) - cx);
-        this.f1y = cy + fr*(((rx >= ry) ? this.vxy : this.vyy) - cy);
-        this.f1 = [ this.f1x, this.f1y ];
-
-        this.f2x = cx - fr*(((rx >= ry) ? this.vxx : this.vyx) - cx);
-        this.f2y = cy - fr*(((rx >= ry) ? this.vxy : this.vyy) - cy);
-        this.f2 = [ this.f2x, this.f2y ];
+        this.f1 ={
+            x: cx + fr*(((rx >= ry) ? this.vx1.x : this.vy1.x) - cx),
+            y: cy + fr*(((rx >= ry) ? this.vx1.y : this.vy1.y) - cy),
+        };
+        this.f2 = {
+            x: cx - fr*(((rx >= ry) ? this.vx1.x : this.vy1.x) - cx),
+            y: cy - fr*(((rx >= ry) ? this.vx1.y : this.vy1.y) - cy),
+        }
     }
 
     toString() {
@@ -309,7 +295,7 @@ export default class Ellipse {
      * Project this ellipse into a plane where the provided ellipse is a unit circle.
      */
     project(e: Ellipse): Ellipse {
-        return this.affine(1/e.rx, 1/e.ry, -e.t, -e.cx, -e.cy);
+        return this.affine(1/e.rx, 1/e.ry, -e.theta, -e.cx, -e.cy);
     }
 
     /**
@@ -327,7 +313,7 @@ export default class Ellipse {
     }
 
     containsEllipse(e: Ellipse) {
-        return this.contains(e.vx) && this.contains(e.vx2) && this.contains(e.vy) && this.contains(e.vy2);
+        return this.contains(e.vx1) && this.contains(e.vx2) && this.contains(e.vy1) && this.contains(e.vy2);
     }
 
     contains(px: number | Point | XY, py?: number) {
@@ -342,7 +328,6 @@ export default class Ellipse {
         }
         const [x, y] = this.transform(px, py);
         const r2 = x * x + y * y;
-        //console.log("\tchecking containment:", pp(px, py), pp(x,y), r2);
         return r2 <= 1;
     }
 
@@ -350,21 +335,13 @@ export default class Ellipse {
         const e1 = this;
         const e2 = e;
         const p1 = e1.project(e2);
-        //console.log("e1:", e1.toString(), "e2:", e2.toString(), "p1:", p1.toString());
         const uis = p1.unitIntersections();
 
-        //console.log("uis:", uis);
         return uis.map(ui => {
             const [c2, s2] = ui;
             const [x, y] = e2.invert(c2, s2);
-            //console.log("ui:", pp(ui), "xy:", pp(x,y), "cs2:", pp(c2, s2));
-
             return new Intersection({ e1, e2, x, y, c2, s2 });
         });
-        //console.log("projected:", p.s());
-        //console.log("unit intxs:", uis.map((p) => { return p.join(","); }));
-        //console.log("inverted:", ret.map((p) => { return p.join(","); }));
-        //return this.project(e).unitIntersections().map(this.invert);
     }
 
     unitIntersections(): XY[] {

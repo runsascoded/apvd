@@ -46,9 +46,8 @@ describe('test Ellipses', () => {
         const [ e0, e2 ] = [ellipses[0], ellipses[2]];
         const e2t = e2.translate(1, 1)
         expect([e2t.cx, e2t.cy]).toBeDeepCloseTo([ 1.5, 2.52 ], 5)
-        const e2p = e2.project(e0)
         const e2pt = e2t.project(e0)
-        expect([e2p.cx, e2p.cy]).toBeDeepCloseTo([ 2.32, 1.07 ], 5)
+        expect([e2pt.cx, e2pt.cy]).toBeDeepCloseTo([ 2.32, 1.07 ], 5)
     })
     test("edge visits", () => {
         const ellipses: Ellipse[] = [

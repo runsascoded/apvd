@@ -1,8 +1,7 @@
-
 import React from 'react';
-import { tpi, pp, pd, pi, pc, deg } from './utils';
+import {deg, pc, pd, pi, pp, tpi} from './utils';
 import Ellipse, {XY} from "./ellipse";
-import Intersection, {CST} from "./intersection";
+import Intersection from "./intersection";
 
 export default class Edge {
     e: Ellipse
@@ -14,12 +13,10 @@ export default class Edge {
     p1: Intersection
     x1: number
     y1: number
-    o1: CST
     t1: number
     p2: Intersection
     x2: number
     y2: number
-    o2: CST
     t2: number
     n: number
     ps: [Intersection, Intersection]
@@ -35,34 +32,32 @@ export default class Edge {
     next?: Edge
 
     constructor(o: { [key: string]: any }) {
-        this.e = o.e;
-        this.i = this.e.idx;
-        this.j = o.j;
-        this.rx = this.e.rx;
-        this.ry = this.e.ry;
-        this.t = this.e.t;
+        this.e = o.e
+        this.i = this.e.idx
+        this.j = o.j
+        this.rx = this.e.rx
+        this.ry = this.e.ry
+        this.t = this.e.theta
 
-        this.p1 = o.p1;
-        this.x1 = this.p1.x;
-        this.y1 = this.p1.y;
-        this.o1 = this.p1.cst(this.i)
-        this.t1 = this.o1.t;
-        this.p1.addEdge(this);
+        this.p1 = o.p1
+        this.x1 = this.p1.x
+        this.y1 = this.p1.y
+        this.t1 = this.p1.polar(this.i).t
+        this.p1.addEdge(this)
 
-        this.p2 = o.p2;
-        this.x2 = this.p2.x;
-        this.y2 = this.p2.y;
-        this.o2 = this.p2.cst(this.i)
-        this.t2 = this.o2.t;
+        this.p2 = o.p2
+        this.x2 = this.p2.x
+        this.y2 = this.p2.y
+        this.t2 = this.p2.polar(this.i).t
         if (this.p2 !== this.p1) {
-            this.p2.addEdge(this);
+            this.p2.addEdge(this)
         }
 
-        this.n = 0;
-        this.ps = [ this.p1, this.p2 ];
+        this.n = 0
+        this.ps = [ this.p1, this.p2 ]
 
-        this.mt = (this.t1 + this.t2 + (this.t2 < this.t1 ? tpi : 0)) / 2;
-        this.mp = this.e.getPoint(this.mt);
+        this.mt = (this.t1 + this.t2 + (this.t2 < this.t1 ? tpi : 0)) / 2
+        this.mp = this.e.getPoint(this.mt)
 
         this.dt = this.t2 - this.t1;
         if (this.p1 === this.p2) {
@@ -124,7 +119,7 @@ export default class Edge {
         const sweepFlag = (from === this.p1) ? 1 : 0;
         return [
             "A" + pc(rx, ry),
-            deg(e.t),
+            deg(e.theta),
             pc(largeArc, sweepFlag),
             pc(xt, yt)
         ].join(' ');

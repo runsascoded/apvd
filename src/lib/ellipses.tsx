@@ -35,10 +35,11 @@ export default class Ellipses {
 
     // ### computeIntersections
 
-        let intersections: Intersection[] = [];
-        const intsByE: Intersection[][] = [];
-        const intsByExE: Intersection[][][] = []
-        const containments: boolean[][] = [];
+        const intsByE: Intersection[][] = [];  // Ellipse -> Intersection[]
+        const intsByExE: Intersection[][][] = []  // Ellipse -> Ellipse -> Intersection[]
+        const containments: boolean[][] = [];  // Ellipse -> Ellipse -> boolean
+
+        // Initialize multi-level arrays
         keys.forEach((i) => {
             containments[i] = [];
             intsByE[i] = [];
@@ -62,6 +63,8 @@ export default class Ellipses {
                 }
             })
         });
+
+        let intersections: Intersection[] = [];
         for (let ii = 0; ii < n - 1; ii++) {
             const i = keys[ii];
             const ei = ellipses[i];
@@ -71,11 +74,11 @@ export default class Ellipses {
 
                 const is = ei.intersect(ej);
                 if (is.length) {
-                    is.forEach((int, k) => {
-                        int.idx = intersections.length + k;
-                        intsByE[i].push(int);
-                        intsByE[j].push(int);
-                        intsByExE[i][j].push(int);
+                    is.forEach((intersection, k) => {
+                        intersection.idx = intersections.length + k;
+                        intsByE[i].push(intersection);
+                        intsByE[j].push(intersection);
+                        intsByExE[i][j].push(intersection);
                     });
                     intersections = intersections.concat(is);
                 } else {
@@ -97,14 +100,14 @@ export default class Ellipses {
         // Add degenerate [0,2pi) edges for ellipses that don't intersect with any others.
         this.ellipses.forEach((e, i) => {
             if (!intsByE[i].length) {
-                const int = new Intersection({
+                const intersection = new Intersection({
                     e1: e, e2: e,
                     t1: 0, t2: 0
                 });
-                int.idx = intersections.length
+                intersection.idx = intersections.length
                 //console.log("adding:", int);
-                intersections.push(int);
-                intsByE[i] = [ int ];
+                intersections.push(intersection);
+                intsByE[i] = [ intersection ];
             }
         });
 
@@ -112,18 +115,19 @@ export default class Ellipses {
         // starting from -pi.
         intsByE.forEach((a, i) => {
             a.sort((i1, i2) => {
-                return i1.cst(i).t - i2.cst(i).t;
+                return i1.polar(i).t - i2.polar(i).t;
             });
             const n = a.length;
             a.forEach((p, j) => {
-                p.cst(i).next = a[(j+1)%n];
-                p.cst(i).prev = a[(j-1+n)%n];
+                p.polar(i).next = a[(j+1)%n];
+                p.polar(i).prev = a[(j-1+n)%n];
             });
         });
 
     // ### computeIslands()
 
-        const intersectionClosures: boolean[][] = [];
+        // Compute whether each ellipse is in a connected component with each other ellipse.
+        const intersectionClosures: boolean[][] = []; // Ellipse -> Ellipse -> boolean
         intsByExE.forEach((o, i) => {
             if (!(i in intersectionClosures)) {
                 intersectionClosures[i] = [];
@@ -172,7 +176,7 @@ export default class Ellipses {
         intsByE.forEach(
             (ints, i) => {
                 const edges = ints.map((p1) => {
-                    const p2 = p1.cst(i).next;
+                    const p2 = p1.polar(i).next;
                     const e = this.ellipses[i];
                     if (!(i in edgesByE)) {
                         edgesByE[i] = [];
