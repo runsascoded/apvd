@@ -19,4 +19,4 @@ jobs:
           repository-name: ryan-williams/apvd
           branch: gh-pages
           folder: out
-          token: ${{ secrets.ghp_pat }}
+          token: ${{ secrets.ghp_pat }}  # expires 2023-11-16
