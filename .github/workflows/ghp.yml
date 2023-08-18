@@ -1,0 +1,20 @@
+name: Build + deploy to GitHub Pages
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ "**" ]
+jobs:
+  build-and-deploy:
+    name: Build and deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: npm install
+      - run: npm run gha-export
+      - name: Deploy
+        uses: JamesIves/github-pages-deploy-action@4.1.1
+        with:
+          branch: gh-pages
+          folder: out
+          token: ${{ secrets.GITHUB_TOKEN }}
