@@ -7,7 +7,7 @@ Area-Proportional Venn Diagram generator (WIP)
 ## Status
 - [x] compute ellipse intersections / areas
 - [ ] autodiff computations + gradient-descend to optimal solution
-  - see [runsascoded/shapes]()
+  - see [runsascoded/shapes](https://github.com/runsascoded/shapes)
 
 ## Inspiration
 

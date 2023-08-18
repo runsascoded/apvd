@@ -15,6 +15,7 @@ jobs:
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@4.1.1
         with:
+          repository-name: ryan-williams/apvd
           branch: gh-pages
           folder: out
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.ghp_pat }}
