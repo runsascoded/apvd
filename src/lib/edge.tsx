@@ -106,7 +106,7 @@ export default class Edge {
     }
 
     s() {
-        return "E(" + this.i + ":" + pp(this.x1,this.y1) + "," + pp(this.x2, this.y2) + ")";
+        return "E(" + this.e.name + ":" + pp(this.x1,this.y1) + "," + pp(this.x2, this.y2) + ")";
     }
 
     arcpath(from: Intersection) {
