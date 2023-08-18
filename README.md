@@ -1,9 +1,12 @@
 # ∧p∨d
-Area-Proportional Venn Diagram generator (WIP)
+Area-Proportional Venn Diagram generator (WIP):
 [runsascoded.com/apvd](https://runsascoded/apvd)
 
-https://github.com/runsascoded/apvd/raw/main/recording.mp4
+https://github.com/runsascoded/apvd/assets/465045/2bcaa761-1989-4d6e-8424-8b593759fb53
 
+*(Ellipse intersections + projections where each one becomes a unit circle)*
+
+## Index
 <!-- toc -->
 - [Status](#status)
 - [Inspiration](#inspo)
@@ -20,22 +23,22 @@ https://github.com/runsascoded/apvd/raw/main/recording.mp4
 <!-- /toc -->
 
 ## Status <a id="status"></a>
-- [x] compute ellipse intersections / areas
-- [ ] autodiff computations + gradient-descend to optimal solution
-  - see [runsascoded/shapes](https://github.com/runsascoded/shapes)
+- [x] Compute ellipse intersections / areas
+- [ ] Autodiff computations + gradient-descend to optimal solution
+  - See [runsascoded/shapes](https://github.com/runsascoded/shapes)
 
 ## Inspiration <a id="inspo"></a>
 
 ### Non-area-proportional Venn Diagrams in papers <a id="papers"></a>
 
 https://www.hindawi.com/journals/bmri/2015/456479/
-![](5-blobs.png)
+![Venn Diagram comprised of 5 nonconvex blobs](5-blobs.png)
 
 https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3753564/pdf/btt375.pdf
-![](4-ellipses.png)
+![Venn Diagram comprised of 4 ellipses](4-ellipses.png)
 
 ### Area-proportional Venn Diagrams (circles only) <a id="circles"></a>
-![](3-circles.png)
+![Venn Diagram comprised of 3 circles, with region areas displayed](3-circles.png)
 
 [Blog (2013)](https://www.benfrederickson.com/venn-diagrams-with-d3.js/), [follow-up (2013)](https://www.benfrederickson.com/calculating-the-intersection-of-3-or-more-circles/), [benfred/venn.js](https://github.com/benfred/venn.js), [upsetjs/venn.js](https://github.com/upsetjs/venn.js)
 
@@ -43,12 +46,12 @@ https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3753564/pdf/btt375.pdf
 https://www.combinatorics.org/files/Surveys/ds5/ds5v3-2005/VennEJC.html
 
 #### 5 symmetric triangles <a id="5-triangles"></a>
-![](5-triangles.gif)
+![Venn Diagram comprised of 5 symmetric triangles](5-triangles.gif)
 
 https://www.combinatorics.org/files/Surveys/ds5/ds5v3-2005/VennSymmExamples.html
 
 #### 6 triangles <a id="6-triangles"></a>
-![](6-triangles.gif)
+![Venn Diagram comprised of 6 differently-shaped triangles](6-triangles.gif)
 https://www.combinatorics.org/files/Surveys/ds5/ds5v3-2005/VennTriangleEJC.html
 
 #### Polyominoes <a id="polyominoes"></a>
@@ -71,22 +74,20 @@ https://www.combinatorics.org/files/Surveys/ds5/ds5v3-2005/VennPoly67EJC.html
 ## Other misc references <a id="misc"></a>
 
 ### Rust <a id="rust"></a>
-https://github.com/itt-ustutt/num-dual ([r/rust](https://www.reddit.com/r/rust/comments/ybi9yx/automatic_differentiation_and_thermodynamics_with/))
-
-https://crates.io/crates/hyperdual/
-https://github.com/elrnv/autodiff
-https://github.com/djmaxus/autodj
-https://github.com/raskr/rust-autograd includes reverse-mode
-
-~https://docs.rs/dual_num/latest/dual_num/~ (archived)
-https://crates.io/crates/fwd_ad 3ya
-https://gist.github.com/emilk/c027311e5d0e8b69953c83a3ec283b74
-
-https://docs.rs/roots/latest/roots/ real roots only
+Dual / Autodiff libraries:
+- https://github.com/itt-ustutt/num-dual ([r/rust](https://www.reddit.com/r/rust/comments/ybi9yx/automatic_differentiation_and_thermodynamics_with/))
+- https://crates.io/crates/hyperdual/
+- https://github.com/elrnv/autodiff
+- https://github.com/djmaxus/autodj
+- https://github.com/raskr/rust-autograd includes reverse-mode
+- ~https://docs.rs/dual_num/latest/dual_num/~ (archived)
+- https://crates.io/crates/fwd_ad 3yrs stale
+- https://gist.github.com/emilk/c027311e5d0e8b69953c83a3ec283b74
+- https://docs.rs/roots/latest/roots/ real roots only
 
 ### JS <a id="js"></a>
 [quartic.js](https://www.npmjs.com/package/quartic) (last release 2008)
 Core code is from a [web solver](http://www.akiti.ca/Quad4Deg.html) written by [David Binner](http://www.akiti.ca/ContactPage.html)
 
 ### Scala <a id="scala"></a>
-Partial Scala.js implementation in [the @scala branch](https://github.com/runsascoded/apvd/tree/scala), including [cubic](https://github.com/runsascoded/apvd/tree/scala/cubic/shared/src/main/scala/cubic) and [quartic](https://github.com/runsascoded/apvd/tree/scala/quartic/shared/src/main/scala/quartic) equation solvers.
+Partial Scala.js implementation in [this repo's @scala branch](https://github.com/runsascoded/apvd/tree/scala), including [cubic](https://github.com/runsascoded/apvd/tree/scala/cubic/shared/src/main/scala/cubic) and [quartic](https://github.com/runsascoded/apvd/tree/scala/quartic/shared/src/main/scala/quartic) equation solvers.
