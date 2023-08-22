@@ -4,6 +4,7 @@ import SvgEllipse from './svg-ellipse';
 import {pp, sqrt} from '../lib/utils';
 import Ellipse, {Center, RadiusVector} from "../lib/ellipse";
 import {Point} from "./point";
+import Grid, {Transform} from "./grid";
 
 function getTheta(x: number, y: number, t: number) {
     const r = sqrt(x * x + y * y);
@@ -47,48 +48,21 @@ export type Props = {
     showGrid: boolean
 }
 
+export type DragAnchor = 'c' | 'f1' | 'f2' | 'vx1' | 'vx2' | 'vy1' | 'vy2'
+
 export default function Svg({ ellipses, idx, onEllipseDrag, transformBy, onCursor, projection, gridSize, points, regions, hideCursorDot, cursor, showGrid }: Props) {
-    const [dragging, setDragging] = useState(false);
     const [pointRadius, setPointRadius] = useState(3);
     const [dragEllipse, setDragEllipse] = useState<number | null>(null);
-    const [dragNode, setDragNode] = useState<string | null>(null);
-    const [dragStartX, setDragStartX] = useState<number | null>(null);
-    const [dragStartY, setDragStartY] = useState<number | null>(null);
+    const [dragAnchor, setDragAnchor] = useState<DragAnchor | null>(null);
     const [width, setWidth] = useState(300);
     const [height, setHeight] = useState(400);
 
-    const scale = useMemo(() => (projection && projection.s) || 1, [ projection ])
-
-    const svg = useRef<SVGSVGElement>(null)
-
-    function onMouseUp() {
-        if (dragging) {
-            setDragging(false);
-            setDragEllipse(null);
-        }
+    function onDragEnd() {
+        setDragAnchor(null);
+        setDragEllipse(null);
     }
 
-    const dragStart = useCallback(
-        (e: MouseEvent, k: string, ek: number) => {
-            const rect = svg.current?.getBoundingClientRect();
-            const { left, top } = rect || { left: 0, top: 0 };
-            setDragging(true);
-            setDragNode(k);
-            setDragEllipse(ek);
-            setDragStartX(e.clientX - left);
-            setDragStartY(e.clientY - top);
-        },
-        [ svg.current ]
-    )
-
-    const virtual = useCallback(
-        (x: number, y: number) => ({
-            x: (x - width / 2) / scale,
-            y: (y - height / 2) / -scale
-        }),
-        [ width, height, scale ]
-    )
-
+    const scale = projection.s
     const actual = useCallback(
         (x: number, y: number) => ({
             x: x * scale + width / 2,
@@ -97,15 +71,8 @@ export default function Svg({ ellipses, idx, onEllipseDrag, transformBy, onCurso
         [ width, height, scale ]
     )
 
-    const onMouseMove = useCallback(
-        (e: MouseEvent) => {
-            const rect = svg.current?.getBoundingClientRect();
-            const { left, top } = rect || { left: 0, top: 0 };
-            const offsetX = e.clientX - left;
-            const offsetY = e.clientY - top;
-
-            const vOffset = virtual(offsetX, offsetY);
-
+    const handleMouseMove = useCallback(
+        (e: MouseEvent, offset: Point, vOffset: Point, dragOffset?: Point) => {
             if (onCursor) {
                 if (transformBy) {
                     const [x, y] = transformBy.invert(vOffset.x, vOffset.y);
@@ -116,11 +83,10 @@ export default function Svg({ ellipses, idx, onEllipseDrag, transformBy, onCurso
 
             // console.log(`SVG ${idx} mousemove: dragging=${dragging} dragEllipse=${dragEllipse} dragNode=${dragNode} dragStartX=${dragStartX} dragStartY=${dragStartY} offsetX=${offsetX} offsetY=${offsetY}`)
             // TODO: single drag state object
-            if (dragging && dragEllipse !== null && dragStartX !== null && dragStartY !== null && onEllipseDrag) {
-                let dx = (offsetX - dragStartX) / scale;
-                let dy = (offsetY - dragStartY) / scale;
+            if (dragOffset && dragEllipse !== null && onEllipseDrag) {
+                let { x: dx, y: dy } = dragOffset
                 const ellipse = ellipses[dragEllipse];
-                if (dragNode === 'c') {
+                if (dragAnchor === 'c') {
                     // console.log(`onEllipseDrag(${dragEllipse}, { cx: ${ellipse.cx + dx}, cy: ${ellipse.cy - dy} })`)
                     onEllipseDrag(
                         dragEllipse,
@@ -133,8 +99,8 @@ export default function Svg({ ellipses, idx, onEllipseDrag, transformBy, onCurso
                     const t = ellipse.theta
                     const cos = Math.cos(t);
                     const sin = Math.sin(t);
-                    if (dragNode === 'vx1' || dragNode === 'vx2') {
-                        if (dragNode === 'vx2') {
+                    if (dragAnchor === 'vx1' || dragAnchor === 'vx2') {
+                        if (dragAnchor === 'vx2') {
                             dx = -dx;
                             dy = -dy;
                         }
@@ -145,8 +111,8 @@ export default function Svg({ ellipses, idx, onEllipseDrag, transformBy, onCurso
                         const nxy = rxy - dy;
                         const { theta, r } = getTheta(nxx, nxy, t);
                         onEllipseDrag(dragEllipse, { theta, rx: r });
-                    } else if (dragNode === 'vy1' || dragNode === 'vy2') {
-                        if (dragNode === 'vy2') {
+                    } else if (dragAnchor === 'vy1' || dragAnchor === 'vy2') {
+                        if (dragAnchor === 'vy2') {
                             dx = -dx;
                             dy = -dy;
                         }
@@ -158,8 +124,8 @@ export default function Svg({ ellipses, idx, onEllipseDrag, transformBy, onCurso
 
                         const { theta, r } = getTheta(nyy, -nyx, t);
                         onEllipseDrag(dragEllipse, { theta, ry: r });
-                    } else if (dragNode === 'f1' || dragNode === 'f2') {
-                        if (dragNode === 'f2') {
+                    } else if (dragAnchor === 'f1' || dragAnchor === 'f2') {
+                        if (dragAnchor === 'f2') {
                             dx = -dx;
                             dy = -dy;
                         }
@@ -185,11 +151,17 @@ export default function Svg({ ellipses, idx, onEllipseDrag, transformBy, onCurso
                         onEllipseDrag(dragEllipse, polar);
                     }
                 }
-                setDragStartX(offsetX);
-                setDragStartY(offsetY);
             }
         },
-        [ svg.current, transformBy, virtual, onCursor,]
+        [ transformBy, onCursor, dragEllipse, onEllipseDrag, dragAnchor, ellipses, idx ]
+    )
+
+    const ellipseDragStart = useCallback(
+        (e: MouseEvent, anchorType: DragAnchor, dragEllipse: number) => {
+            setDragAnchor(anchorType);
+            setDragEllipse(dragEllipse);
+        },
+        []
     )
 
     const transformed = useCallback(
@@ -204,68 +176,19 @@ export default function Svg({ ellipses, idx, onEllipseDrag, transformBy, onCurso
         [ transformBy ]
     )
 
-    const transforms = [];
+    const transforms: Transform[] = [];
 
     if (projection) {
         if (projection.x !== undefined || projection.y !== undefined) {
             transforms.push([
                 "translate",
-                (projection.x + width/2) || 0,
-                (projection.y + height/2) || 0
+                (projection.x + width / 2) || 0,
+                (projection.y + height / 2) || 0
             ]);
         }
         if (projection.s) {
             transforms.push([ "scale", projection.s, -projection.s ]);
         }
-    }
-
-    const s = scale;
-
-    gridSize = gridSize || (Math.min(width, height) / 11 / s);
-
-    const gridLines = [];
-    if (showGrid !== undefined) {
-        const tl = virtual(0, 0);
-        const lx = tl.x - gridSize;
-        const ty = tl.y + gridSize;
-
-        const br = virtual(width, height);
-        const rx = br.x + gridSize;
-        const by = br.y - gridSize;
-
-        const startX = lx - (lx % gridSize);
-
-        const vLines = [];
-        for (let x = startX; x <= rx; x += gridSize) {
-            const d = "M" + x + " " + ty + "V" + by;
-            vLines.push(
-                <path
-                    key={"v-"+x}
-                    className={"grid-line" + (x === 0 ? " axis" : "")}
-                    strokeWidth={gridSize / 20}
-                    d={d}
-                />
-            );
-        }
-        gridLines.push(<g key="vertical" className="grid-lines vertical">{vLines}</g>);
-
-        const startY = by - (by % gridSize);
-
-        const hLines = [];
-        for (let y = startY; y <= ty; y += gridSize) {
-            const d = "M" + lx + " " + y + "H" + rx;
-            hLines.push(
-                <path
-                    key={"h-"+y}
-                    className={"grid-line" + (y === 0 ? " axis" : "")}
-                    strokeWidth={gridSize / 20}
-                    d={d}
-                />
-            );
-        }
-        gridLines.push(
-            <g key="horizontal" className="grid-lines horizontal">{hLines}</g>
-        );
     }
 
     const svgEllipses = useMemo(
@@ -287,14 +210,14 @@ export default function Svg({ ellipses, idx, onEllipseDrag, transformBy, onCurso
                         key={ellipse.name}
                         ellipseIdx={ellipse.idx}
                         dragging={dragging}
-                        dragStart={dragStart}
+                        dragStart={ellipseDragStart}
                         {...transformedEllipse}
-                        scale={s}
+                        scale={scale}
                     />
                 );
             })
         },
-        [ ellipses, transformBy, dragEllipse, dragStart, s ]
+        [ ellipses, transformBy, dragEllipse, ellipseDragStart, scale ]
     )
 
     let svgPoints = useMemo(
@@ -305,14 +228,14 @@ export default function Svg({ ellipses, idx, onEllipseDrag, transformBy, onCurso
                     //console.log("transformed point:", p, t);
                     return <circle
                         key={i}
-                        r={pointRadius / s}
+                        r={pointRadius / scale}
                         className="projected-point"
                         cx={t.x}
                         cy={t.y}
                     />
                 }
             ),
-    [ transformed, pointRadius, s, points, ]
+    [ transformed, pointRadius, scale, points, ]
     )
 
     const transformedCursor = cursor ? transformed(cursor.x, cursor.y) : null;
@@ -322,12 +245,12 @@ export default function Svg({ ellipses, idx, onEllipseDrag, transformBy, onCurso
         (cursor && transformedCursor && rawCursor) ?
             [
                 !hideCursorDot &&
-                    <circle
-                        className="projected-cursor"
-                        r={3 / s}
-                        cx={transformedCursor.x}
-                        cy={transformedCursor.y}
-                    />,
+                <circle
+                    className="projected-cursor"
+                    r={3 / scale}
+                    cx={transformedCursor.x}
+                    cy={transformedCursor.y}
+                />,
                 <text className="cursor" x="10" y="20">
                     {
                         [
@@ -345,32 +268,26 @@ export default function Svg({ ellipses, idx, onEllipseDrag, transformBy, onCurso
                     }
                 </text>
             ] :
-            [
-                null,
-                null,
-                null
-            ];
+            [ null, null, null ];
 
-    return <svg
-        ref={svg}
-        onMouseMove={onMouseMove}
-        onMouseUp={onMouseUp}
+    return <Grid
+        handleMouseMove={handleMouseMove}
+        // handleMouseUp={}
+        // handleDragStart={ellipseDragStart}
+        // onDragEnd={onDragEnd}
+        transforms={transforms}
+        scale={scale}
+        gridSize={gridSize}
+        width={width}
+        height={height}
+        outerChildren={<>
+            {cursorRawCoords}
+            {cursorVirtualCoords}
+        </>}
     >
-        <g
-            className="projection"
-            transform={
-                transforms.length
-                    ? transforms.map((t) => { return t[0] + "(" + t.slice(1).join(",") + ")"; }).join(" ")
-                    : undefined
-            }
-        >
-            {gridLines}
-            {regions && <g className="regions">{regions}</g>}
-            <g className="ellipses">{svgEllipses}</g>
-            <g className="points">{svgPoints}</g>
-            {cursorCircle}
-        </g>
-        {cursorRawCoords}
-        {cursorVirtualCoords}
-    </svg>;
+        {regions && <g className="regions">{regions}</g>}
+        <g className="ellipses">{svgEllipses}</g>
+        <g className="points">{svgPoints}</g>
+        {cursorCircle}
+    </Grid>
 }
