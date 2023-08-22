@@ -1,16 +1,14 @@
 import React, {MouseEvent, ReactNode, useCallback, useMemo, useRef, useState} from "react";
-import {Projection} from "./svg";
 import {Point} from "./point";
 
 export type Transform = [ string, number, number ]
 
 type MouseCb = (e: MouseEvent) => void
 export type Props = {
-    handleMouseMove: (e: MouseEvent, offset: Point, vOffset: Point, dragOffset?: Point) => void
-    handleDragStart?: (e: MouseEvent, rect?: DOMRect) => void
-    handleDragEnd?: () => void
+    handleMouseMove: (e: MouseEvent, offset: Point, vOffset: Point) => void
+    handleMouseDown?: (e: MouseEvent, rect?: DOMRect) => void
+    handleMouseUp?: () => void
     transforms: Transform[]
-    // projection: Projection
     scale: number
     gridSize: number
     width: number
@@ -20,13 +18,10 @@ export type Props = {
     outerChildren?: ReactNode
 }
 
-export default function Grid({ handleMouseMove, handleDragStart, handleDragEnd, transforms, width, height, scale, gridSize, showGrid, children, outerChildren }: Props) {
-    // const [dragging, setDragging] = useState(false);
-    const [dragStart, setDragStart] = useState<Point | null>(null);
+export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, transforms, width, height, scale, gridSize, showGrid, children, outerChildren }: Props) {
     const svg = useRef<SVGSVGElement>(null)
     // const scale = useMemo(() => (projection && projection.s) || 1, [ projection ])
 
-    const dragging = useMemo(() => !!dragStart, [ dragStart ])
 
     const virtual = useCallback(
         (x: number, y: number) => ({
@@ -48,36 +43,30 @@ export default function Grid({ handleMouseMove, handleDragStart, handleDragEnd, 
     const onMouseDown = useCallback(
         (e: MouseEvent) => {
             const [offset, rect] = getOffset(e)
-            setDragStart(offset)
-            if (handleDragStart) {
-                handleDragStart(e, rect)
+            console.log("Grid.onMouseDown:", offset)
+            if (handleMouseDown) {
+                handleMouseDown(e, rect)
             }
         },
-        [ getOffset, setDragStart, handleDragStart ]
+        [ getOffset, handleMouseDown ]
     )
 
     const onMouseUp = useCallback(
         (e: MouseEvent) => {
-            if (dragging) {
-                setDragStart(null)
-                if (handleDragEnd) {
-                    handleDragEnd()
-                }
+            if (handleMouseUp) {
+                handleMouseUp()
             }
         },
-        [ dragging, setDragStart, handleDragEnd ]
+        [ handleMouseUp ]
     )
     const onMouseMove = useCallback(
         (e: MouseEvent) => {
             const [ offset, rect ] = getOffset(e)
             const vOffset = virtual(offset.x, offset.y);
-            const dragOffset = dragging && dragStart ? {
-                x: (offset.x - dragStart.x) / scale,
-                y: (offset.y - dragStart.y) / scale,
-            } : undefined
-            handleMouseMove(e, offset, vOffset, dragOffset)
+            // console.log("onMouseMove", offset, vOffset, dragOffset)
+            handleMouseMove(e, offset, vOffset)
         },
-        [ getOffset, handleMouseMove, virtual, dragging, dragStart, scale ]
+        [ getOffset, handleMouseMove, virtual, scale ]
     )
 
     gridSize = gridSize || (Math.min(width, height) / 11 / scale);
@@ -129,6 +118,7 @@ export default function Grid({ handleMouseMove, handleDragStart, handleDragEnd, 
 
     return <svg
         ref={svg}
+        onMouseDown={onMouseDown}
         onMouseMove={onMouseMove}
         onMouseUp={onMouseUp}
     >

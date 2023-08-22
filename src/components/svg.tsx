@@ -56,6 +56,7 @@ export default function Svg({ ellipses, idx, onEllipseDrag, transformBy, onCurso
     const [dragAnchor, setDragAnchor] = useState<DragAnchor | null>(null);
     const [width, setWidth] = useState(300);
     const [height, setHeight] = useState(400);
+    const [lastOffset, setLastOffset] = useState<Point | null>(null);
 
     function onDragEnd() {
         setDragAnchor(null);
@@ -72,7 +73,7 @@ export default function Svg({ ellipses, idx, onEllipseDrag, transformBy, onCurso
     )
 
     const handleMouseMove = useCallback(
-        (e: MouseEvent, offset: Point, vOffset: Point, dragOffset?: Point) => {
+        (e: MouseEvent, offset: Point, vOffset: Point) => {
             if (onCursor) {
                 if (transformBy) {
                     const [x, y] = transformBy.invert(vOffset.x, vOffset.y);
@@ -81,10 +82,10 @@ export default function Svg({ ellipses, idx, onEllipseDrag, transformBy, onCurso
                     onCursor(vOffset, idx);
             }
 
-            // console.log(`SVG ${idx} mousemove: dragging=${dragging} dragEllipse=${dragEllipse} dragNode=${dragNode} dragStartX=${dragStartX} dragStartY=${dragStartY} offsetX=${offsetX} offsetY=${offsetY}`)
             // TODO: single drag state object
-            if (dragOffset && dragEllipse !== null && onEllipseDrag) {
-                let { x: dx, y: dy } = dragOffset
+            if (dragAnchor && lastOffset && dragEllipse !== null && onEllipseDrag) {
+                let dx = vOffset.x - lastOffset.x
+                let dy = -(vOffset.y - lastOffset.y)
                 const ellipse = ellipses[dragEllipse];
                 if (dragAnchor === 'c') {
                     // console.log(`onEllipseDrag(${dragEllipse}, { cx: ${ellipse.cx + dx}, cy: ${ellipse.cy - dy} })`)
@@ -152,13 +153,15 @@ export default function Svg({ ellipses, idx, onEllipseDrag, transformBy, onCurso
                     }
                 }
             }
+            setLastOffset(vOffset)
         },
-        [ transformBy, onCursor, dragEllipse, onEllipseDrag, dragAnchor, ellipses, idx ]
+        [ transformBy, onCursor, dragEllipse, onEllipseDrag, dragAnchor, ellipses, idx, lastOffset, setLastOffset ]
     )
 
     const ellipseDragStart = useCallback(
-        (e: MouseEvent, anchorType: DragAnchor, dragEllipse: number) => {
-            setDragAnchor(anchorType);
+        (e: MouseEvent, dragAnchor: DragAnchor, dragEllipse: number) => {
+            console.log("ellipseDragStart:", dragAnchor, dragEllipse)
+            setDragAnchor(dragAnchor);
             setDragEllipse(dragEllipse);
         },
         []
@@ -274,10 +277,11 @@ export default function Svg({ ellipses, idx, onEllipseDrag, transformBy, onCurso
         handleMouseMove={handleMouseMove}
         // handleMouseUp={}
         // handleDragStart={ellipseDragStart}
-        // onDragEnd={onDragEnd}
+        handleMouseUp={onDragEnd}
         transforms={transforms}
         scale={scale}
         gridSize={gridSize}
+        showGrid={showGrid}
         width={width}
         height={height}
         outerChildren={<>
