@@ -5,7 +5,6 @@ import EllipseC, {Center, RadiusVector} from '../src/lib/ellipse';
 import Ellipses from '../src/lib/ellipses';
 import { lengthCmp, pi, powerset, r3, spaces } from '../src/lib/utils';
 import {Point} from '../src/components/point';
-import apvd, { fit } from "apvd";
 
 export type Ellipse = {
     name: string
@@ -52,44 +51,6 @@ export default function Page({ ellipses: initialEllipses }: { ellipses: Ellipse[
     const [ malformedEllipses, setMalformedEllipses ] = useState(false);
     const [ virtualCursor, setVirtualCursor ] = useState({ x: 0, y: 0 });
     const [ activeSvg, setActiveSvg ] = useState(0);
-
-    // useEffect(() => {
-    //     apvd().then(() => {
-    //         const model = fit(
-    //             [
-    //                 {
-    //                     idx: 0,
-    //                     c: {
-    //                         x: { v: 0, d: [ 0, 0 ], },
-    //                         y: { v: 0, d: [ 0, 0 ], },
-    //                     },
-    //                     r: { v: 1, d: [ 0, 0 ], },
-    //                 }, {
-    //                     idx: 1,
-    //                     c: {
-    //                         x: { v: 1, d: [ 1, 0 ], },
-    //                         y: { v: 0, d: [ 0, 0 ], },
-    //                     },
-    //                     r: { v: 1, d: [ 0, 1 ], }
-    //                 }
-    //              ],
-    //              [
-    //                 [ "0*", 1/3  ],  // Fizz
-    //                 [ "*1", 1/5  ],  // Buzz
-    //                 [ "01", 1/15 ],  // Fizz Buzz
-    //             ],
-    //              0.1,
-    //              100,
-    //         )
-    //         console.log("model:", model)
-    //         for (let idx in model.steps) {
-    //             const step = model.steps[idx];
-    //             const c1 = step.duals[1]
-    //             const error = step.error
-    //             console.log(`Step ${idx}:`, "err", error.v, `[${error.d.join(", ")}]`, `cx`, c1.c.x.v, "r", c1.r.v,)
-    //         }
-    //     })
-    // }, []);
 
     function onTextFieldChange(value: string) {
         try {
