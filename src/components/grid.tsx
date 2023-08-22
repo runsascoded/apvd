@@ -1,15 +1,14 @@
 import React, {MouseEvent, ReactNode, useCallback, useMemo, useRef, useState} from "react";
 import {Point} from "./point";
+import {Projection} from "./svg";
 
 export type Transform = [ string, number, number ]
 
-type MouseCb = (e: MouseEvent) => void
 export type Props = {
-    handleMouseMove: (e: MouseEvent, offset: Point, vOffset: Point) => void
+    handleMouseMove?: (e: MouseEvent, offset: Point, vOffset: Point) => void
     handleMouseDown?: (e: MouseEvent, rect?: DOMRect) => void
     handleMouseUp?: () => void
-    transforms: Transform[]
-    scale: number
+    projection: Projection
     gridSize: number
     width: number
     height: number
@@ -18,10 +17,9 @@ export type Props = {
     outerChildren?: ReactNode
 }
 
-export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, transforms, width, height, scale, gridSize, showGrid, children, outerChildren }: Props) {
+export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, projection, width, height, gridSize, showGrid, children, outerChildren }: Props) {
     const svg = useRef<SVGSVGElement>(null)
-    // const scale = useMemo(() => (projection && projection.s) || 1, [ projection ])
-
+    const scale = projection.s
 
     const virtual = useCallback(
         (x: number, y: number) => ({
@@ -64,7 +62,9 @@ export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, 
             const [ offset, rect ] = getOffset(e)
             const vOffset = virtual(offset.x, offset.y);
             // console.log("onMouseMove", offset, vOffset, dragOffset)
-            handleMouseMove(e, offset, vOffset)
+            if (handleMouseMove) {
+                handleMouseMove(e, offset, vOffset)
+            }
         },
         [ getOffset, handleMouseMove, virtual, scale ]
     )
@@ -72,6 +72,8 @@ export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, 
     gridSize = gridSize || (Math.min(width, height) / 11 / scale);
 
     const gridLines = [];
+    let xAxis = null
+    let yAxis = null
     if (showGrid !== undefined) {
         const tl = virtual(0, 0);
         const lx = tl.x - gridSize;
@@ -86,14 +88,17 @@ export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, 
         const vLines = [];
         for (let x = startX; x <= rx; x += gridSize) {
             const d = "M" + x + " " + ty + "V" + by;
-            vLines.push(
-                <path
-                    key={"v-"+x}
-                    className={"grid-line" + (x === 0 ? " axis" : "")}
-                    strokeWidth={gridSize / 20}
-                    d={d}
-                />
-            );
+            const vLine = <path
+                key={"v-"+x}
+                className={"grid-line" + (x === 0 ? " axis" : "")}
+                strokeWidth={gridSize / 20}
+                d={d}
+            />
+            if (x == 0) {
+                yAxis = vLine
+            } else {
+                vLines.push(vLine);
+            }
         }
         gridLines.push(<g key="vertical" className="grid-lines vertical">{vLines}</g>);
 
@@ -102,25 +107,49 @@ export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, 
         const hLines = [];
         for (let y = startY; y <= ty; y += gridSize) {
             const d = "M" + lx + " " + y + "H" + rx;
-            hLines.push(
-                <path
-                    key={"h-"+y}
-                    className={"grid-line" + (y === 0 ? " axis" : "")}
-                    strokeWidth={gridSize / 20}
-                    d={d}
-                />
-            );
+            const hLine = <path
+                key={"h-"+y}
+                className={"grid-line" + (y === 0 ? " axis" : "")}
+                strokeWidth={gridSize / 20}
+                d={d}
+            />
+            if (y == 0) {
+                xAxis = hLine;
+            } else {
+                hLines.push(hLine);
+            }
         }
         gridLines.push(
             <g key="horizontal" className="grid-lines horizontal">{hLines}</g>
         );
     }
 
+    const transforms: Transform[] = useMemo(
+        () => {
+            const transforms: Transform[] = [];
+            if (projection) {
+                if (projection.x !== undefined || projection.y !== undefined) {
+                    transforms.push([
+                        "translate",
+                        (projection.x + width / 2) || 0,
+                        (projection.y + height / 2) || 0
+                    ]);
+                }
+                if (projection.s) {
+                    transforms.push(["scale", projection.s, -projection.s]);
+                }
+            }
+            return transforms
+        },
+        [projection]
+    )
+
     return <svg
         ref={svg}
         onMouseDown={onMouseDown}
         onMouseMove={onMouseMove}
         onMouseUp={onMouseUp}
+        style={{ width, height }}
     >
         <g
             className="projection"
@@ -131,6 +160,8 @@ export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, 
             }
         >
             {gridLines}
+            {xAxis}
+            {yAxis}
             {children}
         </g>
         {outerChildren}

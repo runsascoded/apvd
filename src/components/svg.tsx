@@ -179,21 +179,6 @@ export default function Svg({ ellipses, idx, onEllipseDrag, transformBy, onCurso
         [ transformBy ]
     )
 
-    const transforms: Transform[] = [];
-
-    if (projection) {
-        if (projection.x !== undefined || projection.y !== undefined) {
-            transforms.push([
-                "translate",
-                (projection.x + width / 2) || 0,
-                (projection.y + height / 2) || 0
-            ]);
-        }
-        if (projection.s) {
-            transforms.push([ "scale", projection.s, -projection.s ]);
-        }
-    }
-
     const svgEllipses = useMemo(
         () => {
             // if (idx > 0)
@@ -278,8 +263,7 @@ export default function Svg({ ellipses, idx, onEllipseDrag, transformBy, onCurso
         // handleMouseUp={}
         // handleDragStart={ellipseDragStart}
         handleMouseUp={onDragEnd}
-        transforms={transforms}
-        scale={scale}
+        projection={projection}
         gridSize={gridSize}
         showGrid={showGrid}
         width={width}

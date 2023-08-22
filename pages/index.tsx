@@ -134,6 +134,10 @@ export default function Page({ ellipses: initialEllipses }: { ellipses: Ellipse[
             })
             .join("\n");
 
+    const scale = 50
+    const projection = { x: 0, y: 0, s: scale }
+    const gridSize = 1
+
     const projectedSVGs =
         ellipses.map((ellipse, k) =>
                 <Svg
@@ -144,8 +148,8 @@ export default function Page({ ellipses: initialEllipses }: { ellipses: Ellipse[
                     points={intersections}
                     cursor={virtualCursor}
                     showGrid={true}
-                    gridSize={1}
-                    projection={{ x: 0, y: 0, s: 50 }}
+                    gridSize={gridSize}
+                    projection={projection}
                     onCursor={p => onCursor(p, k+1)}
                     hideCursorDot={activeSvg === k+1}
                 />
@@ -161,8 +165,8 @@ export default function Page({ ellipses: initialEllipses }: { ellipses: Ellipse[
             regions={regions}
             onEllipseDrag={onEllipseDrag}
             showGrid={true}
-            gridSize={1}
-            projection={{ x: 0, y: 0, s: 50 }}
+            gridSize={gridSize}
+            projection={projection}
             onCursor={onCursor}
             hideCursorDot={activeSvg === 0}
         />
