@@ -1,17 +1,17 @@
 import Grid from "../src/components/grid";
 import {useCallback, useEffect, useMemo, useState} from "react";
-import apvd, { make_diagram as makeDiagram, fit, Circle, R2, Dual, Model, Diagram } from "apvd";
+import apvd, { init_logs, step as doStep, make_diagram as makeDiagram, fit, Circle, R2, Dual, Model, Diagram } from "apvd";
 import {Point} from "../src/components/point";
 
-const initialCircles = [
-    { c: { x: 0, y: 0 }, r: 1, color: 'green' },
-    { c: { x: 1, y: 0 }, r: 1, color: 'orange' },
+const initialCircles: Circle<number>[] = [
+    { idx: 0, c: { x: 0, y: 0 }, r: 1, color: 'green' },
+    { idx: 1, c: { x: 1, y: 0 }, r: 1, color: 'orange' },
 ]
 export default function Page() {
     const scale = 200
     const projection = { x: -scale / 2, y: 0, s: scale }
     const gridSize = 1
-    const [ circles, setCircles ] = useState(initialCircles)
+    // const [ circles, setCircles ] = useState(initialCircles)
     const [ targets, setTargets ] = useState(
         [
             [ "0*", 1/3  ],  // Fizz
@@ -23,70 +23,37 @@ export default function Page() {
     const [ maxSteps, setMaxSteps ] = useState(100)
     const [ apvdInitialized, setApvdInitialized ] = useState(false)
 
-    const inputs = useMemo(
-        () => {
-            const [ c0, c1 ] = circles
-            return [
-                [ c0, [ [ 0, 0 ], [ 0, 0 ], [0, 0 ] ] ],
-                [ c1, [ [ 1, 0 ], [ 0, 0 ], [0, 1 ] ] ],
-            ]
-        },
-        [ circles ]
-    )
-
-    const [ diagram, setDiagram ] = useState(null)
+    const [ diagram, setDiagram ] = useState<Diagram | null>(null)
     // Initialize wasm library, diagram
     useEffect(
         () => {
+            // init_logs()
             apvd().then(() => {
+                // init_logs()
                 setApvdInitialized(true)
+                const [ c0, c1 ] = circles
+                const inputs = [
+                    [ c0, [ [ 0, 0 ], [ 0, 0 ], [0, 0 ] ] ],
+                    [ c1, [ [ 1, 0 ], [ 0, 0 ], [0, 1 ] ] ],
+                ]
                 setDiagram(makeDiagram(inputs, targets))
             })
         },
-        [ inputs, targets, ]
+        []
     );
+
+    const circles = useMemo(
+        () => diagram ? diagram.shapes.map((c, idx) => ({ ...c, color: initialCircles[idx].color })) : initialCircles,
+        [ diagram, initialCircles ]
+    )
 
     const step = useCallback(
         () => {
-            const [ c0, c1 ] = circles
-            const duals = [
-                {
-                    idx: 0,
-                    c: {
-                        x: { v: c0.c.x, d: [ 0, 0 ], },
-                        y: { v: c0.c.y, d: [ 0, 0 ], },
-                    },
-                    r: { v: c0.r, d: [ 0, 0 ], },
-                }, {
-                    idx: 1,
-                    c: {
-                        x: { v: c1.c.x, d: [ 1, 0 ], },
-                        y: { v: c1.c.y, d: [ 0, 0 ], },
-                    },
-                    r: { v: c1.r, d: [ 0, 1 ], }
-                }
-            ]
-            // const diagram = makeDiagram(duals, targets)
-            const diagram: Diagram = {
-
-            }
-            // console.log("diagram:", diagram)
-
-            // const model = fit(duals, targets, stepSize, maxSteps,)
-            // console.log("model:", model)
-            // for (let idx in model.steps) {
-            //     const step = model.steps[idx];
-            //     const c1 = step.duals[1]
-            //     const error = step.error
-            //     console.log(`Step ${idx}:`, "err", error.v, `[${error.d.join(", ")}]`, `cx`, c1.c.x.v, "r", c1.r.v,)
-            // }
-            // const newCircles = model.min_step.shapes
-            // newCircles.forEach((c: Circle, idx: number) => {
-            //     c.color = circles[idx].color
-            // })
-            // setCircles(newCircles)
+            const newDiagram = doStep(diagram, stepSize)
+            console.log("newDiagram:", newDiagram)
+            setDiagram(newDiagram)
         },
-        [ circles, targets, stepSize, maxSteps, ]
+        [ diagram, stepSize, ]
     )
 
     return <div className={"row"}>
