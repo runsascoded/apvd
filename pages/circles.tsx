@@ -29,7 +29,7 @@ export default function Page() {
         () => {
             // init_logs()
             apvd().then(() => {
-                // init_logs()
+                init_logs()
                 setApvdInitialized(true)
                 const [ c0, c1 ] = circles
                 const inputs = [
