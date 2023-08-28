@@ -204,36 +204,40 @@ export default function Page() {
     )
 
     return <>
-        <div className={`row ${css.row} ${css.body}`}>
-            <Grid projection={projection} gridSize={gridSize} showGrid={showGrid} width={800} height={600}>{
-                circles.map(({ c: { x, y }, r, color }: C, idx: number) =>
-                    <circle key={idx} cx={x} cy={y} r={r} stroke={"black"} strokeWidth={3/scale} fill={color} fillOpacity={0.3} />)
-            }</Grid>
-            <div className={`row ${css.row} ${css.controlPanel}`}>
-                <div className={`${css.controls}`}>
-                    <div className={`row ${css.row} ${css.buttons}`}>
-                        <button title={"Reset to beginning"} onClick={() => setStepIdx(0)} disabled={canReverse}>⏮️</button>
-                        <button title={"Reverse one step"} onClick={() => revStep()} disabled={canReverse}>⬅️</button>
-                        <button title={"Advance one step"} onClick={() => fwdStep()} disabled={canAdvance || stepIdx == maxSteps}>➡️</button>
-                        <button title={"Play steps"} onClick={() => runSteps()} disabled={canAdvance}>{runningSteps ? "⏸️" : "▶️"}</button>
-                    </div>
-                    <div className={`row ${css.row}`}>
-                        <label>
-                            <input className={css.checkbox} type={"checkbox"} checked={showGrid} onChange={() => setShowGrid(!showGrid)} />
-                            Show grid
-                        </label>
+        <div className={css.body}>
+            <div className={`row ${css.row} ${css.content}`}>
+                <Grid className={css.svg} projection={projection} gridSize={gridSize} showGrid={showGrid}>{
+                    circles.map(({ c: { x, y }, r, color }: C, idx: number) =>
+                        <circle key={idx} cx={x} cy={y} r={r} stroke={"black"} strokeWidth={3/scale} fill={color} fillOpacity={0.3} />)
+                }</Grid>
+                <hr />
+                <div className={`row ${css.row} ${css.controlPanel}`}>
+                    <div className={`row ${css.row} ${css.controls}`}>
+                        <div className={`${css.buttons}`}>
+                            <button title={"Reset to beginning"} onClick={() => setStepIdx(0)} disabled={canReverse}>⏮️</button>
+                            <button title={"Reverse one step"} onClick={() => revStep()} disabled={canReverse}>⬅️</button>
+                            <button title={"Advance one step"} onClick={() => fwdStep()} disabled={canAdvance || stepIdx == maxSteps}>➡️</button>
+                            <button title={"Play steps"} onClick={() => runSteps()} disabled={canAdvance}>{runningSteps ? "⏸️" : "▶️"}</button>
+                        </div>
+                        <div className={css.stepStats}>Step {stepIdx} (max {maxSteps}), error: {error?.v?.toPrecision(3)}</div>
+                        <div className={css.plotControls}>
+                            <label>
+                                <input className={css.checkbox} type={"checkbox"} checked={showGrid} onChange={() => setShowGrid(!showGrid)} />
+                                Show grid
+                            </label>
+                        </div>
                     </div>
                 </div>
+                <hr />
                 <div className={css.stats}>
-                    <label>Step {stepIdx} (max {maxSteps}), error: {error?.v?.toPrecision(3)}</label>
                     <div>
-                        <span className={css.tableLabel}>Targets:</span>
+                        <h3 className={css.tableLabel}>Targets</h3>
                         <table>
                             <thead>
                             <tr>
                                 <th>Name</th>
-                                <th>Value</th>
                                 <th>Target</th>
+                                <th>Proportion</th>
                                 <th>Current</th>
                                 <th>Error</th>
                             </tr>
@@ -253,22 +257,22 @@ export default function Page() {
                         </table>
                     </div>
                 </div>
-            </div>
-            <hr />
-            <div className={`row ${css.row}`}>
-                <h2>Differentiable shape-intersection" demo</h2>
-                <p>Given "target" proportions (in this case, <a href={"https://en.wikipedia.org/wiki/Fizz_buzz"}>Fizz Buzz</a>: 1/3 Fizz, 1/5 Buzz, 1/15 Fizz Buzz)</p>
-                <ul>
-                    <li>Model each set with a circle</li>
-                    <li>Compute intersections and areas (using "<a href={"https://en.wikipedia.org/wiki/Dual_number"}>dual numbers</a>" to preserve "forward-mode" derivatives)</li>
-                    <li>Gradient-descend until areas match targets</li>
-                </ul>
-                <p>See also:</p>
-                <ul>
-                    <li><a href={"https://github.com/runsascoded/shapes"}>runsascoded/shapes</a>: Rust implementation of differentiable shape-intersection</li>
-                    <li><a href={"https://github.com/runsascoded/apvd"}>runsascoded/apvd</a>: this app</li>
-                    <li><Link href={basePath}>Ellipse-intersection demo</Link> (non-differentiable)</li>
-                </ul>
+                <hr />
+                <div className={`row ${css.row}`}>
+                    <h2>Differentiable shape-intersection</h2>
+                    <p>Given "target" proportions (in this case, <a href={"https://en.wikipedia.org/wiki/Fizz_buzz"}>Fizz Buzz</a>: 1/3 Fizz, 1/5 Buzz, 1/15 Fizz Buzz)</p>
+                    <ul>
+                        <li>Model each set with a circle</li>
+                        <li>Compute intersections and areas (using "<a href={"https://en.wikipedia.org/wiki/Dual_number"}>dual numbers</a>" to preserve "forward-mode" derivatives)</li>
+                        <li>Gradient-descend until areas match targets</li>
+                    </ul>
+                    <p>See also:</p>
+                    <ul>
+                        <li><a href={"https://github.com/runsascoded/shapes"}>runsascoded/shapes</a>: Rust implementation of differentiable shape-intersection</li>
+                        <li><a href={"https://github.com/runsascoded/apvd"}>runsascoded/apvd</a>: this app</li>
+                        <li><Link href={basePath}>Ellipse-intersection demo</Link> (non-differentiable)</li>
+                    </ul>
+                </div>
             </div>
         </div>
     </>

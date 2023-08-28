@@ -1,59 +1,97 @@
 .body {
-  margin-left: 0.8em;
-  p, h1, h2, h3, h4 {
-    margin-left: 0;
-    padding-left: 0;
-  }
-  hr {
-    margin-top: 1em;
-  }
-  ul {
-    margin-left: 1.5em;
-    padding-left: 0;
-    li {
-      padding-left: 0;
+  width: 100%;
+  margin: 0 0.8em;
+
+  .content {
+    max-width: 40em;
+    margin: 0 auto;
+
+    p, h1, h2, h3, h4 {
       margin-left: 0;
+      padding-left: 0;
     }
-  }
-  .row {
-    margin-left: 0;
-    padding-left: 0;
-  }
-}
 
-.controlPanel {
-  margin-top: 0.3em;
+    hr {
+      margin-top: 1em;
+    }
 
-  .controls {
-    width: auto;
-    .buttons {
-      button {
-        width: auto;
-        margin: 0 0.3em 0 0;
+    ul {
+      margin-left: 1.5em;
+      padding-left: 0;
 
-        font-size: 1.8em;
-        line-height: 1.8em;
-
-        padding: 0;
-        border: 0;
-        background-color: transparent;
-        font-family: "Twemoji Mozilla",
-        "Apple Color Emoji",
-        "Segoe UI Emoji",
-        "Segoe UI Symbol",
-        "Noto Color Emoji",
-        "EmojiOne Color",
-        "Android Emoji",
-        sans-serif;
+      li {
+        padding-left: 0;
+        margin-left: 0;
       }
     }
-    .checkbox {
-      margin-right: 0.3em;
+
+    .row {
+      margin-left: 0;
+      padding-left: 0;
+
+      label {
+        padding-left: 0.2em;
+      }
     }
-  }
-  .stats {
-    width: auto;
-    margin-left: 1.5em;
+
+    .svg {
+      height: 20em;
+      padding: 0;
+      border: 0;
+    }
+
+    .controlPanel {
+      margin-top: 0.3em;
+
+      .controls {
+        width: auto;
+        margin-right: 1.5em;
+        display: inline-block;
+
+        .buttons {
+          width: auto;
+
+          button {
+            width: auto;
+            margin: 0 0.3em 0 0;
+
+            font-size: 2em;
+            line-height: 1.8em;
+
+            padding: 0;
+            border: 0;
+            background-color: transparent;
+            font-family: "Twemoji Mozilla",
+            "Apple Color Emoji",
+            "Segoe UI Emoji",
+            "Segoe UI Symbol",
+            "Noto Color Emoji",
+            "EmojiOne Color",
+            "Android Emoji",
+            sans-serif;
+          }
+        }
+
+        .stepStats {
+          display: block;
+          width: auto;
+          margin-top: auto;
+          margin-bottom: auto;
+        }
+
+        .plotControls {
+          margin-top: 0.5em;
+        }
+      }
+
+      .checkbox {
+        margin-right: 0.3em;
+      }
+    }
+
+    .stats {
+      width: auto;
+    }
 
     .tableLabel {
       font-weight: bold;
