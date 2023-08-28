@@ -65,6 +65,11 @@ export default function Page() {
     const fwdStep = useCallback(
         () => {
             if (!model || stepIdx === null) return
+            if (stepIdx >= maxSteps) {
+                console.log("maxSteps reached, not running step")
+                setRunningSteps(false)
+                return
+            }
             if (stepIdx < model.steps.length - 1) {
                 setStepIdx(stepIdx + 1)
                 console.log("bumping stepIdx to", stepIdx + 1)
@@ -190,12 +195,10 @@ export default function Page() {
 
     return <>
         <div className={`row ${css.row} ${css.body}`}>
-            <div className={css.gridContainer}>
-                <Grid projection={projection} gridSize={gridSize} showGrid={showGrid} width={800} height={600}>{
-                    circles.map(({ c: { x, y }, r, color }: C, idx: number) =>
-                        <circle key={idx} cx={x} cy={y} r={r} stroke={"black"} strokeWidth={3/scale} fill={color} fillOpacity={0.3} />)
-                }</Grid>
-            </div>
+            <Grid projection={projection} gridSize={gridSize} showGrid={showGrid} width={800} height={600}>{
+                circles.map(({ c: { x, y }, r, color }: C, idx: number) =>
+                    <circle key={idx} cx={x} cy={y} r={r} stroke={"black"} strokeWidth={3/scale} fill={color} fillOpacity={0.3} />)
+            }</Grid>
             <div className={`row ${css.row} ${css.controlPanel}`}>
                 <div className={`${css.controls}`}>
                     <div className={`row ${css.row} ${css.buttons}`}>
@@ -212,7 +215,7 @@ export default function Page() {
                     </div>
                 </div>
                 <div className={css.stats}>
-                    <label>Step {stepIdx}, error: {error?.v?.toPrecision(3)}</label>
+                    <label>Step {stepIdx} (max {maxSteps}), error: {error?.v?.toPrecision(3)}</label>
                     <div>
                         <span className={css.tableLabel}>Targets:</span>
                         <table>
@@ -241,22 +244,22 @@ export default function Page() {
                     </div>
                 </div>
             </div>
-        </div>
-        <hr />
-        <div className={`row ${css.row}`}>
-            <h2>Differentiable shape-intersection" demo</h2>
-            <p>Given "target" proportions (in this case, <a href={"https://en.wikipedia.org/wiki/Fizz_buzz"}>Fizz Buzz</a>: 1/3 Fizz, 1/5 Buzz, 1/15 Fizz Buzz)</p>
-            <ul>
-                <li>Model each set with a circle</li>
-                <li>Compute intersections and areas (using "<a href={""}>dual numbers</a>" to preserve "forward-mode" derivatives)</li>
-                <li>Gradient-descend until areas match targets</li>
-            </ul>
-            <p>See also:</p>
-            <ul>
-                <li><a href={""}></a> (Rust implementation of differentiable shape-intersection)</li>
-                <li><a href={""}>runsascoded/apvd</a> (this app)</li>
-                <li><Link href={basePath}>Ellipse-intersection demo</Link> (non-differentiable)</li>
-            </ul>
+            <hr />
+            <div className={`row ${css.row}`}>
+                <h2>Differentiable shape-intersection" demo</h2>
+                <p>Given "target" proportions (in this case, <a href={"https://en.wikipedia.org/wiki/Fizz_buzz"}>Fizz Buzz</a>: 1/3 Fizz, 1/5 Buzz, 1/15 Fizz Buzz)</p>
+                <ul>
+                    <li>Model each set with a circle</li>
+                    <li>Compute intersections and areas (using "<a href={"https://en.wikipedia.org/wiki/Dual_number"}>dual numbers</a>" to preserve "forward-mode" derivatives)</li>
+                    <li>Gradient-descend until areas match targets</li>
+                </ul>
+                <p>See also:</p>
+                <ul>
+                    <li><a href={"https://github.com/runsascoded/shapes"}>runsascoded/shapes</a>: Rust implementation of differentiable shape-intersection</li>
+                    <li><a href={"https://github.com/runsascoded/apvd"}>runsascoded/apvd</a>: this app</li>
+                    <li><Link href={basePath}>Ellipse-intersection demo</Link> (non-differentiable)</li>
+                </ul>
+            </div>
         </div>
     </>
 }
