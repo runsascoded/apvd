@@ -1,13 +1,10 @@
 # ∧p∨d
-Area-Proportional Venn Diagram generator (WIP):
-[runsascoded.com/apvd](https://runsascoded/apvd)
+Area-Proportional Venn Diagram generator (WIP)
 
-https://github.com/runsascoded/apvd/assets/465045/2bcaa761-1989-4d6e-8424-8b593759fb53
-
-*(Ellipse intersections + projections where each one becomes a unit circle)*
-
-## Index
 <!-- toc -->
+- [Demos](#demos)
+    - [Ellipse intersections](#ellipses)
+    - [Differentiable intersections](#circles)
 - [Status](#status)
 - [Inspiration](#inspo)
     - [Non-area-proportional Venn Diagrams in papers](#papers)
@@ -22,10 +19,26 @@ https://github.com/runsascoded/apvd/assets/465045/2bcaa761-1989-4d6e-8424-8b5937
     - [Scala](#scala)
 <!-- /toc -->
 
+## Demos <a id="demos"></a>
+
+### Ellipse intersections: [runsascoded.com/apvd](https://runsascoded/apvd) <a id="ellipses"></a>
+
+https://github.com/runsascoded/apvd/assets/465045/2bcaa761-1989-4d6e-8424-8b593759fb53
+
+(*+ projections where each ellipse becomes a unit circle; useful for computing / debugging intersections*)
+
+### Differentiable intersections: [runsascoded.com/apvd/circles] <a id="circles"></a>
+
+https://github.com/runsascoded/apvd/assets/465045/6dffc8d6-efd8-4f00-bee4-638516496ded
+
+(*uses [runsascoded/shapes] to compute intersections + areas, in terms of circle's center/radius gradients, and gradient-descend to target proportions*)
+
 ## Status <a id="status"></a>
 - [x] Compute ellipse intersections / areas
-- [ ] Autodiff computations + gradient-descend to optimal solution
-  - See [runsascoded/shapes](https://github.com/runsascoded/shapes)
+- Autodiff computations + gradient-descend to optimal solution (see [runsascoded/shapes])
+  - [x] circles ([runsascoded.com/apvd/circles])
+  - [ ] ellipses
+  - [ ] polygons?
 
 ## Inspiration <a id="inspo"></a>
 
@@ -91,3 +104,6 @@ Core code is from a [web solver](http://www.akiti.ca/Quad4Deg.html) written by [
 
 ### Scala <a id="scala"></a>
 Partial Scala.js implementation in [this repo's @scala branch](https://github.com/runsascoded/apvd/tree/scala), including [cubic](https://github.com/runsascoded/apvd/tree/scala/cubic/shared/src/main/scala/cubic) and [quartic](https://github.com/runsascoded/apvd/tree/scala/quartic/shared/src/main/scala/quartic) equation solvers.
+
+[runsascoded/shapes]: https://github.com/runsascoded/shapes
+[runsascoded.com/apvd/circles]: https://runsascoded/apvd/circles
