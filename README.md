@@ -3,8 +3,8 @@ Area-Proportional Venn Diagram generator (WIP)
 
 <!-- toc -->
 - [Demos](#demos)
-    - [Ellipse intersections](#ellipses)
-    - [Differentiable intersections](#circles)
+    - [Ellipse intersections: runsascoded.com/apvd](#ellipses)
+    - [Differentiable intersections: runsascoded.com/apvd/circles](#circles)
 - [Status](#status)
 - [Inspiration](#inspo)
     - [Non-area-proportional Venn Diagrams in papers](#papers)
