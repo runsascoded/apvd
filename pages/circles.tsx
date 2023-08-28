@@ -206,6 +206,14 @@ export default function Page() {
         [ apvdInitialized, stepIdx ],
     )
 
+    const repeatSteps = useMemo(
+        () => {
+            if (!model || !model.repeat_idx || stepIdx === null) return null
+            return [ model.repeat_idx, model.steps.length - 1 ]
+        },
+        [ model, stepIdx ],
+    )
+
     return <>
         <div className={css.body}>
             <div className={`row ${css.row} ${css.content}`}>
@@ -223,12 +231,9 @@ export default function Page() {
                             <button title={"Play steps"} onClick={() => runSteps()} disabled={canAdvance}>{runningSteps ? "⏸️" : "▶️"}</button>
                         </div>
                         <div className={css.stepStats}>Step {stepIdx} (max {maxSteps}), error: {error?.v?.toPrecision(3)}</div>
-                        <div className={css.plotControls}>
-                            <label>
-                                <input className={css.checkbox} type={"checkbox"} checked={showGrid} onChange={() => setShowGrid(!showGrid)} />
-                                Show grid
-                            </label>
-                        </div>
+                        {repeatSteps && stepIdx == repeatSteps[1] &&
+                            <div className={css.repeatSteps}>Step {repeatSteps[1]} repeats {repeatSteps[0]}</div>
+                        }
                     </div>
                 </div>
                 <hr />
