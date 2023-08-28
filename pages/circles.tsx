@@ -3,7 +3,8 @@ import React, {ChangeEvent, useCallback, useEffect, useMemo, useState} from "rea
 import apvd, { init_logs, step as doStep, make_diagram as makeDiagram, make_model as makeModel, train, Circle, R2, Dual, Model, Error, Diagram } from "apvd";
 import css from "./circles.module.scss"
 import Link from "next/link";
-import {getBasePath} from "next-utils/src/basePath";
+import {getBasePath} from "next-utils/basePath";
+import A from "next-utils/a";
 
 type C = Circle<number> & { color: string }
 const initialCircles: C[] = [
@@ -262,17 +263,17 @@ export default function Page() {
                 <hr />
                 <div className={`row ${css.row}`}>
                     <h2>Differentiable shape-intersection</h2>
-                    <p>Given "target" proportions (in this case, <a href={"https://en.wikipedia.org/wiki/Fizz_buzz"}>Fizz Buzz</a>: 1/3 Fizz, 1/5 Buzz, 1/15 Fizz Buzz)</p>
+                    <p>Given "target" proportions (in this case, <A href={"https://en.wikipedia.org/wiki/Fizz_buzz"}>Fizz Buzz</A>: 1/3 Fizz, 1/5 Buzz, 1/15 Fizz Buzz)</p>
                     <ul>
                         <li>Model each set with a circle</li>
-                        <li>Compute intersections and areas (using "<a href={"https://en.wikipedia.org/wiki/Dual_number"}>dual numbers</a>" to preserve "forward-mode" derivatives)</li>
+                        <li>Compute intersections and areas (using "<A href={"https://en.wikipedia.org/wiki/Dual_number"}>dual numbers</A>" to preserve "forward-mode" derivatives)</li>
                         <li>Gradient-descend until areas match targets</li>
                     </ul>
                     <p>See also:</p>
                     <ul>
-                        <li><a href={"https://github.com/runsascoded/shapes"}>runsascoded/shapes</a>: Rust implementation of differentiable shape-intersection</li>
-                        <li><a href={"https://github.com/runsascoded/apvd"}>runsascoded/apvd</a>: this app</li>
-                        <li><Link href={basePath}>Ellipse-intersection demo</Link> (non-differentiable)</li>
+                        <li><A href={"https://github.com/runsascoded/shapes"}>runsascoded/shapes</A>: Rust implementation of differentiable shape-intersection</li>
+                        <li><A href={"https://github.com/runsascoded/apvd"}>runsascoded/apvd</A>: this app</li>
+                        <li><A href={"/"}>Ellipse-intersection demo</A> (non-differentiable)</li>
                     </ul>
                 </div>
             </div>
