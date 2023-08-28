@@ -40,7 +40,7 @@ export default function Page() {
     const minIdx = useMemo(() => model ? model.min_idx : null, [ model ])
     const [ stepIdx, setStepIdx ] = useState<number | null>(null)
     const [ runningSteps, setRunningSteps ] = useState(false)
-    const [ frameLen, setFrameLen ] = useState(50)
+    const [ frameLen, setFrameLen ] = useState(25)
 
     // Initialize wasm library, diagram
     useEffect(
@@ -193,6 +193,16 @@ export default function Page() {
 
     const basePath = getBasePath();
 
+    const canAdvance = useMemo(
+        () => apvdInitialized && (model && model.repeat_idx && stepIdx == model.steps.length - 1) || stepIdx == maxSteps,
+        [ apvdInitialized, model, stepIdx, maxSteps ],
+    )
+
+    const canReverse = useMemo(
+        () => apvdInitialized && stepIdx === 0,
+        [ apvdInitialized, stepIdx ],
+    )
+
     return <>
         <div className={`row ${css.row} ${css.body}`}>
             <Grid projection={projection} gridSize={gridSize} showGrid={showGrid} width={800} height={600}>{
@@ -202,10 +212,10 @@ export default function Page() {
             <div className={`row ${css.row} ${css.controlPanel}`}>
                 <div className={`${css.controls}`}>
                     <div className={`row ${css.row} ${css.buttons}`}>
-                        <button title={"Reset to beginning"} onClick={() => setStepIdx(0)} disabled={!apvdInitialized}>⏮️</button>
-                        <button title={"Reverse one step"} onClick={() => revStep()} disabled={!apvdInitialized}>⬅️</button>
-                        <button title={"Advance one step"} onClick={() => fwdStep()} disabled={!apvdInitialized}>➡️</button>
-                        <button title={"Play steps"} onClick={() => runSteps()} disabled={!apvdInitialized}>{runningSteps ? "⏸️" : "▶️"}</button>
+                        <button title={"Reset to beginning"} onClick={() => setStepIdx(0)} disabled={canReverse}>⏮️</button>
+                        <button title={"Reverse one step"} onClick={() => revStep()} disabled={canReverse}>⬅️</button>
+                        <button title={"Advance one step"} onClick={() => fwdStep()} disabled={canAdvance || stepIdx == maxSteps}>➡️</button>
+                        <button title={"Play steps"} onClick={() => runSteps()} disabled={canAdvance}>{runningSteps ? "⏸️" : "▶️"}</button>
                     </div>
                     <div className={`row ${css.row}`}>
                         <label>
