@@ -17,7 +17,9 @@ type Target = {
     value: number
 }
 export default function Page() {
-    const scale = 200
+    const scale = 150
+    const [width, setWidth] = useState(300);
+    const [height, setHeight] = useState(400);
     const projection = { x: -scale / 2, y: 0, s: scale }
     const gridSize = 1
     const [ targets, setTargets ] = useState<Target[]>(
@@ -206,7 +208,7 @@ export default function Page() {
     return <>
         <div className={css.body}>
             <div className={`row ${css.row} ${css.content}`}>
-                <Grid className={css.svg} projection={projection} gridSize={gridSize} showGrid={showGrid}>{
+                <Grid className={css.svg} projection={projection} width={width} height={height} gridSize={gridSize} showGrid={showGrid}>{
                     circles.map(({ c: { x, y }, r, color }: C, idx: number) =>
                         <circle key={idx} cx={x} cy={y} r={r} stroke={"black"} strokeWidth={3/scale} fill={color} fillOpacity={0.3} />)
                 }</Grid>

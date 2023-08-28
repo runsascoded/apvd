@@ -9,6 +9,8 @@ export type Props = {
     handleMouseDown?: (e: MouseEvent, rect?: DOMRect) => void
     handleMouseUp?: () => void
     projection: Projection
+    width: number
+    height: number
     gridSize: number
     showGrid?: boolean
     children: ReactNode
@@ -16,11 +18,9 @@ export type Props = {
     className?: string
 }
 
-export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, projection, gridSize, showGrid, children, outerChildren, className, }: Props) {
+export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, projection, width, height, gridSize, showGrid, children, outerChildren, className, }: Props) {
     const svg = useRef<SVGSVGElement>(null)
     const scale = projection.s
-    const [ width, setWidth ] = useState(800)
-    const [ height, setHeight ] = useState(600)
 
     const virtual = useCallback(
         (x: number, y: number) => ({
