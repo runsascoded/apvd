@@ -74,7 +74,7 @@ export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, 
     const gridLines = [];
     let xAxis = null
     let yAxis = null
-    if (showGrid !== undefined) {
+    if (showGrid !== false) {
         const tl = virtual(0, 0);
         const lx = tl.x - gridSize;
         const ty = tl.y + gridSize;
