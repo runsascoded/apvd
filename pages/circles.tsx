@@ -1,6 +1,6 @@
 import Grid from "../src/components/grid";
 import {ChangeEvent, useCallback, useEffect, useMemo, useState} from "react";
-import apvd, { init_logs, step as doStep, make_diagram as makeDiagram, make_model as makeModel, train, Circle, R2, Dual, Model, Diagram } from "apvd";
+import apvd, { init_logs, step as doStep, make_diagram as makeDiagram, make_model as makeModel, train, Circle, R2, Dual, Model, Error, Diagram } from "apvd";
 import {Point} from "../src/components/point";
 import css from "./circles.module.scss"
 
@@ -173,7 +173,8 @@ export default function Page() {
     )
 
     const errors = useMemo(
-        () => curStep ? curStep.errors : null,
+        // tsify `#[declare]` erroneously emits Record<K, V> instead of Map<K, V>: https://github.com/madonoharu/tsify/issues/26
+        () => curStep ? (curStep.errors as any as Map<string, Error>) : null,
         [ curStep, ],
     )
 
@@ -188,18 +189,22 @@ export default function Page() {
                     <circle key={idx} cx={x} cy={y} r={r} stroke={"black"} strokeWidth={3/scale} fill={color} fillOpacity={0.3} />)
             }</Grid>
         </div>
-        <div className={`row ${css.controls}`}>
-            <div className={"col-4"}>
-                <button title={"Reset to beginning"} onClick={() => setStepIdx(0)} disabled={!apvdInitialized}>⏮️</button>
-                <button title={"Reverse one step"} onClick={() => revStep()} disabled={!apvdInitialized}>⬅️</button>
-                <button title={"Advance one step"} onClick={() => fwdStep()} disabled={!apvdInitialized}>➡️</button>
-                <button title={"Play steps"} onClick={() => runSteps()} disabled={!apvdInitialized}>{runningSteps ? "⏸️" : "▶️"}</button>
-                <label>
-                    <input className={css.checkbox} type={"checkbox"} checked={showGrid} onChange={() => setShowGrid(!showGrid)} />
-                    Show grid
-                </label>
+        <div className={css.controlPanel}>
+            <div className={`${css.controls}`}>
+                <div className={`row ${css.row} ${css.buttons}`}>
+                    <button title={"Reset to beginning"} onClick={() => setStepIdx(0)} disabled={!apvdInitialized}>⏮️</button>
+                    <button title={"Reverse one step"} onClick={() => revStep()} disabled={!apvdInitialized}>⬅️</button>
+                    <button title={"Advance one step"} onClick={() => fwdStep()} disabled={!apvdInitialized}>➡️</button>
+                    <button title={"Play steps"} onClick={() => runSteps()} disabled={!apvdInitialized}>{runningSteps ? "⏸️" : "▶️"}</button>
+                </div>
+                <div className={`row ${css.row}`}>
+                    <label>
+                        <input className={css.checkbox} type={"checkbox"} checked={showGrid} onChange={() => setShowGrid(!showGrid)} />
+                        Show grid
+                    </label>
+                </div>
             </div>
-            <div className={"col-4"}>
+            <div className={css.stats}>
                 <label>Step {stepIdx}, error: {error?.v?.toPrecision(3)}</label>
                 <div>
                     <span className={css.tableLabel}>Targets:</span>
