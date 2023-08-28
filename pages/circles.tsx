@@ -1,10 +1,9 @@
 import Grid from "../src/components/grid";
-import {ChangeEvent, useCallback, useEffect, useMemo, useState} from "react";
+import React, {ChangeEvent, useCallback, useEffect, useMemo, useState} from "react";
 import apvd, { init_logs, step as doStep, make_diagram as makeDiagram, make_model as makeModel, train, Circle, R2, Dual, Model, Error, Diagram } from "apvd";
-import {Point} from "../src/components/point";
 import css from "./circles.module.scss"
-
-const { stringify } = JSON
+import Link from "next/link";
+import {getBasePath} from "next-utils/src/basePath";
 
 type C = Circle<number> & { color: string }
 const initialCircles: C[] = [
@@ -21,7 +20,6 @@ export default function Page() {
     const scale = 200
     const projection = { x: -scale / 2, y: 0, s: scale }
     const gridSize = 1
-    // const [ circles, setCircles ] = useState(initialCircles)
     const [ targets, setTargets ] = useState<Target[]>(
         [
             { name: "Fizz", sets: "0*", value: 1/3 },
@@ -38,7 +36,6 @@ export default function Page() {
     const [ maxSteps, setMaxSteps ] = useState(100)
     const [ apvdInitialized, setApvdInitialized ] = useState(false)
 
-    // const [ diagram, setDiagram ] = useState<Diagram | null>(null)
     const [ model, setModel ] = useState<Model | null>(null)
     const minIdx = useMemo(() => model ? model.min_idx : null, [ model ])
     const [ stepIdx, setStepIdx ] = useState<number | null>(null)
@@ -48,7 +45,6 @@ export default function Page() {
     // Initialize wasm library, diagram
     useEffect(
         () => {
-            // init_logs()
             apvd().then(() => {
                 init_logs(null)
                 setApvdInitialized(true)
@@ -95,6 +91,10 @@ export default function Page() {
 
     const runSteps = useCallback(
         () => {
+            if (runningSteps) {
+                setRunningSteps(false)
+                return
+            }
             if (!model || stepIdx === null) return
             if (model.repeat_idx !== undefined && stepIdx + 1 == model.steps.length) {
                 console.log("runSteps: found repeat_idx, not running steps")
@@ -103,7 +103,7 @@ export default function Page() {
             }
             setRunningSteps(true)
         },
-        [ model, stepSize, maxSteps, stepIdx, ],
+        [ model, stepSize, maxSteps, stepIdx, runningSteps ],
     )
 
     useEffect(
@@ -118,8 +118,12 @@ export default function Page() {
             console.log("scheduling step:", stepIdx)
             const timer = setTimeout(
                 () => {
-                    console.log('running step:', stepIdx)
-                    fwdStep()
+                    if (runningSteps) {
+                        console.log('running step:', stepIdx)
+                        fwdStep()
+                    } else {
+                        console.log("not running step:", stepIdx)
+                    }
                 },
                 frameLen,
             );
@@ -128,29 +132,29 @@ export default function Page() {
         [ runningSteps, model, stepIdx, fwdStep, ],
     )
 
-    const handleTargetsChange = useCallback(
-        (e: ChangeEvent<HTMLTextAreaElement>) => {
-            const lines = e.target.value.split("\n")
-            let newTargets: Target[] = []
-            for (const line of lines) {
-                const lineRegex = /(.+): (.+) \((.+)\)/
-                const match = lineRegex.exec(line)
-                if (!match) {
-                    console.log("Malformed line:", line)
-                    return
-                }
-                const [ name, sets, value] = match.slice(1)
-                return { name, sets, value: parseFloat(value) }
-            }
-            setTargets(newTargets)
-            if (stepIdx !== null && model && stepIdx < model.steps.length - 1) {
-                const newModel = { ...model }
-                newModel.steps = newModel.steps.slice(0, stepIdx + 1)
-                setModel(newModel)
-            }
-        },
-        [ model, stepIdx, ],
-    )
+    // const handleTargetsChange = useCallback(
+    //     (e: ChangeEvent<HTMLTextAreaElement>) => {
+    //         const lines = e.target.value.split("\n")
+    //         let newTargets: Target[] = []
+    //         for (const line of lines) {
+    //             const lineRegex = /(.+): (.+) \((.+)\)/
+    //             const match = lineRegex.exec(line)
+    //             if (!match) {
+    //                 console.log("Malformed line:", line)
+    //                 return
+    //             }
+    //             const [ name, sets, value] = match.slice(1)
+    //             return { name, sets, value: parseFloat(value) }
+    //         }
+    //         setTargets(newTargets)
+    //         if (stepIdx !== null && model && stepIdx < model.steps.length - 1) {
+    //             const newModel = { ...model }
+    //             newModel.steps = newModel.steps.slice(0, stepIdx + 1)
+    //             setModel(newModel)
+    //         }
+    //     },
+    //     [ model, stepIdx, ],
+    // )
 
     const circles = useMemo(
         () => {
@@ -182,34 +186,37 @@ export default function Page() {
     // console.log("errors:", errors)
     // console.log(`render: ${model?.steps?.length} steps, idx ${stepIdx}`)
 
-    return <div className={"row"}>
-        <div className={css.gridContainer}>
-            <Grid projection={projection} gridSize={gridSize} showGrid={showGrid} width={800} height={600}>{
-                circles.map(({ c: { x, y }, r, color }: C, idx: number) =>
-                    <circle key={idx} cx={x} cy={y} r={r} stroke={"black"} strokeWidth={3/scale} fill={color} fillOpacity={0.3} />)
-            }</Grid>
-        </div>
-        <div className={css.controlPanel}>
-            <div className={`${css.controls}`}>
-                <div className={`row ${css.row} ${css.buttons}`}>
-                    <button title={"Reset to beginning"} onClick={() => setStepIdx(0)} disabled={!apvdInitialized}>⏮️</button>
-                    <button title={"Reverse one step"} onClick={() => revStep()} disabled={!apvdInitialized}>⬅️</button>
-                    <button title={"Advance one step"} onClick={() => fwdStep()} disabled={!apvdInitialized}>➡️</button>
-                    <button title={"Play steps"} onClick={() => runSteps()} disabled={!apvdInitialized}>{runningSteps ? "⏸️" : "▶️"}</button>
-                </div>
-                <div className={`row ${css.row}`}>
-                    <label>
-                        <input className={css.checkbox} type={"checkbox"} checked={showGrid} onChange={() => setShowGrid(!showGrid)} />
-                        Show grid
-                    </label>
-                </div>
+    const basePath = getBasePath();
+
+    return <>
+        <div className={`row ${css.row} ${css.body}`}>
+            <div className={css.gridContainer}>
+                <Grid projection={projection} gridSize={gridSize} showGrid={showGrid} width={800} height={600}>{
+                    circles.map(({ c: { x, y }, r, color }: C, idx: number) =>
+                        <circle key={idx} cx={x} cy={y} r={r} stroke={"black"} strokeWidth={3/scale} fill={color} fillOpacity={0.3} />)
+                }</Grid>
             </div>
-            <div className={css.stats}>
-                <label>Step {stepIdx}, error: {error?.v?.toPrecision(3)}</label>
-                <div>
-                    <span className={css.tableLabel}>Targets:</span>
-                    <table>
-                        <thead>
+            <div className={`row ${css.row} ${css.controlPanel}`}>
+                <div className={`${css.controls}`}>
+                    <div className={`row ${css.row} ${css.buttons}`}>
+                        <button title={"Reset to beginning"} onClick={() => setStepIdx(0)} disabled={!apvdInitialized}>⏮️</button>
+                        <button title={"Reverse one step"} onClick={() => revStep()} disabled={!apvdInitialized}>⬅️</button>
+                        <button title={"Advance one step"} onClick={() => fwdStep()} disabled={!apvdInitialized}>➡️</button>
+                        <button title={"Play steps"} onClick={() => runSteps()} disabled={!apvdInitialized}>{runningSteps ? "⏸️" : "▶️"}</button>
+                    </div>
+                    <div className={`row ${css.row}`}>
+                        <label>
+                            <input className={css.checkbox} type={"checkbox"} checked={showGrid} onChange={() => setShowGrid(!showGrid)} />
+                            Show grid
+                        </label>
+                    </div>
+                </div>
+                <div className={css.stats}>
+                    <label>Step {stepIdx}, error: {error?.v?.toPrecision(3)}</label>
+                    <div>
+                        <span className={css.tableLabel}>Targets:</span>
+                        <table>
+                            <thead>
                             <tr>
                                 <th>Name</th>
                                 <th>Value</th>
@@ -217,22 +224,39 @@ export default function Page() {
                                 <th>Current</th>
                                 <th>Error</th>
                             </tr>
-                        </thead>
-                        <tbody>{
-                            targets.map(({name, sets, value}) => {
-                                const err = errors ? errors.get(sets) : null
-                                return <tr key={name}>
-                                    <td>{name}</td>
-                                    <td>{value.toPrecision(3).replace(/\.?0+$/, '')}</td>
-                                    <td>{err ? err.target_frac.toPrecision(3) : ''}</td>
-                                    <td>{err ? err.actual_frac.v.toPrecision(3) : ''}</td>
-                                    <td>{err ? err.error.v.toPrecision(3) : ''}</td>
-                                </tr>
-                            })
-                        }</tbody>
-                    </table>
+                            </thead>
+                            <tbody>{
+                                targets.map(({name, sets, value}) => {
+                                    const err = errors ? errors.get(sets) : null
+                                    return <tr key={name}>
+                                        <td>{name}</td>
+                                        <td>{value.toPrecision(3).replace(/\.?0+$/, '')}</td>
+                                        <td>{err ? err.target_frac.toPrecision(3) : ''}</td>
+                                        <td>{err ? err.actual_frac.v.toPrecision(3) : ''}</td>
+                                        <td>{err ? err.error.v.toPrecision(3) : ''}</td>
+                                    </tr>
+                                })
+                            }</tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
+        <hr />
+        <div className={`row ${css.row}`}>
+            <h2>Differentiable shape-intersection" demo</h2>
+            <p>Given "target" proportions (in this case, <a href={"https://en.wikipedia.org/wiki/Fizz_buzz"}>Fizz Buzz</a>: 1/3 Fizz, 1/5 Buzz, 1/15 Fizz Buzz)</p>
+            <ul>
+                <li>Model each set with a circle</li>
+                <li>Compute intersections and areas (using "<a href={""}>dual numbers</a>" to preserve "forward-mode" derivatives)</li>
+                <li>Gradient-descend until areas match targets</li>
+            </ul>
+            <p>See also:</p>
+            <ul>
+                <li><a href={""}></a> (Rust implementation of differentiable shape-intersection)</li>
+                <li><a href={""}>runsascoded/apvd</a> (this app)</li>
+                <li><Link href={basePath}>Ellipse-intersection demo</Link> (non-differentiable)</li>
+            </ul>
+        </div>
+    </>
 }
