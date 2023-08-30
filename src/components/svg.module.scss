@@ -1,0 +1,46 @@
+.svg {
+  float: left;
+  height: 400px;
+  width: 300px;
+  border: 1px solid black;
+
+  .ellipses ellipse {
+    fill-opacity: 0.2;
+  }
+
+  .gridLine {
+    stroke: lightgrey;
+  }
+
+  .axis {
+    stroke: grey;
+  }
+
+  .cursor {
+    font-family: monospace;
+    font-size: 10px;
+    user-select: none;
+    cursor: default;
+  }
+
+  .projectedCursor {
+    fill: black;
+  }
+
+  .projectedPoint {
+    fill: green;
+  }
+
+  .edge {
+    fill-opacity: 0.2;
+  }
+
+  .region {
+    fill-opacity: 0.3;
+    fill: black;
+  }
+
+  .clear {
+    fill: transparent;
+  }
+}

@@ -5,6 +5,8 @@ import {pp, sqrt} from '../lib/utils';
 import Ellipse, {Center, RadiusVector} from "../lib/ellipse";
 import {Point} from "./point";
 import Grid, {Transform} from "./grid";
+import Region, { Props as RegionProps } from "../lib/region"
+import css from "./svg.module.scss"
 
 function getTheta(x: number, y: number, t: number) {
     const r = sqrt(x * x + y * y);
@@ -43,14 +45,14 @@ export type Props = {
     gridSize: number
     cursor: Point
     points: Point[]
-    regions?: ReactNode[]
+    regions?: RegionProps[]
     hideCursorDot: boolean
     showGrid: boolean
 }
 
 export type DragAnchor = 'c' | 'f1' | 'f2' | 'vx1' | 'vx2' | 'vy1' | 'vy2'
 
-export default function Svg({ ellipses, idx, onEllipseDrag, transformBy, onCursor, projection, gridSize, points, regions, hideCursorDot, cursor, showGrid }: Props) {
+export default function Svg({ ellipses, idx, onEllipseDrag, transformBy, onCursor, projection, gridSize, points, regions, hideCursorDot, cursor, showGrid, }: Props) {
     const [pointRadius, setPointRadius] = useState(3);
     const [dragEllipse, setDragEllipse] = useState<number | null>(null);
     const [dragAnchor, setDragAnchor] = useState<DragAnchor | null>(null);
@@ -217,7 +219,7 @@ export default function Svg({ ellipses, idx, onEllipseDrag, transformBy, onCurso
                     return <circle
                         key={i}
                         r={pointRadius / scale}
-                        className="projected-point"
+                        className={css.projectedPoint}
                         cx={t.x}
                         cy={t.y}
                     />
@@ -234,12 +236,12 @@ export default function Svg({ ellipses, idx, onEllipseDrag, transformBy, onCurso
             [
                 !hideCursorDot &&
                 <circle
-                    className="projected-cursor"
+                    className={css.projectedCursor}
                     r={3 / scale}
                     cx={transformedCursor.x}
                     cy={transformedCursor.y}
                 />,
-                <text className="cursor" x="10" y="20">
+                <text className={css.cursor} x="10" y="20">
                     {
                         [
                             cursor.x.toString().substr(0,4),
@@ -247,7 +249,7 @@ export default function Svg({ ellipses, idx, onEllipseDrag, transformBy, onCurso
                         ].join(",")
                     }
                 </text>,
-                <text className="cursor" x="10" y="40">
+                <text className={css.cursor} x="10" y="40">
                     {
                         [
                             rawCursor.x.toString().substr(0,4),
@@ -259,6 +261,8 @@ export default function Svg({ ellipses, idx, onEllipseDrag, transformBy, onCurso
             [ null, null, null ];
 
     return <Grid
+        className={css.svg}
+        css={css}
         handleMouseMove={handleMouseMove}
         // handleMouseUp={}
         // handleDragStart={ellipseDragStart}
@@ -273,9 +277,11 @@ export default function Svg({ ellipses, idx, onEllipseDrag, transformBy, onCurso
             {cursorVirtualCoords}
         </>}
     >
-        {regions && <g className="regions">{regions}</g>}
-        <g className="ellipses">{svgEllipses}</g>
-        <g className="points">{svgPoints}</g>
+        {regions && <g className={css.regions}>{
+            regions.map((region, idx) => <Region key={idx} className={css.region} {...region} />)
+        }</g>}
+        <g className={css.ellipses}>{svgEllipses}</g>
+        <g className={css.points}>{svgPoints}</g>
         {cursorCircle}
     </Grid>
 }

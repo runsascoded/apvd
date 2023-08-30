@@ -1,10 +1,11 @@
-import React, {useEffect, useMemo, useState} from 'react';
-import Svg from '../src/components/svg';
-import ModelTextField from '../src/components/model-text-field';
-import EllipseC, {Center, RadiusVector} from '../src/lib/ellipse';
-import Ellipses from '../src/lib/ellipses';
-import { lengthCmp, pi, powerset, r3, spaces } from '../src/lib/utils';
-import {Point} from '../src/components/point';
+import React, {useEffect, useMemo, useState} from 'react'
+import Svg from '../src/components/svg'
+import ModelTextField from '../src/components/model-text-field'
+import EllipseC, {Center, RadiusVector} from '../src/lib/ellipse'
+import Ellipses from '../src/lib/ellipses'
+import { lengthCmp, pi, powerset, r3, spaces } from '../src/lib/utils'
+import {Point} from '../src/components/point'
+import css from "./index.module.scss"
 
 export type Ellipse = {
     name: string
@@ -133,7 +134,7 @@ export default function Page({ ellipses: initialEllipses }: { ellipses: Ellipse[
         />
         {projectedSVGs}
         <textarea
-            className="areas"
+            className={css.areas}
             onChange={() => {}}
             value={areasStr}
         />

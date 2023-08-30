@@ -5,6 +5,11 @@ import Intersection from "./intersection";
 
 export type Containers = { [k: string]: boolean }
 
+export type CSS = {
+    clear?: string
+    region?: string
+}
+
 export type Props = {
     k: string
     polygonArea: number
@@ -15,9 +20,11 @@ export type Props = {
     width: number
     points: Intersection[]
     edges: Edge[]
+    className?: string
+    css?: CSS
 }
 
-export default function Region({ k, polygonArea, secantArea, area, containers, i, width, points, edges, }: Props) {
+export default function Region({ k, polygonArea, secantArea, area, containers, i, width, points, edges, className, css }: Props) {
     function onMouseEnter() {
         console.log("enter:", k, polygonArea, secantArea, area);
     }
@@ -25,7 +32,7 @@ export default function Region({ k, polygonArea, secantArea, area, containers, i
     function onMouseLeave(e: MouseEvent) {
         //console.log("leave:", k, this);
     }
-
+    css = css || {}
     const n = points.length;
     if (n === 1) {
         const e = edges[0].e;
@@ -34,7 +41,7 @@ export default function Region({ k, polygonArea, secantArea, area, containers, i
             <ellipse
                 rx={e.rx}
                 ry={e.ry}
-                className={containers ? "clear" : "region"}
+                className={containers ? css.clear || '' : css.region || ''}
                 stroke="black"
                 strokeWidth={width}
                 onMouseEnter={onMouseEnter}
@@ -51,7 +58,7 @@ export default function Region({ k, polygonArea, secantArea, area, containers, i
     //console.log("region:", d);
     return <path
         key={i}
-        className="region"
+        className={className}
         d={d}
         stroke="black"
         strokeWidth={width}

@@ -1,6 +1,16 @@
 .body {
   width: 100%;
-  margin: 0 0.8em;
+  padding: 0 0.8em;
+
+  .err {
+    padding: 0.1em 0.2em;
+  }
+  .errSame {
+    background-color: #cfc;
+  }
+  .errFlipped {
+    background-color: #fcc;
+  }
 
   .content {
     max-width: 40em;
@@ -96,9 +106,9 @@
       width: auto;
     }
 
-    .tableLabel {
-      font-weight: bold;
-    }
+    //.tableLabel {
+    //  font-weight: bold;
+    //}
 
     td, th {
       border-width: 1px;

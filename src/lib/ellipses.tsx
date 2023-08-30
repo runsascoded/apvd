@@ -3,9 +3,8 @@ import Edge from "./edge";
 import Ellipse from "./ellipse";
 import Intersection from "./intersection";
 import {intersect, keyStr, powerset, ps, ss, sum} from "./utils";
-import React, {ReactElement} from "react";
 
-export const regionString = (r: ReactElement<RegionProps>) => ps(r.props.points, r.props.edges);
+export const regionString = (r: RegionProps) => ps(r.points, r.edges);
 export const rts = regionString;
 
 
@@ -21,7 +20,7 @@ export default class Ellipses {
     edgesByE: Edge[][]
     islands: boolean[][]
     areasObj: { [key: string]: number }
-    regions: ReactElement<RegionProps>[]
+    regions: RegionProps[]
 
     constructor(ellipses: Ellipse[]) {
         this.ellipses = ellipses
@@ -278,7 +277,7 @@ export default class Ellipses {
     // ### computeRegions
 
         const areasObj: { [k: string]: number } = {};
-        const regions: ReactElement<RegionProps>[] = [];
+        const regions: RegionProps[] = [];
         const visitedPoints: boolean[] = [];
         const regionEdgePairs: boolean[][] = [];
         const edges: Edge[] = [];
@@ -394,20 +393,18 @@ export default class Ellipses {
 
                 log("containers:", keyStr(containers));
 
-                const r =
-                    <Region
-                        k={regionStr}
-                        containers={containers}
-                        edges={[...edges]}
-                        points={[...points]}
-                        i={regions.length}
-                        key={regions.length}
-                        width={3 / 50}
-                        area={regionArea}
-                        secantArea={secantArea}
-                        polygonArea={polygonArea}
-                        // obj={region}
-                    />;
+                const r: RegionProps = {
+                    k: regionStr,
+                    containers: containers,
+                    edges: [...edges],
+                    points: [...points],
+                    i: regions.length,
+                    width: 3 / 50,
+                    area: regionArea,
+                    secantArea: secantArea,
+                    polygonArea: polygonArea,
+                    // obj: region,
+                }
 
                 const addedRegions: string[] = [];
                 powerset(regionKey).forEach((rk) => {
