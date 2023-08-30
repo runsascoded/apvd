@@ -85,6 +85,7 @@ https://www.combinatorics.org/files/Surveys/ds5/ds5v3-2005/VennPoly67EJC.html
 > ![](polyvenn7-curves.png)
 
 ## Other misc references <a id="misc"></a>
+- [venneuler R package](https://www.rforge.net/venneuler/) ([paper](https://www.cs.uic.edu/~wilkinson/Publications/venneuler.pdf))
 
 ### Rust <a id="rust"></a>
 Dual / Autodiff libraries:

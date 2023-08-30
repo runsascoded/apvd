@@ -6,10 +6,13 @@ import Link from "next/link";
 import {getBasePath} from "next-utils/basePath";
 import A from "next-utils/a";
 
+const { PI, sqrt } = Math
+
 type C = Circle<number> & { color: string }
 const initialCircles: C[] = [
-    { idx: 0, c: { x: 0, y: 0 }, r: 1, color: 'green' },
-    { idx: 1, c: { x: 1, y: 0 }, r: 1, color: 'orange' },
+    { idx: 0, c: { x: 0, y: 0 }, r: 1, color: 'green', },
+    { idx: 1, c: { x: 1, y: 0 }, r: 1, color: 'orange', },
+    { idx: 2, c: { x: 0, y: 1 }, r: 1, color: 'yellow', },
 ]
 
 type Target = {
@@ -18,16 +21,27 @@ type Target = {
     value: number
 }
 export default function Page() {
-    const scale = 150
+    const scale = 130
     const [width, setWidth] = useState(300);
     const [height, setHeight] = useState(400);
-    const projection = { x: -scale / 2, y: 0, s: scale }
+    const projection = { x: -scale / 2, y: scale / 2, s: scale }
     const gridSize = 1
     const [ targets, setTargets ] = useState<Target[]>(
         [
-            { name: "Fizz", sets: "0*", value: 1/3 },
-            { name: "Buzz", sets: "*1", value: 1/5 },
-            { name: "Fizz Buzz", sets: "01", value: 1/15 },
+            // { name: "Fizz", sets: "0**", value: 1/3 },
+            // { name: "Buzz", sets: "*1*", value: 1/5 },
+            // { name: "Bazz", sets: "**2", value: 1/7 },
+            // { name: "Fizz Buzz", sets: "01*", value: 1/15 },
+            // { name: "Fizz Bazz", sets: "0*2", value: 1/21 },
+            // { name: "Buzz Bazz", sets: "*12", value: 1/35 },
+            // { name: "Fizz Buzz Bazz", sets: "012", value: 1/105 },
+            { name: "A", sets: "0**", value: PI },
+            { name: "B", sets: "*1*", value: PI },
+            { name: "C", sets: "**2", value: PI },
+            { name: "A B", sets: "01*", value: 2*PI/3 - sqrt(3)/2 },
+            { name: "A C", sets: "0*2", value: 2*PI/3 - sqrt(3)/2 },
+            { name: "B C", sets: "*12", value: 2*PI/3 - sqrt(3)/2 },
+            { name: "A B C", sets: "012", value: PI/2 - sqrt(3)/2 },
         ]
     )
     const wasmTargets = useMemo(
@@ -35,15 +49,17 @@ export default function Page() {
         [ targets ],
     )
     const [ showGrid, setShowGrid ] = useState(false)
-    const [ stepSize, setStepSize ] = useState(0.05)
-    const [ maxSteps, setMaxSteps ] = useState(100)
+    const [ maxStepSize, setMaxStepSize ] = useState(0.01)
+    const [ maxErrorRatioStepSize, setMaxErrorRatioStepSize ] = useState(0.7)
+    const [ maxSteps, setMaxSteps ] = useState(1000)
+    const [ stepBatchSize, setStepBatchSize ] = useState(10)
     const [ apvdInitialized, setApvdInitialized ] = useState(false)
 
     const [ model, setModel ] = useState<Model | null>(null)
-    const minIdx = useMemo(() => model ? model.min_idx : null, [ model ])
+    // const minIdx = useMemo(() => model ? model.min_idx : null, [ model ])
     const [ stepIdx, setStepIdx ] = useState<number | null>(null)
     const [ runningSteps, setRunningSteps ] = useState(false)
-    const [ frameLen, setFrameLen ] = useState(25)
+    const [ frameLen, setFrameLen ] = useState(0)
 
     // Initialize wasm library, diagram
     useEffect(
@@ -51,10 +67,11 @@ export default function Page() {
             apvd().then(() => {
                 init_logs(null)
                 setApvdInitialized(true)
-                const [ c0, c1 ] = circles
+                const [ c0, c1, c2, ] = circles
                 const inputs = [
-                    [ c0, [ [ 0, 0 ], [ 0, 0 ], [0, 0 ] ] ],
-                    [ c1, [ [ 1, 0 ], [ 0, 0 ], [0, 1 ] ] ],
+                    [ c0, [ [ 0, 0, 0, 0, 0 ], [ 0, 0, 0, 0, 0 ], [0, 0, 0, 0, 0 ] ] ],
+                    [ c1, [ [ 1, 0, 0, 0, 0 ], [ 0, 0, 0, 0, 0 ], [0, 1, 0, 0, 0 ] ] ],
+                    [ c2, [ [ 0, 0, 1, 0, 0 ], [ 0, 0, 0, 1, 0 ], [0, 0, 0, 0, 1 ] ] ],
                 ]
                 const model = makeModel(inputs, wasmTargets)
                 console.log("new model:", model)
@@ -78,12 +95,31 @@ export default function Page() {
                 console.log("bumping stepIdx to", stepIdx + 1)
                 return
             }
-            const newModel = train(model, stepSize, 1)
+            const lastStep: Diagram = model.steps[model.steps.length - 1]
+            const batchSeed: Model = {
+                steps: [ lastStep ],
+                repeat_idx: null,
+                min_idx: 0,
+                min_error: lastStep.error.v,
+            }
+            const batch = train(batchSeed, maxStepSize, maxErrorRatioStepSize, stepBatchSize)
+            const batchMinStep = batch.steps[batch.min_idx]
+            const modelMinStep = model.steps[model.min_idx]
+            const steps = model.steps.concat(batch.steps.slice(1))
+            const [ min_idx, min_error ] = (batchMinStep.error.v < modelMinStep) ?
+                [ batch.min_idx, batchMinStep.error.v ] :
+                [ model.min_idx, model.min_error ]
+            const newModel: Model = {
+                steps,
+                repeat_idx: batch.repeat_idx === undefined ? undefined : batch.repeat_idx + model.steps.length,
+                min_idx,
+                min_error,
+            }
             console.log("newModel:", newModel)
             setModel(newModel)
             setStepIdx(newModel.steps.length - 1)
         },
-        [ model, stepSize, maxSteps, stepIdx, ]
+        [ model, maxStepSize, maxErrorRatioStepSize, maxSteps, stepIdx, ]
     )
 
     const revStep = useCallback(
@@ -111,7 +147,7 @@ export default function Page() {
             }
             setRunningSteps(true)
         },
-        [ model, stepSize, maxSteps, stepIdx, runningSteps ],
+        [ model, stepIdx, runningSteps ],
     )
 
     useEffect(
@@ -194,7 +230,7 @@ export default function Page() {
     // console.log("errors:", errors)
     // console.log(`render: ${model?.steps?.length} steps, idx ${stepIdx}`)
 
-    const basePath = getBasePath();
+    // const basePath = getBasePath();
 
     const canAdvance = useMemo(
         () => apvdInitialized && (model && model.repeat_idx && stepIdx == model.steps.length - 1) || stepIdx == maxSteps,
@@ -232,7 +268,7 @@ export default function Page() {
                         </div>
                         <div className={css.stepStats}>Step {stepIdx} (max {maxSteps}), error: {error?.v?.toPrecision(3)}</div>
                         {repeatSteps && stepIdx == repeatSteps[1] &&
-                            <div className={css.repeatSteps}>Step {repeatSteps[1]} repeats {repeatSteps[0]}</div>
+                            <div className={css.repeatSteps}>Step {repeatSteps[1]} repeats step {repeatSteps[0]}</div>
                         }
                     </div>
                 </div>
