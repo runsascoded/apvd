@@ -185,7 +185,7 @@ export default function Page() {
                 [ model.min_idx, model.min_error ]
             const newModel: Model = {
                 steps,
-                repeat_idx: batch.repeat_idx === undefined ? undefined : batch.repeat_idx + model.steps.length - 1,
+                repeat_idx: batch.repeat_idx === null || batch.repeat_idx === undefined ? null : batch.repeat_idx + model.steps.length - 1,
                 min_idx,
                 min_error,
             }
@@ -215,8 +215,8 @@ export default function Page() {
                 return
             }
             if (!model || stepIdx === null) return
-            if (model.repeat_idx !== undefined && stepIdx + 1 == model.steps.length) {
-                console.log("runSteps: found repeat_idx, not running steps")
+            if (model.repeat_idx !== null && model.repeat_idx !== undefined && stepIdx + 1 == model.steps.length) {
+                console.log(`runSteps: found repeat_idx ${model.repeat_idx}, not running steps`)
                 setRunningSteps(false)
                 return
             }
@@ -266,8 +266,8 @@ export default function Page() {
         () => {
             if (!runningSteps) return
             if (!model || stepIdx === null) return
-            if (model.repeat_idx !== undefined && stepIdx + 1 == model.steps.length) {
-                console.log("effect: found repeat_idx, not running steps")
+            if (model.repeat_idx !== null && model.repeat_idx !== undefined && stepIdx + 1 == model.steps.length) {
+                console.log(`effect: found repeat_idx ${model.repeat_idx}, not running steps`)
                 setRunningSteps(false)
                 return
             }
@@ -494,7 +494,7 @@ export default function Page() {
                         </tr>
                         </thead>
                         <tbody>{
-                            circles.map(({ idx, c: { x, y }, r, color }: C) =>
+                            circles.map(({ idx, c: { x, y }, r }: C) =>
                                 <tr key={idx}>
                                     <td>{x.toPrecision(4)}</td>
                                     <td>{y.toPrecision(4)}</td>
@@ -508,12 +508,12 @@ export default function Page() {
                     model && error && stepIdx !== null &&
                     error.d.map((d: number, idx: number) => {
                         const fn: (step: Diagram) => number = [
-                            (model: Model) => (step: Diagram) => step.shapes[1].c.x,
-                            (model: Model) => (step: Diagram) => step.shapes[1].r,
-                            (model: Model) => (step: Diagram) => step.shapes[2].c.x,
-                            (model: Model) => (step: Diagram) => step.shapes[2].c.y,
-                            (model: Model) => (step: Diagram) => step.shapes[2].r,
-                        ][idx](model)
+                            (step: Diagram) => step.shapes[1].c.x,
+                            (step: Diagram) => step.shapes[1].r,
+                            (step: Diagram) => step.shapes[2].c.x,
+                            (step: Diagram) => step.shapes[2].c.y,
+                            (step: Diagram) => step.shapes[2].r,
+                        ][idx]
                         const startIdx = max(0, stepIdx - 10)
                         const data = model.steps.slice(startIdx, stepIdx + 1).map((step: Diagram) => fn(step))
                         return <Sparklines key={idx} data={data} limit={10} width={40} height={20} margin={1} style={{ width: "20%", height: 50, }}>
