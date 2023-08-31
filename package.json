@@ -7,13 +7,14 @@
     "email": "ryan@runsascoded.com"
   },
   "dependencies": {
-    "apvd": "https://gitpkg.now.sh/runsascoded/shapes?5135a0b",
+    "apvd": "https://gitpkg.now.sh/runsascoded/shapes?19dc903",
     "bootstrap": "^5.3.1",
     "next": "^13.4.13",
     "next-utils": "https://gitpkg.now.sh/runsascoded/next-utils/dist?81a0d83",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
     "react-plotly.js": "^2.6.0",
+    "react-sparklines": "^1.7.0",
     "sass": "^1.66.1"
   },
   "devDependencies": {
@@ -25,6 +26,7 @@
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
     "@types/react-plotly.js": "^2.6.0",
+    "@types/react-sparklines": "^1.7.2",
     "eslint": "^8.46.0",
     "eslint-config-next": "^13.4.13",
     "jest": "^29.6.2",

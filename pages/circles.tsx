@@ -4,15 +4,26 @@ import apvd, { init_logs, step as doStep, make_diagram as makeDiagram, make_mode
 import css from "./circles.module.scss"
 import A from "next-utils/a";
 import dynamic from "next/dynamic";
+import {Sparklines, SparklinesLine} from 'react-sparklines';
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false })
 
-const { max, PI, sqrt } = Math
+const { ceil, floor, log, min, max, PI, round, sqrt } = Math
+
+const clamp = (v: number, m: number, M: number): number => max(m, min(M, v))
 
 type C = Circle<number> & { color: string }
-const initialCircles: C[] = [
-    { idx: 0, c: { x:   0, y:            0 }, r: 1, color:  'green', },
-    { idx: 1, c: { x:   1, y:            0 }, r: 1, color: 'orange', },
-    { idx: 2, c: { x: 1/2, y: sqrt(3)/2 }, r: 1, color: 'yellow', },
+const sq3 = sqrt(3)
+const colors = [ 'green', 'orange', 'yellow', ]
+export type InitialLayout = { x: number, y: number, r: number }[]
+const SymmetricCircles: InitialLayout = [
+    { x:   0, y:     0, r: 1, },
+    { x:   1, y:     0, r: 1, },
+    { x: 1/2, y: sq3/2, r: 1, },
+]
+const OriginRightUp: InitialLayout = [
+    { x:   0, y: 0, r: 1, },
+    { x:   1, y: 0, r: 1, },
+    { x:   0, y: 1, r: 1, },
 ]
 
 const ThreeEqualCircles: Target[] = [
@@ -52,17 +63,16 @@ export default function Page() {
     const [height, setHeight] = useState(400);
     const projection = { x: -scale / 2, y: scale / 2, s: scale }
     const gridSize = 1
-    const [ targets, setTargets ] = useState<Target[]>(FizzBuzzBazz)
+    const [ targets, setTargets ] = useState<Target[]>(ThreeEqualCircles)
     const numCircles = useMemo(() => targets[0].sets.length, [ targets ])
     const wasmTargets = useMemo(
         () => targets.map(({ name, sets, value }) => [ sets, value ]),
         [ targets ],
     )
     const [ showGrid, setShowGrid ] = useState(false)
-    const [ maxStepSize, setMaxStepSize ] = useState(0.01)
     const [ maxErrorRatioStepSize, setMaxErrorRatioStepSize ] = useState(0.7)
     const [ maxSteps, setMaxSteps ] = useState(1000)
-    const [ stepBatchSize, setStepBatchSize ] = useState(2)
+    const [ stepBatchSize, setStepBatchSize ] = useState(10)
     const [ apvdInitialized, setApvdInitialized ] = useState(false)
 
     const [ model, setModel ] = useState<Model | null>(null)
@@ -81,6 +91,14 @@ export default function Page() {
         [ model, stepIdx ],
     )
 
+    const [ initialLayout, setInitialLayout] = useState<InitialLayout>(OriginRightUp)
+    const initialCircles: C[] = useMemo(
+        () => initialLayout.slice(0, numCircles).map(({ x, y, r }, idx) =>
+            ({ idx, c: { x, y }, r, color: colors[idx], })
+        ),
+        [ numCircles, initialLayout, ],
+    )
+
     const circles = useMemo(
         () => {
             if (!curStep) return initialCircles.slice(0, numCircles)
@@ -95,23 +113,23 @@ export default function Page() {
         [ curStep, initialCircles, numCircles ]
     )
 
-    // Initialize wasm library, diagram
+    // Initialize wasm library, model
     useEffect(
         () => {
             apvd().then(() => {
-                init_logs("debug")
+                init_logs(null)
                 setApvdInitialized(true)
                 // Naively, n circles have 3n degrees of freedom. However, WLOG, we can fix:
                 // - c0 to be a unit circle at origin (x = y = 0, r = 1)
                 // - c1.y = 0 (only x and r can move)
                 // resulting in 4 fewer free variables.
-                const skipVars = [ [ 'x', 'y', 'c', ], ['y'], ]
+                const skipVars = [ [ 'x', 'y', 'r', ], ['y'], ]
                 const numVars = 3 * circles.length - ([] as string[]).concat(...skipVars).length
                 let curIdx = 0
                 const inputs = circles.map((c: Circle<number>, idx: number) => {
                     return [
                         c,
-                        'xyc'.split('').map(v => {
+                        'xyr'.split('').map(v => {
                             const row = new Array(numVars).fill(0)
                             if (idx >= skipVars.length || !skipVars[idx].includes(v)) {
                                 row[curIdx] = 1
@@ -158,7 +176,7 @@ export default function Page() {
                 min_idx: 0,
                 min_error: lastStep.error.v,
             }
-            const batch = train(batchSeed, maxStepSize, maxErrorRatioStepSize, batchSize)
+            const batch = train(batchSeed, maxErrorRatioStepSize, batchSize)
             const batchMinStep = batch.steps[batch.min_idx]
             const modelMinStep = model.steps[model.min_idx]
             const steps = model.steps.concat(batch.steps.slice(1))
@@ -175,7 +193,7 @@ export default function Page() {
             setModel(newModel)
             setStepIdx(newModel.steps.length - 1)
         },
-        [ model, maxStepSize, maxErrorRatioStepSize, maxSteps, stepIdx, ]
+        [ model, maxErrorRatioStepSize, maxSteps, stepIdx, ]
     )
 
     const revStep = useCallback(
@@ -207,6 +225,7 @@ export default function Page() {
         [ model, stepIdx, runningSteps ],
     )
 
+    // Keyboard shortcuts
     useEffect(() => {
         const keyDownHandler = (e: KeyboardEvent) => {
             // console.log(`keydown: ${e.code}, shift ${e.shiftKey}, alt ${e.altKey}, meta ${e.metaKey}`)
@@ -242,6 +261,7 @@ export default function Page() {
         };
     }, [ fwdStep, revStep, runSteps, ]);
 
+    // Run steps
     useEffect(
         () => {
             if (!runningSteps) return
@@ -304,6 +324,14 @@ export default function Page() {
 
     const error = useMemo(() => curStep?.error, [ curStep ])
     const prvError = useMemo(() => prvStep?.error, [ prvStep ])
+
+    const bestStep = useMemo(
+        () => {
+            if (!model) return null
+            return model.steps[model.min_idx]
+        },
+        [ model ],
+    )
     // console.log("errors:", errors)
     // console.log(`render: ${model?.steps?.length} steps, idx ${stepIdx}`)
 
@@ -327,6 +355,53 @@ export default function Page() {
         [ model, stepIdx ],
     )
 
+    const [ plotXRange, setPlotXRange ] = useState<[number, number] | null>(null)
+
+    const plot = useMemo(
+        () => {
+            if (!model || stepIdx === null) return
+            const xlo = clamp(stepIdx - 10, 0, model.steps.length - 1)
+            const xhi = stepIdx
+            const steps = model.steps.slice(xlo, xhi)
+            return <Plot
+                data={[
+                    {
+                        x: steps.map((_: Diagram, idx: number) => xlo + idx),
+                        y: steps.map((step: Diagram) => step.error.v),
+                        type: 'scatter',
+                        mode: 'lines',
+                        marker: { color: 'red' },
+                    },
+                ]}
+                layout={{
+                    dragmode: 'pan',
+                    hovermode: 'x',
+                    xaxis: {
+                        title: 'Step',
+                        range: [ xlo, xhi ],
+                    },
+                    yaxis: {
+                        title: 'Error',
+                        type: 'log',
+                        fixedrange: true,
+                        // ...yAxis,
+                        // range: [-10, 10],
+                    },
+                }}
+                config={{ displayModeBar: false, /*scrollZoom: true,*/ responsive: true, }}
+                onRelayout={(e: any) => {
+                    console.log("relayout:", e)
+                }}
+                onHover={(e: any) => {
+                    const stepIdx = round(e.xvals[0])
+                    console.log("hover:", e, stepIdx)
+                    setStepIdx(stepIdx)
+                }}
+            />
+        },
+        [ model, stepIdx, plotXRange, ],
+    )
+
     return <>
         <div className={css.body}>
             <div className={`row ${css.row} ${css.content}`}>
@@ -344,12 +419,12 @@ export default function Page() {
                             <button title={"Play steps"} onClick={() => runSteps()} disabled={canAdvance}>{runningSteps ? "⏸️" : "▶️"}</button>
                         </div>
                         <div className={css.stepStats}>
-                            Step {stepIdx} (max {maxSteps}), error:{' '}
+                            Step {stepIdx}
                             {
                                 error &&
                                 <span>
-                                    {error.v?.toPrecision(3)}, [
-                                    {
+                                    , error: {error.v.toPrecision(3)},
+                                    Δ: {
                                         error.d.map((d: number, idx: number) => {
                                             const grad = -d
                                             const className = prvError?.d ? prvError.d[idx] * d > 0 ? css.errSame : css.errFlipped : ""
@@ -359,14 +434,21 @@ export default function Page() {
                                             </Fragment>
                                         })
                                     }
-                                    ]
                                 </span>
                             }
                         </div>
-                        {/*<div>*/}
-                        {/*    <span className={css.errFlipped}>Sign flipped</span> (since previous step),*/}
-                        {/*    <span className={css.errSame}>sign preserved</span>*/}
-                        {/*</div>*/}
+                        <div>{model && bestStep && <>
+                            Best step: {model.min_idx}, error: {bestStep.error.v.toPrecision(3)}
+                        </>}</div>
+                        <div>
+                            <label>Max error ratio step size: <input type={"number"} value={maxErrorRatioStepSize} onChange={(e) => setMaxErrorRatioStepSize(parseFloat(e.target.value))} /></label>
+                        </div>
+                        <div>
+                            <label>Max steps: <input type={"number"} value={maxSteps} onChange={(e) => setMaxSteps(parseInt(e.target.value))} /></label>
+                        </div>
+                        <div>
+                            <label>Step batch size: <input type={"number"} value={stepBatchSize} onChange={(e) => setStepBatchSize(parseInt(e.target.value))} /></label>
+                        </div>
                         {repeatSteps && stepIdx == repeatSteps[1] &&
                             <div className={css.repeatSteps}>Step {repeatSteps[1]} repeats step {repeatSteps[0]}</div>
                         }
@@ -409,9 +491,6 @@ export default function Page() {
                             <th>cx</th>
                             <th>cy</th>
                             <th>r</th>
-                            <th>Δcx</th>
-                            <th>Δcy</th>
-                            <th>Δr</th>
                         </tr>
                         </thead>
                         <tbody>{
@@ -420,30 +499,40 @@ export default function Page() {
                                     <td>{x.toPrecision(4)}</td>
                                     <td>{y.toPrecision(4)}</td>
                                     <td>{r.toPrecision(4)}</td>
-                                    <td>{prvStep && (x - prvStep.shapes[idx].c.x).toPrecision(4)}</td>
-                                    <td>{prvStep && (y - prvStep.shapes[idx].c.y).toPrecision(4)}</td>
-                                    <td>{prvStep && (r - prvStep.shapes[idx].r).toPrecision(4)}</td>
                                 </tr>
                             )
                         }</tbody>
                     </table>
                 </div>
-                <div className={`row ${css.row}`}>
-                    <Plot
-                        data={[
-                            {
-                                x: [1, 2, 3],
-                                y: [2, 6, 3],
-                                type: 'scatter',
-                                mode: 'lines+markers',
-                                marker: {color: 'red'},
-                            },
-                            {type: 'bar', x: [1, 2, 3], y: [2, 5, 3]},
-                        ]}
-                        layout={ {width: 320, height: 240, title: 'A Fancy Plot'} }
-                        config={{ displayModeBar: false, scrollZoom: false, responsive: true, }}
-                    />
-                </div>
+                <div className={`row ${css.row}`}>{
+                    model && error && stepIdx !== null &&
+                    error.d.map((d: number, idx: number) => {
+                        const fn: (step: Diagram) => number = [
+                            (model: Model) => (step: Diagram) => step.shapes[1].c.x,
+                            (model: Model) => (step: Diagram) => step.shapes[1].r,
+                            (model: Model) => (step: Diagram) => step.shapes[2].c.x,
+                            (model: Model) => (step: Diagram) => step.shapes[2].c.y,
+                            (model: Model) => (step: Diagram) => step.shapes[2].r,
+                        ][idx](model)
+                        const startIdx = max(0, stepIdx - 10)
+                        const data = model.steps.slice(startIdx, stepIdx + 1).map((step: Diagram) => fn(step))
+                        return <Sparklines key={idx} data={data} limit={10} width={40} height={20} margin={1} style={{ width: "20%", height: 50, }}>
+                            <SparklinesLine color="blue" style={{ strokeWidth: 1, }} />
+                        </Sparklines>
+                    })
+                }</div>
+                <div className={`row ${css.row}`}>{
+                    model && error && stepIdx !== null &&
+                    error.d.map((d: number, idx: number) => {
+                        const startIdx = max(0, stepIdx - 10)
+                        const data = model.steps.slice(startIdx, stepIdx + 1).map((step: Diagram) => step.error.d[idx])
+                        // console.log(`sparkline ${idx}:`, data)
+                        return <Sparklines key={idx} data={data} limit={10} width={40} height={20} margin={1} style={{ width: "20%", height: 50, }}>
+                            <SparklinesLine color="red" style={{ strokeWidth: 1, }} />
+                        </Sparklines>
+                    })
+                }</div>
+                <div className={`row ${css.row}`}>{plot}</div>
                 <hr />
                 <div className={`row ${css.row}`}>
                     <h2>Differentiable shape-intersection</h2>
