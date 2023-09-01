@@ -700,19 +700,18 @@ export default function Page() {
                                     const name = targetName(sets)
                                     const err = errors ? errors.get(sets) : null
                                     const prvErr = prvErrors ? prvErrors.get(sets) : null
-                                    const className = (err && prvErr) ? prvErr.error.v * err.error.v > 0 ? css.errSame : css.errFlipped : ""
                                     return <tr key={sets}>
                                         <td className={css.val}>{name}</td>
                                         <td className={css.val}>{value.toPrecision(3).replace(/\.?0+$/, '')}</td>
                                         <td className={css.val}>{err ? (err.actual_frac.v * err.total_target_area).toPrecision(3) : ''}</td>
-                                        {SparkNum(err && err.error.v)}
+                                        {SparkNum(err && err.error.v * err.total_target_area)}
                                         {SparkLineCell(varIdx, "red", (step: Diagram) => getError(step, sets)?.error.v || 0)}
                                     </tr>
                                 })
                             }
                             <tr>
                                 <td colSpan={3} style={{ textAlign: "right", fontWeight: "bold", }}>Overall:</td>
-                                {SparkNum(error?.v)}
+                                {SparkNum(error && curStep && error.v * curStep.total_target_area)}
                                 {SparkLineCell(-1, "red", (step: Diagram) => step.error.v)}
                             </tr>
                             </tbody>
