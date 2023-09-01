@@ -462,61 +462,74 @@ export default function Page() {
         [ model, stepIdx ],
     )
 
+    const [ plotInitialized, setPlotInitialized ] = useState(false)
     const plot = useMemo(
         () => {
             if (!model || stepIdx === null) return
             const steps = model.steps
-            return <Plot
-                className={css.plot}
-                data={[
-                    {
-                        // x: steps.map((_: Diagram, idx: number) => xlo + idx),
-                        y: steps.map((step: Diagram) => step.error.v),
-                        type: 'scatter',
-                        mode: 'lines',
-                        marker: { color: 'red' },
-                    },
-                ]}
-                layout={{
-                    dragmode: 'pan',
-                    hovermode: 'x',
-                    margin: { t: 0, l: 40, r: 0, b: 40, },
-                    xaxis: {
-                        title: 'Step',
-                        rangemode: 'tozero',
-                        // range: [ xlo, xhi ],
-                    },
-                    yaxis: {
-                        title: 'Error',
-                        type: 'log',
-                        fixedrange: true,
-                        rangemode: 'tozero',
-                        // ...yAxis,
-                        // range: [-10, 10],
-                    },
-                    shapes: /*stepIdx + 1 < model.steps.length ?*/ [{
-                        type: 'line',
-                        x0: stepIdx,
-                        x1: stepIdx,
-                        xref: 'x',
-                        y0: 0,
-                        y1: 1,
-                        yref: 'paper',
-                        fillcolor: 'grey',
-                    }] /*: []*/
-                }}
-                config={{ displayModeBar: false, /*scrollZoom: true,*/ responsive: true, }}
-                onRelayout={(e: any) => {
-                    console.log("relayout:", e)
-                }}
-                onHover={(e: any) => {
-                    const vStepIdx = round(e.xvals[0])
-                    // console.log("hover:", e, vStepIdx)
-                    setVStepIdx(vStepIdx)
-                }}
-            />
+            return <>
+                <Plot
+                    className={css.plot}
+                    style={plotInitialized ? {} : { display: "none", }}
+                    data={[
+                        {
+                            // x: steps.map((_: Diagram, idx: number) => xlo + idx),
+                            y: steps.map((step: Diagram) => step.error.v),
+                            type: 'scatter',
+                            mode: 'lines',
+                            marker: { color: 'red' },
+                        },
+                    ]}
+                    layout={{
+                        dragmode: 'pan',
+                        hovermode: 'x',
+                        margin: { t: 0, l: 40, r: 0, b: 40, },
+                        xaxis: {
+                            title: 'Step',
+                            rangemode: 'tozero',
+                            // range: [ xlo, xhi ],
+                        },
+                        yaxis: {
+                            title: 'Error',
+                            type: 'log',
+                            fixedrange: true,
+                            rangemode: 'tozero',
+                            // ...yAxis,
+                            // range: [-10, 10],
+                        },
+                        shapes: /*stepIdx + 1 < model.steps.length ?*/ [{
+                            type: 'line',
+                            x0: stepIdx,
+                            x1: stepIdx,
+                            xref: 'x',
+                            y0: 0,
+                            y1: 1,
+                            yref: 'paper',
+                            fillcolor: 'grey',
+                        }] /*: []*/
+                    }}
+                    config={{ displayModeBar: false, /*scrollZoom: true,*/ responsive: true, }}
+                    onInitialized={() => {
+                        console.log("plot initialized")
+                        setPlotInitialized(true)
+                    }}
+                    onRelayout={(e: any) => {
+                        console.log("relayout:", e)
+                    }}
+                    onHover={(e: any) => {
+                        const vStepIdx = round(e.xvals[0])
+                        // console.log("hover:", e, vStepIdx)
+                        setVStepIdx(vStepIdx)
+                    }}
+                />
+                {!plotInitialized &&
+                    <div className={css.plot}>
+                        Loading plot...
+                    </div>
+                }
+            </>
         },
-        [ model, stepIdx, ],
+        [ model, stepIdx, plotInitialized, ],
     )
 
     const targetName = useCallback(
@@ -780,14 +793,14 @@ export default function Page() {
                 <hr />
                 <div className={`row`}>
                     <div className={col12}>
-                        <h2>Differentiable shape-intersection</h2>
+                        <h3>Differentiable shape-intersection</h3>
                         <p>Given "target" values:</p>
                         <ul>
                             <li>Model each set with a circle</li>
                             <li>Compute intersections and areas (using "<A href={"https://en.wikipedia.org/wiki/Dual_number"}>dual numbers</A>" to preserve "forward-mode" derivatives)</li>
                             <li>Gradient-descend until areas match targets</li>
                         </ul>
-                        <p>See also:</p>
+                        <h4>See also</h4>
                         <ul>
                             <li><A href={"https://github.com/runsascoded/shapes"}>runsascoded/shapes</A>: Rust implementation of differentiable shape-intersection</li>
                             <li><A href={"https://github.com/runsascoded/apvd"}>runsascoded/apvd</A>: this app</li>
