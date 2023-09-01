@@ -91,6 +91,7 @@ export type Vars = {
     coords: VarCoord[]
     getVal: StepVarGetter
 }
+export type RunningState = "none" | "fwd" | "rev"
 
 export default function Page() {
     const scale = 130
@@ -114,7 +115,7 @@ export default function Page() {
     // const minIdx = useMemo(() => model ? model.min_idx : null, [ model ])
     const [ modelStepIdx, setModelStepIdx ] = useState<number | null>(null)
     const [ vStepIdx, setVStepIdx ] = useState<number | null>(null)
-    const [ runningSteps, setRunningSteps ] = useState(false)
+    const [ runningState, setRunningState ] = useState<RunningState>("none")
     const [ frameLen, setFrameLen ] = useState(0)
 
     const [ stepIdx, setStepIdx ] = useMemo(
@@ -256,7 +257,7 @@ export default function Page() {
             if (!model || stepIdx === null) return
             if (stepIdx >= maxSteps) {
                 console.log("maxSteps reached, not running step")
-                setRunningSteps(false)
+                setRunningState("none")
                 return
             }
             let batchSize
@@ -323,23 +324,6 @@ export default function Page() {
         [ stepIdx, ],
     )
 
-    const runSteps = useCallback(
-        () => {
-            if (runningSteps) {
-                setRunningSteps(false)
-                return
-            }
-            if (!model || stepIdx === null) return
-            if (model.repeat_idx !== null && model.repeat_idx !== undefined && stepIdx + 1 == model.steps.length) {
-                console.log(`runSteps: found repeat_idx ${model.repeat_idx}, not running steps`)
-                setRunningSteps(false)
-                return
-            }
-            setRunningSteps(true)
-        },
-        [ model, stepIdx, runningSteps ],
-    )
-
     const cantAdvance = useMemo(
         () => !apvdInitialized || (model && model.repeat_idx && stepIdx == model.steps.length - 1) || stepIdx == maxSteps,
         [ apvdInitialized, model, stepIdx, maxSteps ],
@@ -380,8 +364,13 @@ export default function Page() {
                 case 'Space':
                     e.preventDefault()
                     e.stopPropagation()
-                    if (cantAdvance) return
-                    runSteps()
+                    if (e.shiftKey) {
+                        if (cantReverse) return
+                        setRunningState(runningState == "rev" ? "none" : "rev")
+                    } else {
+                        if (cantAdvance) return
+                        setRunningState(runningState == "fwd" ? "none" : "fwd")
+                    }
                     break
             }
         }
@@ -391,33 +380,45 @@ export default function Page() {
         return () => {
             document.removeEventListener("keydown", keyDownHandler);
         };
-    }, [ fwdStep, revStep, cantAdvance, cantReverse, runSteps, ]);
+    }, [ fwdStep, revStep, cantAdvance, cantReverse, setRunningState, runningState, ]);
 
     // Run steps
     useEffect(
         () => {
-            if (!runningSteps) return
+            if (runningState == 'none') return
             if (!model || stepIdx === null) return
-            if (model.repeat_idx !== null && model.repeat_idx !== undefined && stepIdx + 1 == model.steps.length) {
-                console.log(`effect: found repeat_idx ${model.repeat_idx}, not running steps`)
-                setRunningSteps(false)
-                return
+            let step: () => void
+            const expectedDirection = runningState
+            if (runningState == 'fwd') {
+                if (model.repeat_idx && stepIdx + 1 == model.steps.length) {
+                    console.log(`effect: found repeat_idx ${model.repeat_idx}, not running steps`)
+                    setRunningState("none")
+                    return
+                }
+                step = fwdStep
+            } else {
+                if (stepIdx === 0) {
+                    console.log(`effect: at step 0, not running steps`)
+                    setRunningState("none")
+                    return
+                }
+                step = revStep
             }
-            console.log("scheduling step:", stepIdx)
+            console.log(`scheduling ${runningState} step ${stepIdx}`)
             const timer = setTimeout(
                 () => {
-                    if (runningSteps) {
-                        console.log('running step:', stepIdx)
-                        fwdStep()
+                    if (runningState == expectedDirection) {
+                        console.log(`running ${expectedDirection} step from ${stepIdx}`)
+                        step()
                     } else {
-                        console.log("not running step:", stepIdx)
+                        console.log(`skipping ${expectedDirection} from step ${stepIdx}, runningSteps is ${runningState}`)
                     }
                 },
                 frameLen,
             );
             return () => clearTimeout(timer);
         },
-        [ runningSteps, model, stepIdx, fwdStep, ],
+        [ runningState, model, stepIdx, fwdStep, ],
     )
 
     // tsify `#[declare]` erroneously emits Record<K, V> instead of Map<K, V>: https://github.com/madonoharu/tsify/issues/26
@@ -596,13 +597,15 @@ export default function Page() {
     const col12 = "col-12"
 
     const PlaybackControl = useCallback(
-        ({ title, onClick, disabled, children }: {
-            title: string,
-            onClick: () => void,
-            disabled: boolean,
-            children?: ReactNode,
-        }) =>
-            <OverlayTrigger overlay={<Tooltip>{title}</Tooltip>}>
+        ({ title, hotkey, onClick, disabled, children }: {
+            title: string
+            hotkey: string
+            onClick: () => void
+            disabled: boolean
+            children?: ReactNode
+        }) => {
+            title = `${title} (${hotkey})`
+            return <OverlayTrigger overlay={<Tooltip>{title}</Tooltip>}>
                 <span>
                     <Button
                         title={title}
@@ -611,7 +614,8 @@ export default function Page() {
                         {children}
                     </Button>
                 </span>
-            </OverlayTrigger>,
+            </OverlayTrigger>
+        },
         [],
     )
 
@@ -646,12 +650,12 @@ export default function Page() {
                                 />
                             }</div>
                             <div className={`${css.buttons}`}>
-                                <PlaybackControl title={"Reset to beginning"} onClick={() => setStepIdx(0)} disabled={cantReverse}>⏮️</PlaybackControl>
-                                <PlaybackControl title={"Rewind"} onClick={() => revStep()} disabled={cantReverse}>⏪️</PlaybackControl>
-                                <PlaybackControl title={"Reverse one step"} onClick={() => revStep()} disabled={cantReverse}>⬅️</PlaybackControl>
-                                <PlaybackControl title={"Advance one step"} onClick={() => fwdStep()} disabled={cantAdvance || stepIdx == maxSteps}>➡️</PlaybackControl>
-                                <PlaybackControl title={"Fast-forward"} onClick={() => runSteps()} disabled={cantAdvance}>{runningSteps ? "⏸️" : "⏩"}</PlaybackControl>
-                                <PlaybackControl title={"Seek to last computed step"} onClick={() => model && setStepIdx(model.steps.length - 1)} disabled={!model || stepIdx === null || stepIdx + 1 == model.steps.length}>⏭️</PlaybackControl>
+                                <PlaybackControl title={"Reset to beginning"} hotkey={"⌘←"} onClick={() => setStepIdx(0)} disabled={cantReverse}>⏮️</PlaybackControl>
+                                <PlaybackControl title={"Rewind"} hotkey={"⇧␣"} onClick={() => setRunningState(runningState == "rev" ? "none" : "rev")} disabled={cantReverse}>{runningState == "rev" ? "⏸️" : "⏪️"}</PlaybackControl>
+                                <PlaybackControl title={"Reverse one step"} hotkey={"←"} onClick={() => revStep()} disabled={cantReverse}>⬅️</PlaybackControl>
+                                <PlaybackControl title={"Advance one step"} hotkey={"→"} onClick={() => fwdStep()} disabled={cantAdvance || stepIdx == maxSteps}>➡️</PlaybackControl>
+                                <PlaybackControl title={"Fast-forward"} hotkey={"␣"} onClick={() => setRunningState(runningState == "fwd" ? "none" : "fwd")} disabled={cantAdvance}>{runningState == "fwd" ? "⏸️" : "⏩"}</PlaybackControl>
+                                <PlaybackControl title={"Seek to last computed step"} hotkey={"⌘→"} onClick={() => model && setStepIdx(model.steps.length - 1)} disabled={!model || stepIdx === null || stepIdx + 1 == model.steps.length}>⏭️</PlaybackControl>
                             </div>
                             <div className={css.stepStats}>
                                 <p>Step {stepIdx}{ error && <span>, error: {error.v.toPrecision(3)}</span> }</p>
@@ -680,7 +684,7 @@ export default function Page() {
                 <hr />
                 <div className={"row"}>
                     <div className={`${col7}`}>
-                        <h3 className={css.tableLabel}>Targets</h3>
+                        <h3 className={css.tableTitle}>Targets</h3>
                         <table className={css.sparkLinesTable}>
                             <thead>
                             <tr>
@@ -715,7 +719,7 @@ export default function Page() {
                         </table>
                     </div>
                     <div className={col5}>
-                        <h3 className={css.tableLabel}>Vars</h3>
+                        <h3 className={css.tableTitle}>Vars</h3>
                         <table className={css.sparkLinesTable}>
                             <thead>
                             <tr>
@@ -736,7 +740,8 @@ export default function Page() {
                                 )
                             }</tbody>
                         </table>
-                        <h3 className={css.tableLabel}>Shapes</h3>
+                        <div className={css.tableBreak} />
+                        <h3 className={css.tableTitle}>Shapes</h3>
                         <table>
                             <thead>
                             <tr>
@@ -767,7 +772,7 @@ export default function Page() {
                             setVStepIdx(null)
                         }}
                     >
-                        <h3 className={css.tableLabel}>Error</h3>
+                        <h3 className={css.tableTitle}>Error</h3>
                         {plot}
                     </div>
                     <div className={col5}>
