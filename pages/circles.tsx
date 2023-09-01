@@ -1,17 +1,18 @@
 import Grid from "../src/components/grid";
-import React, {ChangeEvent, Fragment, useCallback, useEffect, useMemo, useState} from "react";
-import apvd, { init_logs, step as doStep, make_diagram as makeDiagram, make_model as makeModel, train, Circle, R2, Dual, Model, Error, Diagram } from "apvd";
+import React, {Fragment, ReactNode, MouseEvent, useCallback, useEffect, useMemo, useState} from "react";
+import apvd, {Circle, Diagram, Dual, Error, init_logs, make_model as makeModel, Model, train} from "apvd";
 import css from "./circles.module.scss"
 import A from "next-utils/a";
 import dynamic from "next/dynamic";
 import {Sparklines, SparklinesLine} from 'react-sparklines';
+
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false })
 
-const { ceil, floor, log, min, max, PI, round, sqrt } = Math
+const { min, max, PI, round, sqrt } = Math
 
 const clamp = (v: number, m: number, M: number): number => max(m, min(M, v))
 
-type C = Circle<number> & { color: string }
+type C = Circle<number> & { name: string, color: string }
 const sq3 = sqrt(3)
 const colors = [ 'green', 'orange', 'yellow', ]
 export type InitialLayout = { x: number, y: number, r: number }[]
@@ -27,36 +28,67 @@ const OriginRightUp: InitialLayout = [
 ]
 
 const ThreeEqualCircles: Target[] = [
-    { name: "A", sets: "0**", value: PI },
-    { name: "B", sets: "*1*", value: PI },
-    { name: "C", sets: "**2", value: PI },
-    { name: "A B", sets: "01*", value: 2*PI/3 - sqrt(3)/2 },
-    { name: "A C", sets: "0*2", value: 2*PI/3 - sqrt(3)/2 },
-    { name: "B C", sets: "*12", value: 2*PI/3 - sqrt(3)/2 },
-    { name: "A B C", sets: "012", value: PI/2 - sqrt(3)/2 },
+    { sets: "0**", value: PI },
+    { sets: "*1*", value: PI },
+    { sets: "**2", value: PI },
+    { sets: "01*", value: 2*PI/3 - sqrt(3)/2 },
+    { sets: "0*2", value: 2*PI/3 - sqrt(3)/2 },
+    { sets: "*12", value: 2*PI/3 - sqrt(3)/2 },
+    { sets: "012", value: PI/2 - sqrt(3)/2 },
 ]
 
 const FizzBuzz: Target[] = [
-    { name: "Fizz", sets: "0*", value: 1/3 },
-    { name: "Buzz", sets: "*1", value: 1/5 },
-    { name: "Fizz Buzz", sets: "01", value: 1/15 },
+    { sets: "0*", value: 1/3 },
+    { sets: "*1", value: 1/5 },
+    { sets: "01", value: 1/15 },
 ]
 
 const FizzBuzzBazz: Target[] = [
-    { name: "Fizz", sets: "0**", value: 1/3 },
-    { name: "Buzz", sets: "*1*", value: 1/5 },
-    { name: "Bazz", sets: "**2", value: 1/7 },
-    { name: "Fizz Buzz", sets: "01*", value: 1/15 },
-    { name: "Fizz Bazz", sets: "0*2", value: 1/21 },
-    { name: "Buzz Bazz", sets: "*12", value: 1/35 },
-    { name: "Fizz Buzz Bazz", sets: "012", value: 1/105 },
+    { sets: "0**", value: 1/3 },
+    { sets: "*1*", value: 1/5 },
+    { sets: "**2", value: 1/7 },
+    { sets: "01*", value: 1/15 },
+    { sets: "0*2", value: 1/21 },
+    { sets: "*12", value: 1/35 },
+    { sets: "012", value: 1/105 },
 ]
 
 type Target = {
-    name: string
     sets: string
     value: number
 }
+
+export type CircleCoord = 'x' | 'y' | 'r'
+export type CircleGetter<T> = (c: Circle<T>) => T
+export type CircleGetters<T> = { [k in CircleCoord]: CircleGetter<T> }
+const CircleCoords: CircleCoord[] = [ 'x', 'y', 'r' ]
+export function CircleGetters<T>(): CircleGetters<T> {
+    return {
+        'x': c => c.c.x,
+        'y': c => c.c.y,
+        'r': c => c.r,
+    }
+}
+export const CircleFloatGetters = CircleGetters<number>()
+export const CircleDualGetters = CircleGetters<Dual>()
+
+// export type StepGetter<T> = (step: Diagram) => T
+
+export type VarCoord = [ number, CircleCoord ]
+// export type VarIdxToCoord = (varIdx: number) =>  VarCoord
+export type StepVarGetter = (step: Diagram, varIdx: number) => number
+
+export type Vars = {
+    allCoords: CircleCoord[][]
+    skipVars: CircleCoord[][]
+    vars: CircleCoord[][]
+    numCoords: number
+    numVars: number
+    numSkipVars: number
+    coords: VarCoord[]
+    getVal: StepVarGetter
+}
+
 export default function Page() {
     const scale = 130
     const [width, setWidth] = useState(300);
@@ -66,7 +98,7 @@ export default function Page() {
     const [ targets, setTargets ] = useState<Target[]>(ThreeEqualCircles)
     const numCircles = useMemo(() => targets[0].sets.length, [ targets ])
     const wasmTargets = useMemo(
-        () => targets.map(({ name, sets, value }) => [ sets, value ]),
+        () => targets.map(({ sets, value }) => [ sets, value ]),
         [ targets ],
     )
     const [ showGrid, setShowGrid ] = useState(false)
@@ -77,9 +109,23 @@ export default function Page() {
 
     const [ model, setModel ] = useState<Model | null>(null)
     // const minIdx = useMemo(() => model ? model.min_idx : null, [ model ])
-    const [ stepIdx, setStepIdx ] = useState<number | null>(null)
+    const [ modelStepIdx, setModelStepIdx ] = useState<number | null>(null)
+    const [ vStepIdx, setVStepIdx ] = useState<number | null>(null)
     const [ runningSteps, setRunningSteps ] = useState(false)
     const [ frameLen, setFrameLen ] = useState(0)
+
+    const [ stepIdx, setStepIdx ] = useMemo(
+        () => {
+            return [
+                vStepIdx !== null ? vStepIdx : modelStepIdx,
+                (stepIdx: number) => {
+                    setModelStepIdx(stepIdx)
+                    setVStepIdx(null)
+                },
+            ]
+        },
+        [ modelStepIdx, setModelStepIdx, vStepIdx, setVStepIdx, ]
+    )
 
     const curStep: Diagram | null = useMemo(
         () => (!model || stepIdx === null) ? null : model.steps[stepIdx],
@@ -94,60 +140,113 @@ export default function Page() {
     const [ initialLayout, setInitialLayout] = useState<InitialLayout>(OriginRightUp)
     const initialCircles: C[] = useMemo(
         () => initialLayout.slice(0, numCircles).map(({ x, y, r }, idx) =>
-            ({ idx, c: { x, y }, r, color: colors[idx], })
+            ({
+                idx,
+                c: { x, y }, r,
+                name: String.fromCharCode('A'.charCodeAt(0) + idx),
+                color: colors[idx],
+            })
         ),
         [ numCircles, initialLayout, ],
     )
 
-    const circles = useMemo(
+    const circles: C[] = useMemo(
         () => {
             if (!curStep) return initialCircles.slice(0, numCircles)
             return (
                 curStep
                     .shapes
                     .map((c: Circle<number>, idx: number) => (
-                        {...c, color: initialCircles[idx].color}
+                        { ...initialCircles[idx], ...c, }
                     ))
             )
         },
         [ curStep, initialCircles, numCircles ]
     )
 
-    // Initialize wasm library, model
+    const vars: Vars = useMemo(
+        () => {
+            const allCoords: CircleCoord[][] = new Array(numCircles).fill(CircleCoords)
+            const numCoords = ([] as string[]).concat(...allCoords).length
+            const skipVars: CircleCoord[][] = [ CircleCoords, ['y'], ]
+            const numSkipVars = ([] as string[]).concat(...skipVars).length
+            const numVars = numCoords - numSkipVars
+            const vars = allCoords.map(
+                (circleVars, idx) =>
+                    circleVars.filter(v =>
+                        !(skipVars[idx] || []).includes(v)
+                    )
+            )
+            const coords: VarCoord[] = []
+            // const varGetters: StepGetter<number>[] = []
+            vars.forEach((circleVars, circleIdx) => {
+                circleVars.forEach(circleVar => {
+                    // const circleGetter = CircleFloatGetters[circleVar]
+                    coords.push([ circleIdx, circleVar ])
+                    // varGetters.push((step: Diagram) => circleGetter(step.shapes[circleIdx]))
+                })
+            })
+            function getVal(step: Diagram, varIdx: number): number {
+                const [ circleIdx, circleCoord ] = coords[varIdx]
+                const circleGetter = CircleFloatGetters[circleCoord]
+                return circleGetter(step.shapes[circleIdx])
+            }
+            return {
+                allCoords,
+                numCoords,
+                skipVars,
+                numSkipVars,
+                vars,
+                numVars,
+                coords,
+                getVal,
+            }
+        },
+        [ numCircles ],
+    )
+
+    // Initialize wasm library, logging
     useEffect(
         () => {
             apvd().then(() => {
                 init_logs(null)
                 setApvdInitialized(true)
-                // Naively, n circles have 3n degrees of freedom. However, WLOG, we can fix:
-                // - c0 to be a unit circle at origin (x = y = 0, r = 1)
-                // - c1.y = 0 (only x and r can move)
-                // resulting in 4 fewer free variables.
-                const skipVars = [ [ 'x', 'y', 'r', ], ['y'], ]
-                const numVars = 3 * circles.length - ([] as string[]).concat(...skipVars).length
-                let curIdx = 0
-                const inputs = circles.map((c: Circle<number>, idx: number) => {
-                    return [
-                        c,
-                        'xyr'.split('').map(v => {
-                            const row = new Array(numVars).fill(0)
-                            if (idx >= skipVars.length || !skipVars[idx].includes(v)) {
-                                row[curIdx] = 1
-                                curIdx += 1
-                            }
-                            return row
-                        }),
-                    ]
-                })
-                console.log("inputs:", inputs)
-                const model = makeModel(inputs, wasmTargets)
-                console.log("new model:", model)
-                setModel(model)
-                setStepIdx(0)
             })
         },
         []
     );
+
+    // Initialize model, stepIdx
+    useEffect(
+        () => {
+            if (!apvdInitialized) return
+            // Naively, n circles have 3n degrees of freedom. However, WLOG, we can fix:
+            // - c0 to be a unit circle at origin (x = y = 0, r = 1)
+            // - c1.y = 0 (only x and r can move)
+            // resulting in 4 fewer free variables.
+            let curIdx = 0
+            const { numVars, skipVars } = vars
+            const inputs = circles.map((c: Circle<number>, idx: number) => {
+                return [
+                    c,
+                    CircleCoords.map(v => {
+                        const row = new Array(numVars).fill(0)
+                        if (!(idx < skipVars.length && skipVars[idx].includes(v))) {
+                            row[curIdx] = 1
+                            curIdx += 1
+                        }
+                        return row
+                    }),
+                ]
+            })
+            console.log("inputs:", inputs)
+            const model = makeModel(inputs, wasmTargets)
+            console.log("new model:", model)
+            setModel(model)
+            setStepIdx(0)
+        },
+        [ apvdInitialized, vars, ]
+    )
 
     const fwdStep = useCallback(
         (n?: number) => {
@@ -225,12 +324,25 @@ export default function Page() {
         [ model, stepIdx, runningSteps ],
     )
 
+    const cantAdvance = useMemo(
+        () => !apvdInitialized || (model && model.repeat_idx && stepIdx == model.steps.length - 1) || stepIdx == maxSteps,
+        [ apvdInitialized, model, stepIdx, maxSteps ],
+    )
+
+    const cantReverse = useMemo(
+        () => !apvdInitialized || stepIdx === 0,
+        [ apvdInitialized, stepIdx ],
+    )
+
     // Keyboard shortcuts
     useEffect(() => {
         const keyDownHandler = (e: KeyboardEvent) => {
             // console.log(`keydown: ${e.code}, shift ${e.shiftKey}, alt ${e.altKey}, meta ${e.metaKey}`)
             switch (e.code) {
                 case 'ArrowRight':
+                    e.preventDefault()
+                    e.stopPropagation()
+                    if (cantAdvance) return
                     if (e.metaKey) {
                         if (model) {
                             setStepIdx(model.steps.length - 1)
@@ -240,6 +352,9 @@ export default function Page() {
                     }
                     break
                 case 'ArrowLeft':
+                    e.preventDefault()
+                    e.stopPropagation()
+                    if (cantReverse) return
                     if (e.metaKey) {
                         setStepIdx(0)
                     } else {
@@ -247,9 +362,10 @@ export default function Page() {
                     }
                     break
                 case 'Space':
-                    runSteps()
                     e.preventDefault()
                     e.stopPropagation()
+                    if (cantAdvance) return
+                    runSteps()
                     break
             }
         }
@@ -259,7 +375,7 @@ export default function Page() {
         return () => {
             document.removeEventListener("keydown", keyDownHandler);
         };
-    }, [ fwdStep, revStep, runSteps, ]);
+    }, [ fwdStep, revStep, cantAdvance, cantReverse, runSteps, ]);
 
     // Run steps
     useEffect(
@@ -288,34 +404,18 @@ export default function Page() {
         [ runningSteps, model, stepIdx, fwdStep, ],
     )
 
-    // const handleTargetsChange = useCallback(
-    //     (e: ChangeEvent<HTMLTextAreaElement>) => {
-    //         const lines = e.target.value.split("\n")
-    //         let newTargets: Target[] = []
-    //         for (const line of lines) {
-    //             const lineRegex = /(.+): (.+) \((.+)\)/
-    //             const match = lineRegex.exec(line)
-    //             if (!match) {
-    //                 console.log("Malformed line:", line)
-    //                 return
-    //             }
-    //             const [ name, sets, value] = match.slice(1)
-    //             return { name, sets, value: parseFloat(value) }
-    //         }
-    //         setTargets(newTargets)
-    //         if (stepIdx !== null && model && stepIdx < model.steps.length - 1) {
-    //             const newModel = { ...model }
-    //             newModel.steps = newModel.steps.slice(0, stepIdx + 1)
-    //             setModel(newModel)
-    //         }
-    //     },
-    //     [ model, stepIdx, ],
-    // )
-
     // tsify `#[declare]` erroneously emits Record<K, V> instead of Map<K, V>: https://github.com/madonoharu/tsify/issues/26
     const errors = useMemo(
         () => curStep ? (curStep.errors as any as Map<string, Error>) : null,
         [ curStep, ],
+    )
+    const getErrors = useCallback(
+        (step: Diagram) => step.errors as any as Map<string, Error>,
+        [],
+    )
+    const getError = useCallback(
+        (step: Diagram, sets: string) => getErrors(step).get(sets),
+        [ getErrors, ],
     )
     const prvErrors = useMemo(
         () => prvStep ? (prvStep.errors as any as Map<string, Error>) : null,
@@ -337,16 +437,6 @@ export default function Page() {
 
     // const basePath = getBasePath();
 
-    const canAdvance = useMemo(
-        () => apvdInitialized && (model && model.repeat_idx && stepIdx == model.steps.length - 1) || stepIdx == maxSteps,
-        [ apvdInitialized, model, stepIdx, maxSteps ],
-    )
-
-    const canReverse = useMemo(
-        () => apvdInitialized && stepIdx === 0,
-        [ apvdInitialized, stepIdx ],
-    )
-
     const repeatSteps = useMemo(
         () => {
             if (!model || !model.repeat_idx || stepIdx === null) return null
@@ -355,18 +445,15 @@ export default function Page() {
         [ model, stepIdx ],
     )
 
-    const [ plotXRange, setPlotXRange ] = useState<[number, number] | null>(null)
-
     const plot = useMemo(
         () => {
             if (!model || stepIdx === null) return
-            const xlo = clamp(stepIdx - 10, 0, model.steps.length - 1)
-            const xhi = stepIdx
-            const steps = model.steps.slice(xlo, xhi)
+            const steps = model.steps
             return <Plot
+                className={css.plot}
                 data={[
                     {
-                        x: steps.map((_: Diagram, idx: number) => xlo + idx),
+                        // x: steps.map((_: Diagram, idx: number) => xlo + idx),
                         y: steps.map((step: Diagram) => step.error.v),
                         type: 'scatter',
                         mode: 'lines',
@@ -376,178 +463,297 @@ export default function Page() {
                 layout={{
                     dragmode: 'pan',
                     hovermode: 'x',
+                    margin: { t: 0, l: 40, r: 0, b: 40, },
                     xaxis: {
                         title: 'Step',
-                        range: [ xlo, xhi ],
+                        rangemode: 'tozero',
+                        // range: [ xlo, xhi ],
                     },
                     yaxis: {
                         title: 'Error',
                         type: 'log',
                         fixedrange: true,
+                        rangemode: 'tozero',
                         // ...yAxis,
                         // range: [-10, 10],
                     },
+                    shapes: /*stepIdx + 1 < model.steps.length ?*/ [{
+                        type: 'line',
+                        x0: stepIdx,
+                        x1: stepIdx,
+                        xref: 'x',
+                        y0: 0,
+                        y1: 1,
+                        yref: 'paper',
+                        fillcolor: 'grey',
+                    }] /*: []*/
                 }}
                 config={{ displayModeBar: false, /*scrollZoom: true,*/ responsive: true, }}
                 onRelayout={(e: any) => {
                     console.log("relayout:", e)
                 }}
                 onHover={(e: any) => {
-                    const stepIdx = round(e.xvals[0])
-                    console.log("hover:", e, stepIdx)
-                    setStepIdx(stepIdx)
+                    const vStepIdx = round(e.xvals[0])
+                    // console.log("hover:", e, vStepIdx)
+                    setVStepIdx(vStepIdx)
                 }}
             />
         },
-        [ model, stepIdx, plotXRange, ],
+        [ model, stepIdx, ],
     )
+
+    const targetName = useCallback(
+        (sets: string) => <>{
+            sets.split('').map((ch: string, idx: number) => {
+                if (ch === '*') {
+                    return <span key={idx}></span>
+                } else if (ch == '-') {
+                    return <span key={idx} style={{ textDecoration: "line-through", }}>{circles[idx].name}</span>
+                } else {
+                    return <span key={idx}>{circles[idx].name}</span>
+                }
+            })
+        }</>,
+        [ circles, ],
+    )
+
+    const [ sparkLineLimit, setSparkLineLimit ] = useState(20)
+    const [ sparkLineStrokeWidth, setSparkLineStrokeWidth ] = useState(1)
+    const [ sparkLineMargin, setSparkLineMargin ] = useState(1)
+    const [ sparkLineWidth, setSparkLineWidth ] = useState(80)
+    const [ sparkLineHeight, setSparkLineHeight ] = useState(30)
+    const SparkNum = useCallback(
+        (v: number | null | undefined) => <td className={css.sparkNum}>
+            <span>{v === null || v === undefined ? '' : v.toPrecision(4)}</span>
+        </td>,
+        [],
+    )
+    const SparkLineCell = useCallback(
+        (
+            varIdx: number,
+            color: string,
+            fn: (step: Diagram) => number,
+        ) => <td>{
+            model && stepIdx !== null &&
+            <Sparklines
+                data={
+                    model
+                        .steps
+                        .slice(
+                            max(0, stepIdx - sparkLineLimit),
+                            stepIdx + 1
+                        )
+                        .map(fn)
+                }
+                limit={sparkLineLimit}
+                width={40} height={20}
+                svgWidth={sparkLineWidth} svgHeight={sparkLineHeight}
+                margin={sparkLineMargin}
+            >
+                <SparklinesLine
+                    color={color}
+                    style={{strokeWidth: sparkLineStrokeWidth,}}
+                    // onMouseMove={(e, v, { x, y }) => {
+                    //     console.log("sparkline mousemove:", e, v, x, y)
+                    // }}
+                />
+            </Sparklines>
+        }</td>,
+        [ model, stepIdx, ]
+    )
+
+    const getSliderValue = useCallback(
+        (e: MouseEvent<HTMLInputElement>) => {
+            const target = e.target as HTMLInputElement
+            const [ m , M ] = [
+                parseInt(target.getAttribute('min') || '0', 10),
+                parseInt(target.getAttribute('max') || '0', 10),
+            ]
+            return round(m + (M - m) * e.nativeEvent.offsetX / target.clientWidth)
+        },
+        []
+    )
+
+    const col5 = "col"
+    const col7 = "col"
+    const col6 = "col"
+    const col12 = "col-12"
 
     return <>
         <div className={css.body}>
-            <div className={`row ${css.row} ${css.content}`}>
+            <div className={`${css.row} ${css.content}`}>
                 <Grid className={css.svg} projection={projection} width={width} height={height} gridSize={gridSize} showGrid={showGrid}>{
-                    circles.map(({ c: { x, y }, r, color }: C, idx: number) =>
+                    circles.map(({ c: { x, y }, r, name, color }: C, idx: number) =>
                         <circle key={idx} cx={x} cy={y} r={r} stroke={"black"} strokeWidth={3/scale} fill={color} fillOpacity={0.3} />)
                 }</Grid>
                 <hr />
-                <div className={`row ${css.row} ${css.controlPanel}`}>
-                    <div className={`row ${css.row} ${css.controls}`}>
-                        <div className={`${css.buttons}`}>
-                            <button title={"Reset to beginning"} onClick={() => setStepIdx(0)} disabled={canReverse}>⏮️</button>
-                            <button title={"Reverse one step"} onClick={() => revStep()} disabled={canReverse}>⬅️</button>
-                            <button title={"Advance one step"} onClick={() => fwdStep()} disabled={canAdvance || stepIdx == maxSteps}>➡️</button>
-                            <button title={"Play steps"} onClick={() => runSteps()} disabled={canAdvance}>{runningSteps ? "⏸️" : "▶️"}</button>
+                <div className={"row"}>
+                    <div className={`${col6} ${css.controlPanel}`}>
+                        <div className={`${css.controls}`}>
+                            <div className={css.slider}>{model && stepIdx !== null &&
+                                <input
+                                    type={"range"}
+                                    value={stepIdx}
+                                    min={0}
+                                    max={model.steps.length - 1}
+                                    onChange={e => setStepIdx(parseInt(e.target.value))}
+                                    onMouseMove={e => {
+                                        setVStepIdx(getSliderValue(e))
+                                    }}
+                                    onClick={e => {
+                                        setStepIdx(getSliderValue(e))
+                                    }}
+                                    onMouseOut={() => {
+                                        console.log("onMouseOut")
+                                        setVStepIdx(null)
+                                    }}
+                                />
+                            }</div>
+                            <div className={`${css.buttons}`}>
+                                <button title={"Reset to beginning"} onClick={() => setStepIdx(0)} disabled={cantReverse}>⏮️</button>
+                                <button title={"Rewind"} onClick={() => revStep()} disabled={cantReverse}>⏪️</button>
+                                <button title={"Reverse one step"} onClick={() => revStep()} disabled={cantReverse}>⬅️</button>
+                                <button title={"Advance one step"} onClick={() => fwdStep()} disabled={cantAdvance || stepIdx == maxSteps}>➡️</button>
+                                <button title={"Fast-forward"} onClick={() => runSteps()} disabled={cantAdvance}>{runningSteps ? "⏸️" : "⏩"}</button>
+                                <button title={"Seek to last computed step"} onClick={() => model && setStepIdx(model.steps.length - 1)} disabled={!model || stepIdx === null || stepIdx + 1 == model.steps.length}>⏭️</button>
+                            </div>
+                            <div className={css.stepStats}>
+                                <p>Step {stepIdx}{ error && <span>, error: {error.v.toPrecision(3)}</span> }</p>
+                                <p>{model && bestStep && <>
+                                    Best step: {model.min_idx}, error: {bestStep.error.v.toPrecision(3)}
+                                </>}</p>
+                                {repeatSteps && stepIdx == repeatSteps[1] ?
+                                    <p className={css.repeatSteps}>♻️ Step {repeatSteps[1]} repeats step {repeatSteps[0]}</p> :
+                                    <p className={`${css.repeatSteps} ${css.invisible}`}>♻️ Step {"?"} repeats step {"?"}</p>
+                                }
+                            </div>
                         </div>
-                        <div className={css.stepStats}>
-                            Step {stepIdx}
-                            {
-                                error &&
-                                <span>
-                                    , error: {error.v.toPrecision(3)},
-                                    Δ: {
-                                        error.d.map((d: number, idx: number) => {
-                                            const grad = -d
-                                            const className = prvError?.d ? prvError.d[idx] * d > 0 ? css.errSame : css.errFlipped : ""
-                                            return <Fragment key={idx}>
-                                                {idx > 0 ? ", " : ""}
-                                                <span className={`${css.err} ${className}`}>{grad.toPrecision(3)}</span>
-                                            </Fragment>
-                                        })
-                                    }
-                                </span>
-                            }
-                        </div>
-                        <div>{model && bestStep && <>
-                            Best step: {model.min_idx}, error: {bestStep.error.v.toPrecision(3)}
-                        </>}</div>
-                        <div>
+                    </div>
+                    <div className={`${col6} ${css.controlPanel}`}>
+                        <div className={css.input}>
                             <label>Max error ratio step size: <input type={"number"} value={maxErrorRatioStepSize} onChange={(e) => setMaxErrorRatioStepSize(parseFloat(e.target.value))} /></label>
                         </div>
-                        <div>
+                        <div className={css.input}>
                             <label>Max steps: <input type={"number"} value={maxSteps} onChange={(e) => setMaxSteps(parseInt(e.target.value))} /></label>
                         </div>
-                        <div>
+                        <div className={css.input}>
                             <label>Step batch size: <input type={"number"} value={stepBatchSize} onChange={(e) => setStepBatchSize(parseInt(e.target.value))} /></label>
                         </div>
-                        {repeatSteps && stepIdx == repeatSteps[1] &&
-                            <div className={css.repeatSteps}>Step {repeatSteps[1]} repeats step {repeatSteps[0]}</div>
-                        }
                     </div>
                 </div>
                 <hr />
-                <div className={css.stats}>
-                    <h3 className={css.tableLabel}>Targets</h3>
-                    <table>
-                        <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Target</th>
-                            <th>Proportion</th>
-                            <th>Current</th>
-                            <th>Error</th>
-                        </tr>
-                        </thead>
-                        <tbody>{
-                            targets.map(({name, sets, value}) => {
-                                const err = errors ? errors.get(sets) : null
-                                const prvErr = prvErrors ? prvErrors.get(sets) : null
-                                const className = (err && prvErr) ? prvErr.error.v * err.error.v > 0 ? css.errSame : css.errFlipped : ""
-                                return <tr key={name}>
-                                    <td>{name}</td>
-                                    <td>{value.toPrecision(3).replace(/\.?0+$/, '')}</td>
-                                    <td>{err ? err.target_frac.toPrecision(3) : ''}</td>
-                                    <td>{err ? err.actual_frac.v.toPrecision(3) : ''}</td>
-                                    <td><span className={className}>{err ? err.error.v.toPrecision(3) : ''}</span></td>
-                                </tr>
-                            })
-                        }</tbody>
-                    </table>
+                <div className={"row"}>
+                    <div className={`${col7}`}>
+                        <h3 className={css.tableLabel}>Targets</h3>
+                        <table className={css.sparkLinesTable}>
+                            <thead>
+                            <tr>
+                                <th></th>
+                                <th>Goal</th>
+                                <th>Cur</th>
+                                <th style={{ textAlign: "center" }} colSpan={2}>Error</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {
+                                targets.map(({ sets, value}, varIdx) => {
+                                    const name = targetName(sets)
+                                    const err = errors ? errors.get(sets) : null
+                                    const prvErr = prvErrors ? prvErrors.get(sets) : null
+                                    const className = (err && prvErr) ? prvErr.error.v * err.error.v > 0 ? css.errSame : css.errFlipped : ""
+                                    return <tr key={sets}>
+                                        <td className={css.val}>{name}</td>
+                                        <td className={css.val}>{value.toPrecision(3).replace(/\.?0+$/, '')}</td>
+                                        <td className={css.val}>{err ? (err.actual_frac.v * err.total_target_area).toPrecision(3) : ''}</td>
+                                        {SparkNum(err && err.error.v)}
+                                        {SparkLineCell(varIdx, "red", (step: Diagram) => getError(step, sets)?.error.v || 0)}
+                                    </tr>
+                                })
+                            }
+                            <tr>
+                                <td colSpan={3} style={{ textAlign: "right", fontWeight: "bold", }}>Overall:</td>
+                                {SparkNum(error?.v)}
+                                {SparkLineCell(-1, "red", (step: Diagram) => step.error.v)}
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div className={col5}>
+                        <h3 className={css.tableLabel}>Vars</h3>
+                        <table className={css.sparkLinesTable}>
+                            <thead>
+                            <tr>
+                                <th>Var</th>
+                                <th colSpan={2} style={{ textAlign: "center", }}>Value</th>
+                                <th colSpan={2} style={{ textAlign: "center", }}>Δ</th>
+                            </tr>
+                            </thead>
+                            <tbody>{
+                                vars.coords.map(([ circleIdx, circleCoord ], varIdx ) =>
+                                    <tr key={varIdx}>
+                                        <td>{circles[circleIdx].name}.{circleCoord}</td>
+                                        {SparkNum(curStep && vars.getVal(curStep, varIdx))}
+                                        {SparkLineCell(varIdx, "blue", (step: Diagram) => vars.getVal(step, varIdx))}
+                                        {SparkNum(error && -error.d[varIdx])}
+                                        {SparkLineCell(varIdx, "green", (step: Diagram) => step.error.d[varIdx])}
+                                    </tr>
+                                )
+                            }</tbody>
+                        </table>
+                        <h3 className={css.tableLabel}>Shapes</h3>
+                        <table>
+                            <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>x</th>
+                                <th>y</th>
+                                <th>r</th>
+                            </tr>
+                            </thead>
+                            <tbody>{
+                                circles.map(({ idx, c: { x, y }, r, name, }: C) =>
+                                    <tr key={idx}>
+                                        <td>{name}</td>
+                                        <td>{x.toPrecision(4)}</td>
+                                        <td>{y.toPrecision(4)}</td>
+                                        <td>{r.toPrecision(4)}</td>
+                                    </tr>
+                                )
+                            }</tbody>
+                        </table>
+                    </div>
                 </div>
-                <div className={`row ${css.row} ${css.stats}`}>
-                    <h3 className={css.tableLabel}>Shapes</h3>
-                    <table>
-                        <thead>
-                        <tr>
-                            <th>cx</th>
-                            <th>cy</th>
-                            <th>r</th>
-                        </tr>
-                        </thead>
-                        <tbody>{
-                            circles.map(({ idx, c: { x, y }, r }: C) =>
-                                <tr key={idx}>
-                                    <td>{x.toPrecision(4)}</td>
-                                    <td>{y.toPrecision(4)}</td>
-                                    <td>{r.toPrecision(4)}</td>
-                                </tr>
-                            )
-                        }</tbody>
-                    </table>
+                <div className={"row"}>
+                    <div
+                        className={col7}
+                        onMouseOut={e => {
+                            console.log("onMouseOut:", e)
+                            setVStepIdx(null)
+                        }}
+                    >
+                        <h3 className={css.tableLabel}>Error</h3>
+                        {plot}
+                    </div>
+                    <div className={col5}>
+                    </div>
                 </div>
-                <div className={`row ${css.row}`}>{
-                    model && error && stepIdx !== null &&
-                    error.d.map((d: number, idx: number) => {
-                        const fn: (step: Diagram) => number = [
-                            (step: Diagram) => step.shapes[1].c.x,
-                            (step: Diagram) => step.shapes[1].r,
-                            (step: Diagram) => step.shapes[2].c.x,
-                            (step: Diagram) => step.shapes[2].c.y,
-                            (step: Diagram) => step.shapes[2].r,
-                        ][idx]
-                        const startIdx = max(0, stepIdx - 10)
-                        const data = model.steps.slice(startIdx, stepIdx + 1).map((step: Diagram) => fn(step))
-                        return <Sparklines key={idx} data={data} limit={10} width={40} height={20} margin={1} style={{ width: "20%", height: 50, }}>
-                            <SparklinesLine color="blue" style={{ strokeWidth: 1, }} />
-                        </Sparklines>
-                    })
-                }</div>
-                <div className={`row ${css.row}`}>{
-                    model && error && stepIdx !== null &&
-                    error.d.map((d: number, idx: number) => {
-                        const startIdx = max(0, stepIdx - 10)
-                        const data = model.steps.slice(startIdx, stepIdx + 1).map((step: Diagram) => step.error.d[idx])
-                        // console.log(`sparkline ${idx}:`, data)
-                        return <Sparklines key={idx} data={data} limit={10} width={40} height={20} margin={1} style={{ width: "20%", height: 50, }}>
-                            <SparklinesLine color="red" style={{ strokeWidth: 1, }} />
-                        </Sparklines>
-                    })
-                }</div>
-                <div className={`row ${css.row}`}>{plot}</div>
                 <hr />
-                <div className={`row ${css.row}`}>
-                    <h2>Differentiable shape-intersection</h2>
-                    <p>Given "target" proportions (in this case, <A href={"https://en.wikipedia.org/wiki/Fizz_buzz"}>Fizz Buzz</A>: 1/3 Fizz, 1/5 Buzz, 1/15 Fizz Buzz)</p>
-                    <ul>
-                        <li>Model each set with a circle</li>
-                        <li>Compute intersections and areas (using "<A href={"https://en.wikipedia.org/wiki/Dual_number"}>dual numbers</A>" to preserve "forward-mode" derivatives)</li>
-                        <li>Gradient-descend until areas match targets</li>
-                    </ul>
-                    <p>See also:</p>
-                    <ul>
-                        <li><A href={"https://github.com/runsascoded/shapes"}>runsascoded/shapes</A>: Rust implementation of differentiable shape-intersection</li>
-                        <li><A href={"https://github.com/runsascoded/apvd"}>runsascoded/apvd</A>: this app</li>
-                        <li><A href={"/"}>Ellipse-intersection demo</A> (non-differentiable)</li>
-                    </ul>
+                <div className={`row`}>
+                    <div className={col12}>
+                        <h2>Differentiable shape-intersection</h2>
+                        <p>Given "target" values:</p>
+                        <ul>
+                            <li>Model each set with a circle</li>
+                            <li>Compute intersections and areas (using "<A href={"https://en.wikipedia.org/wiki/Dual_number"}>dual numbers</A>" to preserve "forward-mode" derivatives)</li>
+                            <li>Gradient-descend until areas match targets</li>
+                        </ul>
+                        <p>See also:</p>
+                        <ul>
+                            <li><A href={"https://github.com/runsascoded/shapes"}>runsascoded/shapes</A>: Rust implementation of differentiable shape-intersection</li>
+                            <li><A href={"https://github.com/runsascoded/apvd"}>runsascoded/apvd</A>: this app</li>
+                            <li><A href={"/"}>Ellipse-intersection demo</A> (non-differentiable)</li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>

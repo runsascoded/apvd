@@ -2,6 +2,9 @@
   width: 100%;
   padding: 0 0.8em;
 
+  .invisible {
+    visibility: hidden;
+  }
   .err {
     padding: 0.1em 0.2em;
   }
@@ -13,7 +16,7 @@
   }
 
   .content {
-    max-width: 40em;
+    max-width: 50em;
     margin: 0 auto;
 
     p, h1, h2, h3, h4 {
@@ -36,37 +39,50 @@
     }
 
     .row {
+      margin-top: 0.5em;
       margin-left: 0;
       padding-left: 0;
 
-      label {
-        padding-left: 0.2em;
-      }
+    }
+    label {
+      padding-left: 0.2em;
     }
 
     .svg {
       height: 20em;
+      width: 100%;
       padding: 0;
       border: 0;
     }
 
     .controlPanel {
-      margin-top: 0.3em;
+
+      .input {
+        text-align: right;
+
+        input {
+          text-align: right;
+          max-width: 6em;
+        }
+      }
 
       .controls {
-        width: auto;
-        margin-right: 1.5em;
-        display: inline-block;
+
+        .slider {
+          width: 15em;
+          input {
+            width: 100%;
+          }
+        }
 
         .buttons {
-          width: auto;
-
+          margin-bottom: 0.3em;
           button {
             width: auto;
             margin: 0 0.3em 0 0;
 
             font-size: 2em;
-            line-height: 1.8em;
+            line-height: 1em;
 
             padding: 0;
             border: 0;
@@ -83,14 +99,13 @@
         }
 
         .stepStats {
-          display: block;
-          width: auto;
-          margin-top: auto;
-          margin-bottom: auto;
+
+          p {
+            margin-bottom: auto;
+          }
         }
 
         .repeatSteps {
-          margin-top: 0.5em;
         }
         .plotControls {
           margin-top: 0.5em;
@@ -102,13 +117,46 @@
       }
     }
 
+    .plot {
+      width: 20em;
+      height: 15em;
+    }
     .stats {
       width: auto;
     }
 
-    //.tableLabel {
-    //  font-weight: bold;
-    //}
+    .sparkLinesTable {
+      tr {
+        height: 1em;
+        font-size: 1em;
+        max-height: 1em;
+        td, th {
+          height: 1em;
+          font-size: 1em;
+          max-height: 1em;
+          text-align: right;
+        }
+        td.sparkNum {
+          //width: 5em;
+          min-width: 5em;
+          max-width: 5em;
+          overflow: hidden;
+          text-align: right;
+          span {
+            width: 100%;
+          }
+        }
+        td.val {
+          min-width: 3em;
+          max-width: 3em;
+          overflow: hidden;
+          text-align: right;
+          span {
+            width: 100%;
+          }
+        }
+      }
+    }
 
     td, th {
       border-width: 1px;
