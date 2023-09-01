@@ -77,24 +77,26 @@
 
         .buttons {
           margin-bottom: 0.3em;
-          button {
+          span {
             width: auto;
             margin: 0 0.3em 0 0;
 
-            font-size: 2em;
-            line-height: 1em;
+            button {
+              font-size: 2em;
+              line-height: 1em;
 
-            padding: 0;
-            border: 0;
-            background-color: transparent;
-            font-family: "Twemoji Mozilla",
-            "Apple Color Emoji",
-            "Segoe UI Emoji",
-            "Segoe UI Symbol",
-            "Noto Color Emoji",
-            "EmojiOne Color",
-            "Android Emoji",
-            sans-serif;
+              padding: 0;
+              border: 0;
+              background-color: transparent;
+              font-family: "Twemoji Mozilla",
+              "Apple Color Emoji",
+              "Segoe UI Emoji",
+              "Segoe UI Symbol",
+              "Noto Color Emoji",
+              "EmojiOne Color",
+              "Android Emoji",
+              sans-serif;
+            }
           }
         }
 

@@ -5,6 +5,9 @@ import css from "./circles.module.scss"
 import A from "next-utils/a";
 import dynamic from "next/dynamic";
 import {Sparklines, SparklinesLine} from 'react-sparklines';
+import Button from 'react-bootstrap/Button';
+import OverlayTrigger from 'react-bootstrap/OverlayTrigger';
+import Tooltip from 'react-bootstrap/Tooltip';
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false })
 
@@ -256,16 +259,29 @@ export default function Page() {
                 setRunningSteps(false)
                 return
             }
-            let batchSize = stepBatchSize
+            let batchSize
             if (n === undefined) {
                 n = 1
+                batchSize = stepBatchSize
             } else {
                 batchSize = stepIdx + n + 1 - model.steps.length
             }
             if (stepIdx + n < model.steps.length) {
+                // "Fast-forward" without any new computation
                 setStepIdx(stepIdx + n)
                 console.log("bumping stepIdx to", stepIdx + n)
                 return
+            }
+            if (model.repeat_idx) {
+                // Don't advance past repeat_idx
+                setStepIdx(model.steps.length - 1)
+                console.log(`bumping stepIdx to ${model.steps.length - 1} due to repeat_idx ${model.repeat_idx}`)
+                return
+            }
+            if (stepIdx + n > maxSteps) {
+                n = maxSteps - stepIdx
+                batchSize = n
+                console.log(`Clamping advance to ${n} steps due to maxSteps ${maxSteps}`)
             }
 
             const lastStep: Diagram = model.steps[model.steps.length - 1]
@@ -579,6 +595,26 @@ export default function Page() {
     const col6 = "col"
     const col12 = "col-12"
 
+    const PlaybackControl = useCallback(
+        ({ title, onClick, disabled, children }: {
+            title: string,
+            onClick: () => void,
+            disabled: boolean,
+            children?: ReactNode,
+        }) =>
+            <OverlayTrigger overlay={<Tooltip>{title}</Tooltip>}>
+                <span>
+                    <Button
+                        title={title}
+                        onClick={onClick}
+                        disabled={disabled}>
+                        {children}
+                    </Button>
+                </span>
+            </OverlayTrigger>,
+        [],
+    )
+
     return <>
         <div className={css.body}>
             <div className={`${css.row} ${css.content}`}>
@@ -610,12 +646,12 @@ export default function Page() {
                                 />
                             }</div>
                             <div className={`${css.buttons}`}>
-                                <button title={"Reset to beginning"} onClick={() => setStepIdx(0)} disabled={cantReverse}>⏮️</button>
-                                <button title={"Rewind"} onClick={() => revStep()} disabled={cantReverse}>⏪️</button>
-                                <button title={"Reverse one step"} onClick={() => revStep()} disabled={cantReverse}>⬅️</button>
-                                <button title={"Advance one step"} onClick={() => fwdStep()} disabled={cantAdvance || stepIdx == maxSteps}>➡️</button>
-                                <button title={"Fast-forward"} onClick={() => runSteps()} disabled={cantAdvance}>{runningSteps ? "⏸️" : "⏩"}</button>
-                                <button title={"Seek to last computed step"} onClick={() => model && setStepIdx(model.steps.length - 1)} disabled={!model || stepIdx === null || stepIdx + 1 == model.steps.length}>⏭️</button>
+                                <PlaybackControl title={"Reset to beginning"} onClick={() => setStepIdx(0)} disabled={cantReverse}>⏮️</PlaybackControl>
+                                <PlaybackControl title={"Rewind"} onClick={() => revStep()} disabled={cantReverse}>⏪️</PlaybackControl>
+                                <PlaybackControl title={"Reverse one step"} onClick={() => revStep()} disabled={cantReverse}>⬅️</PlaybackControl>
+                                <PlaybackControl title={"Advance one step"} onClick={() => fwdStep()} disabled={cantAdvance || stepIdx == maxSteps}>➡️</PlaybackControl>
+                                <PlaybackControl title={"Fast-forward"} onClick={() => runSteps()} disabled={cantAdvance}>{runningSteps ? "⏸️" : "⏩"}</PlaybackControl>
+                                <PlaybackControl title={"Seek to last computed step"} onClick={() => model && setStepIdx(model.steps.length - 1)} disabled={!model || stepIdx === null || stepIdx + 1 == model.steps.length}>⏭️</PlaybackControl>
                             </div>
                             <div className={css.stepStats}>
                                 <p>Step {stepIdx}{ error && <span>, error: {error.v.toPrecision(3)}</span> }</p>
