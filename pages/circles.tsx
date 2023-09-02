@@ -1,6 +1,6 @@
 import Grid from "../src/components/grid"
 import React, {ReactNode, MouseEvent, useCallback, useEffect, useMemo, useState} from "react"
-import init_apvd, {Circle, Diagram, Dual, Error, init_logs, R2, train} from "apvd"
+import init_apvd, {Circle, Diagram, Dual, Error, init_logs, R2, train, update_log_level} from "apvd"
 import {Edge, Model, Region, Step} from "../src/lib/regions"
 import * as apvd from "apvd"
 import css from "./circles.module.scss"
@@ -93,14 +93,40 @@ export type Vars = {
     getVal: StepVarGetter
 }
 export type RunningState = "none" | "fwd" | "rev"
+export type LogLevel = "debug" | "info" | "warn" | "error"
 
 export default function Page() {
+    const [ initialLayout, setInitialLayout] = useState<InitialLayout>(OriginRightUp)
+    const [ targets, setTargets ] = useState<Target[]>(FizzBuzzBazz)
+
+    // Initialize wasm library
+    const [ apvdInitialized, setApvdInitialized ] = useState(false)
+    useEffect(
+        () => {
+            init_apvd().then(() => {
+                init_logs()
+                setApvdInitialized(true)
+            })
+        },
+        []
+    );
+
+    // WASM log level
+    const [ logLevel, setLogLevel ] = useState<LogLevel>("info")
+    useEffect(
+        () => {
+            if (!apvdInitialized) return
+            update_log_level(logLevel)
+        },
+        [ apvdInitialized, logLevel, ]
+    );
+
     const scale = 130
     const [width, setWidth] = useState(300);
     const [height, setHeight] = useState(400);
     const projection = { x: -scale / 2, y: scale / 2, s: scale }
     const gridSize = 1
-    const [ targets, setTargets ] = useState<Target[]>(ThreeEqualCircles)
+
     const numCircles = useMemo(() => targets[0].sets.length, [ targets ])
     const wasmTargets = useMemo(
         () => targets.map(({ sets, value }) => [ sets, value ]),
@@ -110,8 +136,6 @@ export default function Page() {
     const [ maxErrorRatioStepSize, setMaxErrorRatioStepSize ] = useState(0.7)
     const [ maxSteps, setMaxSteps ] = useState(1000)
     const [ stepBatchSize, setStepBatchSize ] = useState(10)
-
-    const [ apvdInitialized, setApvdInitialized ] = useState(false)
 
     const [ model, setModel ] = useState<Model | null>(null)
     // const minIdx = useMemo(() => model ? model.min_idx : null, [ model ])
@@ -138,12 +162,6 @@ export default function Page() {
         [ model, stepIdx ],
     )
 
-    const prvStep: Step | null = useMemo(
-        () => (!model || stepIdx === null || stepIdx === 0) ? null : model.steps[stepIdx - 1],
-        [ model, stepIdx ],
-    )
-
-    const [ initialLayout, setInitialLayout] = useState<InitialLayout>(OriginRightUp)
     const initialCircles: C[] = useMemo(
         () => initialLayout.slice(0, numCircles).map(({ x, y, r }, idx) =>
             ({
@@ -208,17 +226,6 @@ export default function Page() {
         },
         [ numCircles ],
     )
-
-    // Initialize wasm library, logging
-    useEffect(
-        () => {
-            init_apvd().then(() => {
-                init_logs(null)
-                setApvdInitialized(true)
-            })
-        },
-        []
-    );
 
     // Initialize model, stepIdx
     useEffect(
@@ -728,7 +735,7 @@ export default function Page() {
     const [ showRegionLabels, setShowRegionLabels ] = useState(true)
     const regionLabels = useMemo(
         () =>
-            showRegionLabels && curStep && curStep.regions.regions.map((region, idx) => {
+            showRegionLabels && curStep && curStep.regions.regions.map((region, regionIdx) => {
                 const center = getRegionCenter(region, fs)
                 const containerIdxs = region.containers.map(({ idx }) => idx)
                 containerIdxs.sort()
@@ -738,7 +745,7 @@ export default function Page() {
                 const tooltip = target ? `${label}: ${area.v.toPrecision(3)} ${target.toPrecision(3)}` : key
                 // console.log("key:", key, "hoveredRegion:", hoveredRegion)
                 return (
-                    <OverlayTrigger key={key} show={key == hoveredRegion} overlay={<Tooltip onMouseOver={() => setHoveredRegion(key)}>{tooltip}</Tooltip>}>
+                    <OverlayTrigger key={`${regionIdx}-${key}`} show={key == hoveredRegion} overlay={<Tooltip onMouseOver={() => setHoveredRegion(key)}>{tooltip}</Tooltip>}>
                         <text
                             transform={`translate(${center.x}, ${center.y}) scale(1, -1)`}
                             textAnchor={"middle"}
@@ -757,7 +764,7 @@ export default function Page() {
 
     const regionPaths = useMemo(
         () =>
-            curStep && curStep.regions.regions.map(({ key, segments, area, }, idx) => {
+            curStep && curStep.regions.regions.map(({ key, segments, area, }, regionIdx) => {
                 let d = ''
                 segments.forEach(({ edge, fwd }, idx) => {
                     const { c: { r }, i0, i1, t0, t1, } = edge
@@ -770,7 +777,7 @@ export default function Page() {
                 const isHovered = hoveredRegion == key
                 return (
                     <path
-                        key={key}
+                        key={`${regionIdx}-${key}`}
                         d={d}
                         stroke={"black"}
                         strokeWidth={1 / scale}
@@ -850,7 +857,17 @@ export default function Page() {
                             <label>Step batch size: <input type={"number"} value={stepBatchSize} onChange={(e) => setStepBatchSize(parseInt(e.target.value))} /></label>
                         </div>
                         <div className={css.input}>
-                            <label>Labels: <input type={"checkbox"} checked={showRegionLabels} onChange={e => setShowRegionLabels(e.target.checked)} /></label>
+                            <label>Region labels: <input type={"checkbox"} checked={showRegionLabels} onChange={e => setShowRegionLabels(e.target.checked)} /></label>
+                        </div>
+                        <div className={css.input}>
+                            <label>
+                                Log level:
+                                <select value={logLevel} onChange={e => setLogLevel(e.target.value as LogLevel)}>{
+                                    ["debug", "info", "warn"].map(level =>
+                                        <option key={level} value={level}>{level}</option>
+                                    )
+                                }</select>
+                            </label>
                         </div>
                     </div>
                 </div>
