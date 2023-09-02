@@ -67,12 +67,13 @@ export function makeRegions(input: apvd.Regions): Regions {
         const point = points[pointIdx]
         point.edges = edge_idxs.map(edgeIdx => edges[edgeIdx])
     })
-    const regions = input.regions.map(({ key, segments, container_idxs, container_bmp }) => ({
+    const regions = input.regions.map(({ key, segments, area, container_idxs, container_bmp }) => ({
         key,
         segments: segments.map(({ edge_idx, fwd }) => ({
             edge: edges[edge_idx],
             fwd,
         })),
+        area,
         containers: container_idxs.map(cidx => shapes[cidx]),
         container_bmp,
     }))
@@ -84,6 +85,7 @@ export type C = Circle<number>
 export type Region = {
     key: string
     segments: Segment[]
+    area: Dual
     containers: C[]
     container_bmp: boolean[]
 }

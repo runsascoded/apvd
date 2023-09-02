@@ -1,7 +1,7 @@
 import Grid from "../src/components/grid"
-import React, {Fragment, ReactNode, MouseEvent, useCallback, useEffect, useMemo, useState} from "react"
-import init_apvd, {Circle, Diagram, Dual, Error, init_logs, make_model, R2, train} from "apvd"
-import {Edge, Model, Region, Segment, Step} from "../src/lib/regions"
+import React, {ReactNode, MouseEvent, useCallback, useEffect, useMemo, useState} from "react"
+import init_apvd, {Circle, Diagram, Dual, Error, init_logs, R2, train} from "apvd"
+import {Edge, Model, Region, Step} from "../src/lib/regions"
 import * as apvd from "apvd"
 import css from "./circles.module.scss"
 import A from "next-utils/a"
@@ -11,6 +11,7 @@ import Button from 'react-bootstrap/Button'
 import OverlayTrigger from 'react-bootstrap/OverlayTrigger'
 import Tooltip from 'react-bootstrap/Tooltip'
 import {makeModel} from "../src/lib/regions";
+import {fromEntries} from "next-utils/objs";
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false })
 
@@ -434,13 +435,8 @@ export default function Page() {
         (step: Step, sets: string) => getErrors(step).get(sets),
         [ getErrors, ],
     )
-    const prvErrors = useMemo(
-        () => prvStep ? (prvStep.errors as any as Map<string, Error>) : null,
-        [ prvStep, ],
-    )
 
     const error = useMemo(() => curStep?.error, [ curStep ])
-    const prvError = useMemo(() => prvStep?.error, [ prvStep ])
 
     const bestStep = useMemo(
         () => {
@@ -714,6 +710,21 @@ export default function Page() {
         [ showEdgePoints, curStep, scale, ]
     )
 
+    const expandedTargets = useMemo(
+        () => {
+            if (!apvdInitialized) return null
+            return apvd.expand_areas(wasmTargets) as [ string, number ][]
+        },
+        [ apvdInitialized, wasmTargets, ]
+    )
+
+    const expandedTargetsMap = useMemo(
+        () => expandedTargets ? fromEntries(expandedTargets) : null,
+        [ expandedTargets ],
+    )
+
+    const [ hoveredRegion, setHoveredRegion ] = useState<string | null>(null)
+
     const [ showRegionLabels, setShowRegionLabels ] = useState(true)
     const regionLabels = useMemo(
         () =>
@@ -722,29 +733,56 @@ export default function Page() {
                 const containerIdxs = region.containers.map(({ idx }) => idx)
                 containerIdxs.sort()
                 const label = containerIdxs.map(idx => circles[idx].name).join('')
+                const { key, area } = region
+                const target = expandedTargetsMap && expandedTargetsMap[key]
+                const tooltip = target ? `${label}: ${area.v.toPrecision(3)} ${target.toPrecision(3)}` : key
+                // console.log("key:", key, "hoveredRegion:", hoveredRegion)
                 return (
-                    <text
-                        key={idx}
-                        transform={`translate(${center.x}, ${center.y}) scale(1, -1)`}
-                        textAnchor={"middle"}
-                        dominantBaseline={"middle"}
-                        fontSize={16 / scale}
-                    >
-                        {label}
-                    </text>
+                    <OverlayTrigger key={key} show={key == hoveredRegion} overlay={<Tooltip onMouseOver={() => setHoveredRegion(key)}>{tooltip}</Tooltip>}>
+                        <text
+                            transform={`translate(${center.x}, ${center.y}) scale(1, -1)`}
+                            textAnchor={"middle"}
+                            dominantBaseline={"middle"}
+                            fontSize={16 / scale}
+                        >
+                            {label}
+                        </text>
+                    </OverlayTrigger>
                 )
-                // return <circle
-                //     key={idx}
-                //     cx={center.x}
-                //     cy={center.y}
-                //     r={0.1}
-                //     stroke={"black"}
-                //     strokeWidth={0.5 / scale}
-                //     fill={"black"}
-                //     fillOpacity={0.5}
-                // />
             }),
-        [ curStep, scale, showRegionLabels ],
+        [ curStep, scale, showRegionLabels, hoveredRegion, ],
+    )
+
+    // console.log("expandedTargets:", expandedTargets)
+
+    const regionPaths = useMemo(
+        () =>
+            curStep && curStep.regions.regions.map(({ key, segments, area, }, idx) => {
+                let d = ''
+                segments.forEach(({ edge, fwd }, idx) => {
+                    const { c: { r }, i0, i1, t0, t1, } = edge
+                    const [ start, end ] = fwd ? [ i0, i1 ] : [ i1, i0 ]
+                    if (idx == 0) {
+                        d = `M ${start.x.v} ${start.y.v}`
+                    }
+                    d += ` A ${r},${r} 0 ${t1 - t0 > PI ? 1 : 0} ${fwd ? 1 : 0} ${end.x.v},${end.y.v}`
+                })
+                const isHovered = hoveredRegion == key
+                return (
+                    <path
+                        key={key}
+                        d={d}
+                        stroke={"black"}
+                        strokeWidth={1 / scale}
+                        fill={"grey"}
+                        fillOpacity={isHovered ? 0.5 : 0}
+                        onMouseOver={() => setHoveredRegion(key)}
+                        // onMouseLeave={() => setHoveredRegion(null)}
+                        onMouseOut={() => setHoveredRegion(null)}
+                    />
+                )
+            }),
+        [ curStep, scale, hoveredRegion, ],
     )
 
     return <>
@@ -755,6 +793,7 @@ export default function Page() {
                         {circleNodes}
                         {edgePoints}
                         {regionLabels}
+                        {regionPaths}
                     </>
                 </Grid>
                 <hr />
