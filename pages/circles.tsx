@@ -91,6 +91,180 @@ export type Vars = {
 export type RunningState = "none" | "fwd" | "rev"
 export type LogLevel = "debug" | "info" | "warn" | "error"
 
+const SparkNum = (v: number | null | undefined) =>
+    <td className={css.sparkNum}>
+        <span>{v === null || v === undefined ? '' : v.toPrecision(4)}</span>
+    </td>
+
+export function SparkLineCell(
+    { color, fn, model, stepIdx, sparkLineLimit, sparkLineStrokeWidth, sparkLineMargin, sparkLineWidth, sparkLineHeight, }: {
+        color: string
+        fn: (step: Step) => number
+        model: Model
+        stepIdx: number
+    } & SparkLineProps
+) {
+    return <td>
+        <Sparklines
+            data={
+                model
+                    .steps
+                    .slice(
+                        max(0, stepIdx - sparkLineLimit),
+                        stepIdx + 1
+                    )
+                    .map(fn)
+            }
+            limit={sparkLineLimit}
+            width={40} height={20}
+            svgWidth={sparkLineWidth} svgHeight={sparkLineHeight}
+            margin={sparkLineMargin}
+        >
+            <SparklinesLine
+                color={color}
+                style={{strokeWidth: sparkLineStrokeWidth,}}
+                // onMouseMove={(e, v, { x, y }) => {
+                //     console.log("sparkline mousemove:", e, v, x, y)
+                // }}
+            />
+        </Sparklines>
+    </td>
+}
+
+export type SparkLineProps = {
+    sparkLineLimit: number
+    sparkLineStrokeWidth: number
+    sparkLineMargin: number
+    sparkLineWidth: number
+    sparkLineHeight: number
+}
+export type SparkLineCellProps = SparkLineProps & {
+    model: Model
+    stepIdx: number
+}
+
+export function TargetsTable(
+    { initialCircles, targets, model, curStep, error, stepIdx, ...sparkLineProps }: {
+        initialCircles: C[]
+        targets: Target[]
+        model: Model
+        curStep: Step
+        error: Dual
+        stepIdx: number
+    } & SparkLineProps
+) {
+    const targetName = useCallback(
+        (sets: string) =>
+            sets.split('').map((ch: string, idx: number) => {
+                const name = initialCircles[idx].name
+                // console.log("targetName:", ch, idx, circle, initialCircles)
+                if (ch === '*') {
+                    return <span key={idx}></span>
+                } else if (ch == '-') {
+                    return <span key={idx} style={{textDecoration: "line-through",}}>{name}</span>
+                } else {
+                    return <span key={idx}>{name}</span>
+                }
+            }),
+        [ initialCircles, ],
+    )
+
+    const [ showTargetCurCol, setShowTargetCurCol ] = useState(false)
+    const cellProps = { model, stepIdx, ...sparkLineProps, }
+    const targetTableRows = targets.map(({ sets, value}) => {
+        const name = targetName(sets)
+        const err = curStep.errors.get(sets)
+        return <tr key={sets}>
+            <td className={css.val}>{name}</td>
+            <td className={css.val}>{value.toPrecision(3).replace(/\.?0+$/, '')}</td>
+            {
+                showTargetCurCol &&
+                <td className={css.val}>{
+                    err ? (err.actual_frac.v * err.total_target_area).toPrecision(3) : ''
+                }</td>
+            }
+            {SparkNum(err && err.error.v * err.total_target_area)}
+            <SparkLineCell
+                color={"red"}
+                fn={step => step.errors.get(sets)?.error.v || 0}
+                {...cellProps}
+            />
+        </tr>
+    })
+
+    return (
+        <table className={css.sparkLinesTable}>
+            <thead>
+            <tr>
+                <th></th>
+                <th>Goal</th>
+                {showTargetCurCol && <th>Cur</th>}
+                <th style={{ textAlign: "center" }} colSpan={2}>Error</th>
+            </tr>
+            </thead>
+            <tbody>
+            {targetTableRows}
+            <tr>
+                <td colSpan={2 + (showTargetCurCol ? 1 : 0)} style={{ textAlign: "right", fontWeight: "bold", }}>Overall:</td>
+                {SparkNum(error.v * curStep.total_target_area)}
+                <SparkLineCell
+                    color={"red"}
+                    fn={step => step.error.v}
+                    {...cellProps}
+                />
+            </tr>
+            </tbody>
+        </table>
+    )
+}
+
+export function VarsTable(
+    { vars, initialCircles, circles, curStep, error, ...sparkLineCellProps }: {
+        vars: Vars
+        initialCircles: C[]
+        circles: C[]
+        curStep: Step
+        error: Dual
+    } & SparkLineCellProps
+) {
+    const varTableRows = useMemo(
+        () => {
+            // console.log(`varTableRows: ${initialCircles.length} vs ${circles.length} circles, vars:`, vars.coords.length, vars)
+            return vars.coords.map(([ circleIdx, circleCoord ], varIdx ) =>
+                circleIdx < circles.length &&
+                <tr key={varIdx}>
+                    <td>{circles[circleIdx].name}.{circleCoord}</td>
+                    {SparkNum(vars.getVal(curStep, varIdx))}
+                    <SparkLineCell
+                        color={"blue"}
+                        fn={step => vars.getVal(step, varIdx)}
+                        {...sparkLineCellProps}
+                    />
+                    {SparkNum(-error.d[varIdx])}
+                    <SparkLineCell
+                        color={"green"}
+                        fn={step => step.error.d[varIdx]}
+                        {...sparkLineCellProps}
+                    />
+                </tr>
+            )
+        },
+        [ vars, initialCircles, circles, ]
+    )
+    return (
+        <table className={css.sparkLinesTable}>
+            <thead>
+            <tr>
+                <th>Var</th>
+                <th colSpan={2} style={{ textAlign: "center", }}>Value</th>
+                <th colSpan={2} style={{ textAlign: "center", }}>Δ</th>
+            </tr>
+            </thead>
+            <tbody>{varTableRows}</tbody>
+        </table>
+    )
+}
+
 export default function Page() {
     const [ initialLayout, setInitialLayout] = useState<InitialLayout>(
         OriginRightUp,
@@ -435,20 +609,6 @@ export default function Page() {
         [ runningState, model, stepIdx, fwdStep, revStep, frameLen, ],
     )
 
-    // tsify `#[declare]` erroneously emits Record<K, V> instead of Map<K, V>: https://github.com/madonoharu/tsify/issues/26
-    const errors = useMemo(
-        () => curStep ? (curStep.errors as any as Map<string, Error>) : null,
-        [ curStep, ],
-    )
-    const getErrors = useCallback(
-        (step: Step) => step.errors as any as Map<string, Error>,
-        [],
-    )
-    const getError = useCallback(
-        (step: Step, sets: string) => getErrors(step).get(sets),
-        [ getErrors, ],
-    )
-
     const error = useMemo(() => curStep?.error, [ curStep ])
 
     const bestStep = useMemo(
@@ -546,94 +706,8 @@ export default function Page() {
     const [ sparkLineMargin, setSparkLineMargin ] = useState(1)
     const [ sparkLineWidth, setSparkLineWidth ] = useState(80)
     const [ sparkLineHeight, setSparkLineHeight ] = useState(30)
-    const SparkNum = useCallback(
-        (v: number | null | undefined) => <td className={css.sparkNum}>
-            <span>{v === null || v === undefined ? '' : v.toPrecision(4)}</span>
-        </td>,
-        [],
-    )
-    const SparkLineCell = useCallback(
-        (
-            varIdx: number,
-            color: string,
-            fn: (step: Step) => number,
-        ) => <td>{
-            model && stepIdx !== null &&
-            <Sparklines
-                data={
-                    model
-                        .steps
-                        .slice(
-                            max(0, stepIdx - sparkLineLimit),
-                            stepIdx + 1
-                        )
-                        .map(fn)
-                }
-                limit={sparkLineLimit}
-                width={40} height={20}
-                svgWidth={sparkLineWidth} svgHeight={sparkLineHeight}
-                margin={sparkLineMargin}
-            >
-                <SparklinesLine
-                    color={color}
-                    style={{strokeWidth: sparkLineStrokeWidth,}}
-                    // onMouseMove={(e, v, { x, y }) => {
-                    //     console.log("sparkline mousemove:", e, v, x, y)
-                    // }}
-                />
-            </Sparklines>
-        }</td>,
-        [ model, stepIdx, ]
-    )
-
-    const targetName = useCallback(
-        (sets: string) =>
-            sets.split('').map((ch: string, idx: number) => {
-                const circle = initialCircles[idx]
-                // console.log("targetName:", ch, idx, circle, initialCircles)
-                if (ch === '*') {
-                    return <span key={idx}></span>
-                } else if (ch == '-') {
-                    return <span key={idx} style={{textDecoration: "line-through",}}>{circles[idx].name}</span>
-                } else {
-                    return <span key={idx}>{circle.name}</span>
-                }
-            }),
-        [ initialCircles, numCircles, ],
-    )
-
-    const [ showTargetCurCol, setShowTargetCurCol ] = useState(false)
-    const targetTableRows = useMemo(
-        () => targets.map(({ sets, value}, varIdx) => {
-            const name = targetName(sets)
-            const err = errors ? errors.get(sets) : null
-            return <tr key={sets}>
-                <td className={css.val}>{name}</td>
-                <td className={css.val}>{value.toPrecision(3).replace(/\.?0+$/, '')}</td>
-                { showTargetCurCol && <td className={css.val}>{err ? (err.actual_frac.v * err.total_target_area).toPrecision(3) : ''}</td> }
-                {SparkNum(err && err.error.v * err.total_target_area)}
-                {SparkLineCell(varIdx, "red", step => getError(step, sets)?.error.v || 0)}
-            </tr>
-        }),
-        [ targets, targetName, errors, getError, ]
-    )
-
-    const varTableRows = useMemo(
-        () => {
-            // console.log(`varTableRows: ${initialCircles.length} vs ${circles.length} circles, vars:`, vars.coords.length, vars)
-            return vars.coords.map(([ circleIdx, circleCoord ], varIdx ) =>
-                circleIdx < circles.length &&
-                <tr key={varIdx}>
-                    <td>{circles[circleIdx].name}.{circleCoord}</td>
-                    {SparkNum(curStep && vars.getVal(curStep, varIdx))}
-                    {SparkLineCell(varIdx, "blue", step => vars.getVal(step, varIdx))}
-                    {SparkNum(error && -error.d[varIdx])}
-                    {SparkLineCell(varIdx, "green", step => step.error.d[varIdx])}
-                </tr>
-            )
-        },
-        [ vars, initialCircles, circles, ]
-    )
+    const sparkLineProps: SparkLineProps = { sparkLineLimit, sparkLineStrokeWidth, sparkLineMargin, sparkLineWidth, sparkLineHeight, }
+    const sparkLineCellProps = model && (typeof stepIdx === 'number') && { model, stepIdx, ...sparkLineProps }
 
     const col5 = "col"
     const col7 = "col"
@@ -929,24 +1003,16 @@ export default function Page() {
                 <div className={"row"}>
                     <div className={`${col7}`}>
                         <h3 className={css.tableTitle}>Targets</h3>
-                        <table className={css.sparkLinesTable}>
-                            <thead>
-                            <tr>
-                                <th></th>
-                                <th>Goal</th>
-                                {showTargetCurCol && <th>Cur</th>}
-                                <th style={{ textAlign: "center" }} colSpan={2}>Error</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            {targetTableRows}
-                            <tr>
-                                <td colSpan={2 + (showTargetCurCol ? 1 : 0)} style={{ textAlign: "right", fontWeight: "bold", }}>Overall:</td>
-                                {SparkNum(error && curStep && error.v * curStep.total_target_area)}
-                                {SparkLineCell(-1, "red", step => step.error.v)}
-                            </tr>
-                            </tbody>
-                        </table>
+                        {
+                            model && curStep && error && sparkLineCellProps &&
+                            <TargetsTable
+                                initialCircles={initialCircles}
+                                targets={targets}
+                                curStep={curStep}
+                                error={error}
+                                {...sparkLineCellProps}
+                            />
+                        }
                         <div>
                             <details>
                                 <summary>Examples</summary>
@@ -960,16 +1026,17 @@ export default function Page() {
                     </div>
                     <div className={col5}>
                         <h3 className={css.tableTitle}>Vars</h3>
-                        <table className={css.sparkLinesTable}>
-                            <thead>
-                            <tr>
-                                <th>Var</th>
-                                <th colSpan={2} style={{ textAlign: "center", }}>Value</th>
-                                <th colSpan={2} style={{ textAlign: "center", }}>Δ</th>
-                            </tr>
-                            </thead>
-                            <tbody>{varTableRows}</tbody>
-                        </table>
+                        {
+                            curStep && error && sparkLineCellProps &&
+                            <VarsTable
+                                vars={vars}
+                                initialCircles={initialCircles}
+                                circles={circles}
+                                curStep={curStep}
+                                error={error}
+                                {...sparkLineCellProps}
+                            />
+                        }
                         <div className={css.tableBreak} />
                         <h3 className={css.tableTitle}>Shapes</h3>
                         <table>

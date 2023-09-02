@@ -1,5 +1,5 @@
 import * as apvd from "apvd";
-import {Circle, Diagram, Dual, Errors, Input, Targets} from "apvd"
+import {Circle, Diagram, Dual, Error, Input, Targets} from "apvd"
 
 export type Point = {
     x: Dual
@@ -10,6 +10,8 @@ export type Point = {
     t1: Dual
     edges: Edge[]
 }
+
+export type Errors = Map<string, Error>
 
 export type Step = {
     inputs: Input[]
@@ -42,8 +44,13 @@ export function makeModel(model: apvd.Model): Model {
 
 export function makeStep(diagram: Diagram): Step {
     // console.log("makeStep:", diagram)
-    const { regions, ...rest } = diagram
-    return { regions: makeRegions(regions), ...rest }
+    const { regions, errors, ...rest } = diagram
+    return { 
+        regions: makeRegions(regions),
+        // tsify `#[declare]` erroneously emits Record<K, V> instead of Map<K, V>: https://github.com/madonoharu/tsify/issues/26
+        errors: errors as any as Errors,
+        ...rest
+    }
 }
 
 export function makeRegions(input: apvd.Regions): Regions {
