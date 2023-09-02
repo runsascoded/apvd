@@ -1,7 +1,7 @@
 import Grid from "../src/components/grid"
 import React, {Fragment, ReactNode, MouseEvent, useCallback, useEffect, useMemo, useState} from "react"
-import init_apvd, {Circle, Diagram, Dual, Error, init_logs, make_model, train} from "apvd"
-import {Model, Step} from "../src/lib/regions"
+import init_apvd, {Circle, Diagram, Dual, Error, init_logs, make_model, R2, train} from "apvd"
+import {Edge, Model, Region, Segment, Step} from "../src/lib/regions"
 import * as apvd from "apvd"
 import css from "./circles.module.scss"
 import A from "next-utils/a"
@@ -109,6 +109,7 @@ export default function Page() {
     const [ maxErrorRatioStepSize, setMaxErrorRatioStepSize ] = useState(0.7)
     const [ maxSteps, setMaxSteps ] = useState(1000)
     const [ stepBatchSize, setStepBatchSize ] = useState(10)
+
     const [ apvdInitialized, setApvdInitialized ] = useState(false)
 
     const [ model, setModel ] = useState<Model | null>(null)
@@ -631,13 +632,131 @@ export default function Page() {
         [],
     )
 
+    const getCirclePointAtTheta = useCallback(
+        (c: Circle<number>, theta: number): R2<number> => ({
+            x: c.c.x + c.r * Math.cos(theta),
+            y: c.c.y + c.r * Math.sin(theta),
+        }),
+        []
+    )
+
+    const getMidpoint = useCallback(
+        ({ c, t0, t1 }: Edge, f: number = 0.5) =>
+            getCirclePointAtTheta(
+                c,
+                t0 * (1 - f) + f * t1,
+            ),
+        []
+    )
+
+    const getEdgeLength = useCallback(({ c, t0, t1 }: Edge) => c.r * (t1 - t0), [])
+
+    const getRegionCenter = useCallback(
+        ({ segments }: Region, fs: number[]) => {
+            fs = fs || [ 0.5 ]
+            let totalWeight = 0
+            const points = ([] as { point: R2<number>, weight: number }[]).concat(
+                ...segments.map(({ edge }) => {
+                    const weight = getEdgeLength(edge)
+                    // const weight = 1
+                    return fs.map(f => {
+                        totalWeight += weight
+                        return { point: getMidpoint(edge, f), weight }
+                    })
+                }),
+            )
+            return {
+                x: points.map(({ point: { x }, weight }) => weight * x).reduce((a,b)=>a+b) / totalWeight,
+                y: points.map(({ point: { y }, weight }) => weight * y).reduce((a,b)=>a+b) / totalWeight,
+            }
+        },
+        []
+    )
+
+    const fs = [ 0.25, 0.5, 0.75, ];
+    // const fs = [ 0.5, ];
+
+    const circleNodes = useMemo(
+        () => circles.map(({ c: { x, y }, r, name, color }: C, idx: number) =>
+            <circle
+                key={idx}
+                cx={x}
+                cy={y}
+                r={r}
+                stroke={"black"}
+                strokeWidth={3 / scale}
+                fill={color}
+                fillOpacity={0.3}
+            />
+        ),
+        [ circles, scale ],
+    )
+
+    const [ showEdgePoints, setShowEdgePoints ] = useState(false)
+    const edgePoints = useMemo(
+        () =>
+            showEdgePoints && curStep && curStep.regions.edges.map((edge, idx) =>
+                fs.map(f => {
+                    const midpoint = getMidpoint(edge, f)
+                    console.log("edge:", edge.c.idx, round(edge.t0 * 180 / PI), round(edge.t1 * 180 / PI), "midpoint:", midpoint)
+                    return <circle
+                        key={`${idx} ${f}`}
+                        cx={midpoint.x}
+                        cy={midpoint.y}
+                        r={0.1}
+                        stroke={"red"}
+                        strokeWidth={1 / scale}
+                        fill={"red"}
+                        fillOpacity={0.5}
+                    />
+                })
+            ),
+        [ showEdgePoints, curStep, scale, ]
+    )
+
+    const [ showRegionLabels, setShowRegionLabels ] = useState(true)
+    const regionLabels = useMemo(
+        () =>
+            showRegionLabels && curStep && curStep.regions.regions.map((region, idx) => {
+                const center = getRegionCenter(region, fs)
+                const containerIdxs = region.containers.map(({ idx }) => idx)
+                containerIdxs.sort()
+                const label = containerIdxs.map(idx => circles[idx].name).join(' ')
+                return (
+                    <text
+                        key={idx}
+                        transform={`translate(${center.x}, ${center.y}) scale(1, -1)`}
+                        textAnchor={"middle"}
+                        dominantBaseline={"middle"}
+                        fontSize={16 / scale}
+                    >
+                        {label}
+                    </text>
+                )
+                // return <circle
+                //     key={idx}
+                //     cx={center.x}
+                //     cy={center.y}
+                //     r={0.1}
+                //     stroke={"black"}
+                //     strokeWidth={0.5 / scale}
+                //     fill={"black"}
+                //     fillOpacity={0.5}
+                // />
+            }),
+        [ curStep, scale, showRegionLabels ],
+    )
+
     return <>
         <div className={css.body}>
             <div className={`${css.row} ${css.content}`}>
-                <Grid className={css.svg} projection={projection} width={width} height={height} gridSize={gridSize} showGrid={showGrid}>{
-                    circles.map(({ c: { x, y }, r, name, color }: C, idx: number) =>
-                        <circle key={idx} cx={x} cy={y} r={r} stroke={"black"} strokeWidth={3/scale} fill={color} fillOpacity={0.3} />)
-                }</Grid>
+                <Grid className={css.svg} projection={projection} width={width} height={height} gridSize={gridSize} showGrid={showGrid}>
+                    <>
+                        {circleNodes}
+                        {edgePoints}
+                        {regionLabels}
+                    </>
+                </Grid>
                 <hr />
                 <div className={"row"}>
                     <div className={`${col6} ${css.controlPanel}`}>
@@ -690,6 +809,9 @@ export default function Page() {
                         </div>
                         <div className={css.input}>
                             <label>Step batch size: <input type={"number"} value={stepBatchSize} onChange={(e) => setStepBatchSize(parseInt(e.target.value))} /></label>
+                        </div>
+                        <div className={css.input}>
+                            <label>Labels: <input type={"checkbox"} checked={showRegionLabels} onChange={e => setShowRegionLabels(e.target.checked)} /></label>
                         </div>
                     </div>
                 </div>
