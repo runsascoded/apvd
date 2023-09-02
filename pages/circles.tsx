@@ -1,13 +1,16 @@
-import Grid from "../src/components/grid";
-import React, {Fragment, ReactNode, MouseEvent, useCallback, useEffect, useMemo, useState} from "react";
-import apvd, {Circle, Diagram, Dual, Error, init_logs, make_model as makeModel, Model, train} from "apvd";
+import Grid from "../src/components/grid"
+import React, {Fragment, ReactNode, MouseEvent, useCallback, useEffect, useMemo, useState} from "react"
+import init_apvd, {Circle, Diagram, Dual, Error, init_logs, make_model, train} from "apvd"
+import {Model, Step} from "../src/lib/regions"
+import * as apvd from "apvd"
 import css from "./circles.module.scss"
-import A from "next-utils/a";
-import dynamic from "next/dynamic";
-import {Sparklines, SparklinesLine} from 'react-sparklines';
-import Button from 'react-bootstrap/Button';
-import OverlayTrigger from 'react-bootstrap/OverlayTrigger';
-import Tooltip from 'react-bootstrap/Tooltip';
+import A from "next-utils/a"
+import dynamic from "next/dynamic"
+import {Sparklines, SparklinesLine} from 'react-sparklines'
+import Button from 'react-bootstrap/Button'
+import OverlayTrigger from 'react-bootstrap/OverlayTrigger'
+import Tooltip from 'react-bootstrap/Tooltip'
+import {makeModel} from "../src/lib/regions";
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false })
 
@@ -75,11 +78,8 @@ export function CircleGetters<T>(): CircleGetters<T> {
 export const CircleFloatGetters = CircleGetters<number>()
 export const CircleDualGetters = CircleGetters<Dual>()
 
-// export type StepGetter<T> = (step: Diagram) => T
-
 export type VarCoord = [ number, CircleCoord ]
-// export type VarIdxToCoord = (varIdx: number) =>  VarCoord
-export type StepVarGetter = (step: Diagram, varIdx: number) => number
+export type StepVarGetter = (step: Step, varIdx: number) => number
 
 export type Vars = {
     allCoords: CircleCoord[][]
@@ -131,12 +131,12 @@ export default function Page() {
         [ modelStepIdx, setModelStepIdx, vStepIdx, setVStepIdx, ]
     )
 
-    const curStep: Diagram | null = useMemo(
+    const curStep: Step | null = useMemo(
         () => (!model || stepIdx === null) ? null : model.steps[stepIdx],
         [ model, stepIdx ],
     )
 
-    const prvStep: Diagram | null = useMemo(
+    const prvStep: Step | null = useMemo(
         () => (!model || stepIdx === null || stepIdx === 0) ? null : model.steps[stepIdx - 1],
         [ model, stepIdx ],
     )
@@ -159,6 +159,7 @@ export default function Page() {
             if (!curStep) return initialCircles.slice(0, numCircles)
             return (
                 curStep
+                    .regions
                     .shapes
                     .map((c: Circle<number>, idx: number) => (
                         { ...initialCircles[idx], ...c, }
@@ -182,18 +183,15 @@ export default function Page() {
                     )
             )
             const coords: VarCoord[] = []
-            // const varGetters: StepGetter<number>[] = []
             vars.forEach((circleVars, circleIdx) => {
                 circleVars.forEach(circleVar => {
-                    // const circleGetter = CircleFloatGetters[circleVar]
                     coords.push([ circleIdx, circleVar ])
-                    // varGetters.push((step: Diagram) => circleGetter(step.shapes[circleIdx]))
                 })
             })
-            function getVal(step: Diagram, varIdx: number): number {
+            function getVal(step: Step, varIdx: number): number {
                 const [ circleIdx, circleCoord ] = coords[varIdx]
                 const circleGetter = CircleFloatGetters[circleCoord]
-                return circleGetter(step.shapes[circleIdx])
+                return circleGetter(step.regions.shapes[circleIdx])
             }
             return {
                 allCoords,
@@ -212,7 +210,7 @@ export default function Page() {
     // Initialize wasm library, logging
     useEffect(
         () => {
-            apvd().then(() => {
+            init_apvd().then(() => {
                 init_logs(null)
                 setApvdInitialized(true)
             })
@@ -244,7 +242,7 @@ export default function Page() {
                 ]
             })
             console.log("inputs:", inputs)
-            const model = makeModel(inputs, wasmTargets)
+            const model = makeModel(apvd.make_model(inputs, wasmTargets))
             console.log("new model:", model)
             setModel(model)
             setStepIdx(0)
@@ -262,7 +260,7 @@ export default function Page() {
             }
             let batchSize
             if (n === undefined) {
-                n = 1
+                n = stepIdx + 1 == model.steps.length ? stepBatchSize : 1
                 batchSize = stepBatchSize
             } else {
                 batchSize = stepIdx + n + 1 - model.steps.length
@@ -285,14 +283,14 @@ export default function Page() {
                 console.log(`Clamping advance to ${n} steps due to maxSteps ${maxSteps}`)
             }
 
-            const lastStep: Diagram = model.steps[model.steps.length - 1]
-            const batchSeed: Model = {
-                steps: [ lastStep ],
+            const lastDiagram: Diagram = model.lastDiagram
+            const batchSeed: apvd.Model = {
+                steps: [ lastDiagram ],
                 repeat_idx: null,
                 min_idx: 0,
-                min_error: lastStep.error.v,
+                min_error: lastDiagram.error.v,
             }
-            const batch = train(batchSeed, maxErrorRatioStepSize, batchSize)
+            const batch = makeModel(train(batchSeed, maxErrorRatioStepSize, batchSize))
             const batchMinStep = batch.steps[batch.min_idx]
             const modelMinStep = model.steps[model.min_idx]
             const steps = model.steps.concat(batch.steps.slice(1))
@@ -301,9 +299,10 @@ export default function Page() {
                 [ model.min_idx, model.min_error ]
             const newModel: Model = {
                 steps,
-                repeat_idx: batch.repeat_idx === null || batch.repeat_idx === undefined ? null : batch.repeat_idx + model.steps.length - 1,
+                repeat_idx: batch.repeat_idx ? batch.repeat_idx + model.steps.length - 1 : null,
                 min_idx,
                 min_error,
+                lastDiagram: batch.lastDiagram,
             }
             console.log("newModel:", newModel)
             setModel(newModel)
@@ -348,7 +347,7 @@ export default function Page() {
                             setStepIdx(model.steps.length - 1)
                         }
                     } else {
-                        fwdStep(e.shiftKey ? 10 : 1)
+                        fwdStep(e.shiftKey ? 10 : undefined)
                     }
                     break
                 case 'ArrowLeft':
@@ -427,11 +426,11 @@ export default function Page() {
         [ curStep, ],
     )
     const getErrors = useCallback(
-        (step: Diagram) => step.errors as any as Map<string, Error>,
+        (step: Step) => step.errors as any as Map<string, Error>,
         [],
     )
     const getError = useCallback(
-        (step: Diagram, sets: string) => getErrors(step).get(sets),
+        (step: Step, sets: string) => getErrors(step).get(sets),
         [ getErrors, ],
     )
     const prvErrors = useMemo(
@@ -474,7 +473,7 @@ export default function Page() {
                     data={[
                         {
                             // x: steps.map((_: Diagram, idx: number) => xlo + idx),
-                            y: steps.map((step: Diagram) => step.error.v),
+                            y: steps.map(step => step.error.v),
                             type: 'scatter',
                             mode: 'lines',
                             marker: { color: 'red' },
@@ -562,7 +561,7 @@ export default function Page() {
         (
             varIdx: number,
             color: string,
-            fn: (step: Diagram) => number,
+            fn: (step: Step) => number,
         ) => <td>{
             model && stepIdx !== null &&
             <Sparklines
@@ -703,7 +702,7 @@ export default function Page() {
                             <tr>
                                 <th></th>
                                 <th>Goal</th>
-                                <th>Cur</th>
+                                {/*<th>Cur</th>*/}
                                 <th style={{ textAlign: "center" }} colSpan={2}>Error</th>
                             </tr>
                             </thead>
@@ -712,20 +711,19 @@ export default function Page() {
                                 targets.map(({ sets, value}, varIdx) => {
                                     const name = targetName(sets)
                                     const err = errors ? errors.get(sets) : null
-                                    const prvErr = prvErrors ? prvErrors.get(sets) : null
                                     return <tr key={sets}>
                                         <td className={css.val}>{name}</td>
                                         <td className={css.val}>{value.toPrecision(3).replace(/\.?0+$/, '')}</td>
-                                        <td className={css.val}>{err ? (err.actual_frac.v * err.total_target_area).toPrecision(3) : ''}</td>
+                                        {/*<td className={css.val}>{err ? (err.actual_frac.v * err.total_target_area).toPrecision(3) : ''}</td>*/}
                                         {SparkNum(err && err.error.v * err.total_target_area)}
-                                        {SparkLineCell(varIdx, "red", (step: Diagram) => getError(step, sets)?.error.v || 0)}
+                                        {SparkLineCell(varIdx, "red", step => getError(step, sets)?.error.v || 0)}
                                     </tr>
                                 })
                             }
                             <tr>
-                                <td colSpan={3} style={{ textAlign: "right", fontWeight: "bold", }}>Overall:</td>
+                                <td colSpan={2} style={{ textAlign: "right", fontWeight: "bold", }}>Overall:</td>
                                 {SparkNum(error && curStep && error.v * curStep.total_target_area)}
-                                {SparkLineCell(-1, "red", (step: Diagram) => step.error.v)}
+                                {SparkLineCell(-1, "red", step => step.error.v)}
                             </tr>
                             </tbody>
                         </table>
@@ -745,9 +743,9 @@ export default function Page() {
                                     <tr key={varIdx}>
                                         <td>{circles[circleIdx].name}.{circleCoord}</td>
                                         {SparkNum(curStep && vars.getVal(curStep, varIdx))}
-                                        {SparkLineCell(varIdx, "blue", (step: Diagram) => vars.getVal(step, varIdx))}
+                                        {SparkLineCell(varIdx, "blue", step => vars.getVal(step, varIdx))}
                                         {SparkNum(error && -error.d[varIdx])}
-                                        {SparkLineCell(varIdx, "green", (step: Diagram) => step.error.d[varIdx])}
+                                        {SparkLineCell(varIdx, "green", step => step.error.d[varIdx])}
                                     </tr>
                                 )
                             }</tbody>
