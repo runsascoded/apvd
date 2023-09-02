@@ -721,7 +721,7 @@ export default function Page() {
                 const center = getRegionCenter(region, fs)
                 const containerIdxs = region.containers.map(({ idx }) => idx)
                 containerIdxs.sort()
-                const label = containerIdxs.map(idx => circles[idx].name).join(' ')
+                const label = containerIdxs.map(idx => circles[idx].name).join('')
                 return (
                     <text
                         key={idx}
