@@ -16,6 +16,7 @@ export type Step = {
     regions: Regions
     targets: Targets
     total_target_area: number
+    total_area: Dual
     errors: Errors
     error: Dual
 }

@@ -46,14 +46,14 @@ const FizzBuzz: Target[] = [
     { sets: "01", value: 1/15 },
 ]
 
-const FizzBuzzBazz: Target[] = [
-    { sets: "0**", value: 1/3 },
-    { sets: "*1*", value: 1/5 },
-    { sets: "**2", value: 1/7 },
-    { sets: "01*", value: 1/15 },
-    { sets: "0*2", value: 1/21 },
-    { sets: "*12", value: 1/35 },
-    { sets: "012", value: 1/105 },
+const FizzBuzzBazz: Target[] = [ // Fractions scaled up by LCM
+    { sets: "0**", value: 35 },  // 1 / 3
+    { sets: "*1*", value: 21 },  // 1 / 5
+    { sets: "**2", value: 15 },  // 1 / 7
+    { sets: "01*", value:  7 },  // 1 / 15
+    { sets: "0*2", value:  5 },  // 1 / 21
+    { sets: "*12", value:  3 },  // 1 / 35
+    { sets: "012", value:  1 },  // 1 / 105
 ]
 
 type Target = {
@@ -92,8 +92,14 @@ export type RunningState = "none" | "fwd" | "rev"
 export type LogLevel = "debug" | "info" | "warn" | "error"
 
 export default function Page() {
-    const [ initialLayout, setInitialLayout] = useState<InitialLayout>(OriginRightUp)
-    const [ targets, setTargets ] = useState<Target[]>(ThreeEqualCircles)
+    const [ initialLayout, setInitialLayout] = useState<InitialLayout>(
+        OriginRightUp,
+        // SymmetricCircles,
+    )
+    const [ targets, setTargets ] = useState<Target[]>(
+        ThreeEqualCircles,
+        // FizzBuzzBazz,
+    )
 
     // Initialize wasm library
     const [ apvdInitialized, setApvdInitialized ] = useState(false)
@@ -596,6 +602,7 @@ export default function Page() {
         [ initialCircles, numCircles, ],
     )
 
+    const [ showTargetCurCol, setShowTargetCurCol ] = useState(false)
     const targetTableRows = useMemo(
         () => targets.map(({ sets, value}, varIdx) => {
             const name = targetName(sets)
@@ -603,7 +610,7 @@ export default function Page() {
             return <tr key={sets}>
                 <td className={css.val}>{name}</td>
                 <td className={css.val}>{value.toPrecision(3).replace(/\.?0+$/, '')}</td>
-                {/*<td className={css.val}>{err ? (err.actual_frac.v * err.total_target_area).toPrecision(3) : ''}</td>*/}
+                { showTargetCurCol && <td className={css.val}>{err ? (err.actual_frac.v * err.total_target_area).toPrecision(3) : ''}</td> }
                 {SparkNum(err && err.error.v * err.total_target_area)}
                 {SparkLineCell(varIdx, "red", step => getError(step, sets)?.error.v || 0)}
             </tr>
@@ -769,7 +776,7 @@ export default function Page() {
                 const label = containerIdxs.map(idx => circles[idx].name).join('')
                 const { key, area } = region
                 const target = expandedTargetsMap && expandedTargetsMap[key]
-                const tooltip = target ? `${label}: ${area.v.toPrecision(3)} ${target.toPrecision(3)}` : key
+                const tooltip = target ? `${label}: ${(area.v / curStep.total_area.v * curStep.total_target_area).toPrecision(3)} ${target.toPrecision(3)}` : key
                 // console.log("key:", key, "hoveredRegion:", hoveredRegion)
                 return (
                     <OverlayTrigger key={`${regionIdx}-${key}`} show={key == hoveredRegion} overlay={<Tooltip onMouseOver={() => setHoveredRegion(key)}>{tooltip}</Tooltip>}>
@@ -863,7 +870,7 @@ export default function Page() {
                                 <PlaybackControl title={"Seek to last computed step"} hotkey={"⌘→"} onClick={() => model && setStepIdx(model.steps.length - 1)} disabled={!model || stepIdx === null || stepIdx + 1 == model.steps.length}>⏭️</PlaybackControl>
                             </div>
                             <div className={css.stepStats}>
-                                <p>Step {stepIdx}{ error && <span>, error: {error.v.toPrecision(3)}</span> }</p>
+                                <p>Step {stepIdx}{ curStep && error && <span>, error: {(error.v * curStep.total_target_area).toPrecision(3)}</span> }</p>
                                 <p
                                     onMouseMove={() => {
                                         if (!model) return
@@ -882,8 +889,8 @@ export default function Page() {
                                         setRunningState("none")
                                     }}
                                 >{
-                                    model && bestStep && <>
-                                        Best step: {model.min_idx}, error: {bestStep.error.v.toPrecision(3)}
+                                    model && curStep && bestStep && <>
+                                        Best step: {model.min_idx}, error: {(bestStep.error.v * curStep.total_target_area).toPrecision(3)}
                                     </>
                                 }</p>
                                 {repeatSteps && stepIdx == repeatSteps[1] ?
@@ -927,14 +934,14 @@ export default function Page() {
                             <tr>
                                 <th></th>
                                 <th>Goal</th>
-                                {/*<th>Cur</th>*/}
+                                {showTargetCurCol && <th>Cur</th>}
                                 <th style={{ textAlign: "center" }} colSpan={2}>Error</th>
                             </tr>
                             </thead>
                             <tbody>
                             {targetTableRows}
                             <tr>
-                                <td colSpan={2} style={{ textAlign: "right", fontWeight: "bold", }}>Overall:</td>
+                                <td colSpan={2 + (showTargetCurCol ? 1 : 0)} style={{ textAlign: "right", fontWeight: "bold", }}>Overall:</td>
                                 {SparkNum(error && curStep && error.v * curStep.total_target_area)}
                                 {SparkLineCell(-1, "red", step => step.error.v)}
                             </tr>
