@@ -900,6 +900,13 @@ export default function Page() {
         [ curStep, scale, hoveredRegion, ],
     )
 
+    const fizzBuzzLink = <A href={"https://en.wikipedia.org/wiki/Fizz_buzz"}>Fizz Buzz</A>
+    const exampleTargets = [
+        { name: "Fizz Buzz", targets: FizzBuzz, description: <>2 circles, of size 1/3 and 1/5, representing integers divisible by 3 and by 5. Inspired by {fizzBuzzLink}.</> },
+        { name: "Fizz Buzz Bazz", targets: FizzBuzzBazz, description: <>Extended version of {fizzBuzzLink} above, with 3 sets, representing integers divisible by 3, 5, or 7. This is impossible to model accurately with 3 circles, but gradient descent gets as close as it can.</> },
+        { name: "3 symmetric circles", targets: ThreeEqualCircles, description: <>Simple test case, 3 circles, one starts slightly off-center from the other two, "target" ratios require the 3 circles to be in perfectly symmetric position with each other.</> },
+    ]
+
     return <>
         <div className={css.body}>
             <div className={`${css.row} ${css.content}`}>
@@ -1016,11 +1023,22 @@ export default function Page() {
                         <div>
                             <details>
                                 <summary>Examples</summary>
-                                <ul style={{ listStyle: "none", }}>
-                                    <li><a href={"#"} onClick={() => { setTargets(FizzBuzz) }}>Fizz Buzz</a></li>
-                                    <li><a href={"#"} onClick={() => { setTargets(FizzBuzzBazz) }}>Fizz Buzz Bazz</a></li>
-                                    <li><a href={"#"} onClick={() => { setTargets(ThreeEqualCircles) }}>3 symmetric circles</a></li>
-                                </ul>
+                                <ul style={{ listStyle: "none", }}>{
+                                    exampleTargets.map(({ name, targets, description }, idx) => {
+                                        const overlay = <Tooltip>{description}</Tooltip>
+                                        return (
+                                            <li key={idx}>
+                                                <OverlayTrigger overlay={overlay}>
+                                                    <a href={"#"} onClick={() => { setTargets(targets) }}>{name}</a>
+                                                </OverlayTrigger>
+                                                {' '}
+                                                <OverlayTrigger trigger="click" placement="right" overlay={overlay}>
+                                                    <span className={css.info}>ℹ️</span>
+                                                </OverlayTrigger>
+                                            </li>
+                                        )
+                                    })
+                                }</ul>
                             </details>
                         </div>
                     </div>

@@ -45,7 +45,7 @@ export function makeModel(model: apvd.Model): Model {
 export function makeStep(diagram: Diagram): Step {
     // console.log("makeStep:", diagram)
     const { regions, errors, ...rest } = diagram
-    return { 
+    return {
         regions: makeRegions(regions),
         // tsify `#[declare]` erroneously emits Record<K, V> instead of Map<K, V>: https://github.com/madonoharu/tsify/issues/26
         errors: errors as any as Errors,
