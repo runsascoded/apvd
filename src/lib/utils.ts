@@ -1,14 +1,7 @@
-
-// import _ from 'underscore';
-
 import Edge from "./edge";
 import {Point} from "../components/point";
 import {XY} from "./ellipse";
-
-export const pi = Math.PI;
-
-export const pi4 = pi / 4;
-export const tpi = 2 * pi;
+import {r3} from "./math";
 
 export const cmp = (a: number, b: number) => a - b;
 
@@ -26,33 +19,7 @@ export const cpps = (a: any[]) => {
     console.log(pps(a));
 };
 
-export const deg = (t: number) => 180 * t / pi;
-export const rad = (d: number) => pi * d / 180;
-
-export const pd = (t: number) => r3(deg(t)) + "°";
-
 export const zeroCheck = (n: number) => (Math.abs(n) < 1e-13) ? 0 : n;
-
-export const sqrt = Math.sqrt;
-// export const sq2 = sq(2);
-
-// export const setEntry = (arr, i1, i2, v) => {
-//     if (!(i1 in arr)) {
-//         arr[i1] = [];
-//     }
-//     arr[i1][i2] = v;
-// };
-//
-// export const pushEntry = (arr, i1, i2, v) => {
-//     if (!(i1 in arr)) {
-//         arr[i1] = [];
-//     }
-//     const a1 = arr[i1];
-//     if (!(i2 in a1)) {
-//         a1[i2] = [];
-//     }
-//     a1[i2].push(v);
-// };
 
 export const keyStr = (o: { [k: string]: any } | any[], sep?: string) => {
     const ks: string[] = [];
@@ -63,21 +30,12 @@ export const keyStr = (o: { [k: string]: any } | any[], sep?: string) => {
     })
     return ks.join(sep || ",");
 };
-// export const ks = keyStr;
-// export const kvs = obj => _.map(
-//     obj,
-//     (o, i) => i + ": " + ks(o, "")
-// ).join(", ");
 
 export const eqSet = <T>(as: Set<T>, bs: Set<T>) => {
     if (as.size !== bs.size) return false;
     for (let a of as) if (!bs.has(a)) return false;
     return true;
 };
-
-// export const union = (a, b) => {
-//     b.forEach(i => a.add(i));
-// };
 
 export const intersect = (a: boolean[], b: boolean[]): [ boolean[], boolean[], boolean[] ] => {
     const intersection: boolean[] = [];
@@ -144,5 +102,3 @@ export const spaces = (n: number) => {
     }
     return s;
 }
-
-export const r3 = (x: number) => Math.round(1000 * x) / 1000;

@@ -1,7 +1,7 @@
-
-import { zeroCheck, pi, sqrt, pp, r3 } from './utils';
 import Intersection from './intersection';
-import { quartic } from '../quartic';
+import {pi, r3, sqrt} from './math';
+import {quartic} from '../quartic';
+import {pp, zeroCheck} from './utils';
 import {Point} from "../components/point";
 
 export type XY = [ number, number ];

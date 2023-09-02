@@ -1,6 +1,7 @@
 
 import { cubic } from './cubic';
-import { sqrt, cmp } from './lib/utils';
+import { cmp } from './lib/utils';
+import {sqrt} from "./lib/math";
 
 export const quartic = (a: number, b: number, c: number, d?: number, e?: number): number[] => {
 

@@ -1,7 +1,8 @@
 
-import { pp, r3, deg } from './utils';
+import { pp } from './utils';
 import Ellipse from "./ellipse";
 import Edge from "./edge";
+import {deg, r3} from "./math";
 
 export type CST = {
     c: number

@@ -1,12 +1,11 @@
-
-import React, {ReactNode, useMemo, useRef, useState, MouseEvent, useCallback} from 'react';
+import React, {MouseEvent, useCallback, useMemo, useState} from 'react';
 import SvgEllipse from './svg-ellipse';
-import {pp, sqrt} from '../lib/utils';
 import Ellipse, {Center, RadiusVector} from "../lib/ellipse";
 import {Point} from "./point";
-import Grid, {Transform} from "./grid";
-import Region, { Props as RegionProps } from "../lib/region"
+import Grid from "./grid";
+import Region, {Props as RegionProps} from "../lib/region"
 import css from "./svg.module.scss"
+import {sqrt} from "../lib/math";
 
 function getTheta(x: number, y: number, t: number) {
     const r = sqrt(x * x + y * y);

@@ -3,9 +3,10 @@ import Svg from '../src/components/svg'
 import ModelTextField from '../src/components/model-text-field'
 import EllipseC, {Center, RadiusVector} from '../src/lib/ellipse'
 import Ellipses from '../src/lib/ellipses'
-import { lengthCmp, pi, powerset, r3, spaces } from '../src/lib/utils'
+import { lengthCmp, powerset, spaces } from '../src/lib/utils'
 import {Point} from '../src/components/point'
 import css from "./index.module.scss"
+import {pi, r3} from "../src/lib/math";
 
 export type Ellipse = {
     name: string

@@ -1,5 +1,6 @@
 
-import { sqrt, pi, cmp } from './lib/utils';
+import { cmp } from './lib/utils';
+import {pi, sqrt} from "./lib/math";
 
 export const cubic = (a: number, b: number, c?: number, d?: number): number[] => {
     if (d !== undefined) {

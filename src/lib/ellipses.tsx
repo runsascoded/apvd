@@ -1,4 +1,4 @@
-import Region, {Containers, Props as RegionProps} from "./region";
+import {Containers, Props as RegionProps} from "./region";
 import Edge from "./edge";
 import Ellipse from "./ellipse";
 import Intersection from "./intersection";

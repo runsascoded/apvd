@@ -1,7 +1,9 @@
 import React from 'react';
-import {deg, pc, pd, pi, pp, tpi} from './utils';
+import {pc, pp,} from './utils';
+import {pd, pi, tpi} from './math';
 import Ellipse, {XY} from "./ellipse";
 import Intersection from "./intersection";
+import {deg} from "./math";
 
 export default class Edge {
     e: Ellipse

@@ -1,8 +1,8 @@
 import Grid from "../src/components/grid"
-import React, {ReactNode, MouseEvent, useCallback, useEffect, useMemo, useState, Fragment} from "react"
-import init_apvd, {Circle, Diagram, Dual, Error, init_logs, R2, train, update_log_level} from "apvd"
-import {Edge, Model, Region, Step} from "../src/lib/regions"
-import * as apvd from "apvd"
+import React, {Fragment, ReactNode, useCallback, useEffect, useMemo, useState} from "react"
+import init_apvd, * as apvd from "apvd"
+import {Circle, Diagram, Dual, Error, init_logs, R2, train, update_log_level} from "apvd"
+import {Edge, makeModel, Model, Region, Step} from "../src/lib/regions"
 import css from "./circles.module.scss"
 import A from "next-utils/a"
 import dynamic from "next/dynamic"
@@ -10,17 +10,13 @@ import {Sparklines, SparklinesLine} from 'react-sparklines'
 import Button from 'react-bootstrap/Button'
 import OverlayTrigger from 'react-bootstrap/OverlayTrigger'
 import Tooltip from 'react-bootstrap/Tooltip'
-import {makeModel} from "../src/lib/regions";
 import {fromEntries} from "next-utils/objs";
+import {getSliderValue} from "../src/components/inputs";
+import {deg, max, PI, round, sq3, sqrt} from "../src/lib/math";
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false })
 
-const { min, max, PI, round, sqrt } = Math
-
-const clamp = (v: number, m: number, M: number): number => max(m, min(M, v))
-
 type C = Circle<number> & { name: string, color: string }
-const sq3 = sqrt(3)
 const colors = [ 'green', 'orange', 'yellow', ]
 export type InitialLayout = { x: number, y: number, r: number }[]
 const SymmetricCircles: InitialLayout = [
@@ -97,7 +93,7 @@ export type LogLevel = "debug" | "info" | "warn" | "error"
 
 export default function Page() {
     const [ initialLayout, setInitialLayout] = useState<InitialLayout>(OriginRightUp)
-    const [ targets, setTargets ] = useState<Target[]>(FizzBuzzBazz)
+    const [ targets, setTargets ] = useState<Target[]>(ThreeEqualCircles)
 
     // Initialize wasm library
     const [ apvdInitialized, setApvdInitialized ] = useState(false)
@@ -163,35 +159,36 @@ export default function Page() {
     )
 
     const initialCircles: C[] = useMemo(
-        () => initialLayout.slice(0, numCircles).map(({ x, y, r }, idx) =>
-            ({
-                idx,
-                c: { x, y }, r,
-                name: String.fromCharCode('A'.charCodeAt(0) + idx),
-                color: colors[idx],
-            })
-        ),
-        [ numCircles, initialLayout, ],
+        () =>
+            initialLayout
+                .slice(0, numCircles)
+                .map(({ x, y, r }, idx) =>
+                    ({
+                        idx,
+                        c: { x, y }, r,
+                        name: String.fromCharCode('A'.charCodeAt(0) + idx),
+                        color: colors[idx],
+                    })
+                ),
+        [ numCircles, initialLayout, ]
     )
 
     const circles: C[] = useMemo(
-        () => {
-            if (!curStep) return initialCircles.slice(0, numCircles)
-            return (
-                curStep
+        () =>
+            curStep
+                ? curStep
                     .regions
                     .shapes
                     .map((c: Circle<number>, idx: number) => (
                         { ...initialCircles[idx], ...c, }
                     ))
-            )
-        },
-        [ curStep, initialCircles, numCircles ]
+                : initialCircles.slice(0, numCircles),
+        [ curStep, initialCircles, numCircles ],
     )
 
     const vars: Vars = useMemo(
         () => {
-            const allCoords: CircleCoord[][] = new Array(numCircles).fill(CircleCoords)
+            const allCoords: CircleCoord[][] = new Array(initialCircles.length).fill(CircleCoords)
             const numCoords = ([] as string[]).concat(...allCoords).length
             const skipVars: CircleCoord[][] = [ CircleCoords, ['y'], ]
             const numSkipVars = ([] as string[]).concat(...skipVars).length
@@ -224,7 +221,7 @@ export default function Page() {
                 getVal,
             }
         },
-        [ numCircles ],
+        [ initialCircles, ],
     )
 
     // Initialize model, stepIdx
@@ -237,7 +234,7 @@ export default function Page() {
             // resulting in 4 fewer free variables.
             let curIdx = 0
             const { numVars, skipVars } = vars
-            const inputs = circles.map((c: Circle<number>, idx: number) => {
+            const inputs = initialCircles.map((c: Circle<number>, idx: number) => {
                 return [
                     c,
                     CircleCoords.map(v => {
@@ -256,7 +253,7 @@ export default function Page() {
             setModel(model)
             setStepIdx(0)
         },
-        [ apvdInitialized, vars, ]
+        [ apvdInitialized, vars, initialCircles, wasmTargets, ]
     )
 
     const fwdStep = useCallback(
@@ -317,7 +314,7 @@ export default function Page() {
             setModel(newModel)
             setStepIdx(newModel.steps.length - 1)
         },
-        [ model, maxErrorRatioStepSize, maxSteps, stepIdx, ]
+        [ model, stepIdx, stepBatchSize, maxErrorRatioStepSize, maxSteps, ]
     )
 
     const revStep = useCallback(
@@ -358,6 +355,7 @@ export default function Page() {
                     } else {
                         fwdStep(e.shiftKey ? 10 : undefined)
                     }
+                    setRunningState("none")
                     break
                 case 'ArrowLeft':
                     e.preventDefault()
@@ -368,6 +366,7 @@ export default function Page() {
                     } else {
                         revStep(e.shiftKey ? 10 : 1)
                     }
+                    setRunningState("none")
                     break
                 case 'Space':
                     e.preventDefault()
@@ -412,6 +411,7 @@ export default function Page() {
                 }
                 step = revStep
             }
+
             console.log(`scheduling ${runningState} step ${stepIdx}`)
             const timer = setTimeout(
                 () => {
@@ -424,9 +424,9 @@ export default function Page() {
                 },
                 frameLen,
             );
-            return () => clearTimeout(timer);
+            return () => clearTimeout(timer)
         },
-        [ runningState, model, stepIdx, fwdStep, ],
+        [ runningState, model, stepIdx, fwdStep, revStep, frameLen, ],
     )
 
     // tsify `#[declare]` erroneously emits Record<K, V> instead of Map<K, V>: https://github.com/madonoharu/tsify/issues/26
@@ -535,21 +535,6 @@ export default function Page() {
         [ model, stepIdx, plotInitialized, ],
     )
 
-    const targetName = useCallback(
-        (sets: string) => <>{
-            sets.split('').map((ch: string, idx: number) => {
-                if (ch === '*') {
-                    return <span key={idx}></span>
-                } else if (ch == '-') {
-                    return <span key={idx} style={{ textDecoration: "line-through", }}>{circles[idx].name}</span>
-                } else {
-                    return <span key={idx}>{circles[idx].name}</span>
-                }
-            })
-        }</>,
-        [ circles, ],
-    )
-
     const [ sparkLineLimit, setSparkLineLimit ] = useState(20)
     const [ sparkLineStrokeWidth, setSparkLineStrokeWidth ] = useState(1)
     const [ sparkLineMargin, setSparkLineMargin ] = useState(1)
@@ -595,16 +580,52 @@ export default function Page() {
         [ model, stepIdx, ]
     )
 
-    const getSliderValue = useCallback(
-        (e: MouseEvent<HTMLInputElement>) => {
-            const target = e.target as HTMLInputElement
-            const [ m , M ] = [
-                parseInt(target.getAttribute('min') || '0', 10),
-                parseInt(target.getAttribute('max') || '0', 10),
-            ]
-            return round(m + (M - m) * e.nativeEvent.offsetX / target.clientWidth)
+    const targetName = useCallback(
+        (sets: string) =>
+            sets.split('').map((ch: string, idx: number) => {
+                const circle = initialCircles[idx]
+                // console.log("targetName:", ch, idx, circle, initialCircles)
+                if (ch === '*') {
+                    return <span key={idx}></span>
+                } else if (ch == '-') {
+                    return <span key={idx} style={{textDecoration: "line-through",}}>{circles[idx].name}</span>
+                } else {
+                    return <span key={idx}>{circle.name}</span>
+                }
+            }),
+        [ initialCircles, numCircles, ],
+    )
+
+    const targetTableRows = useMemo(
+        () => targets.map(({ sets, value}, varIdx) => {
+            const name = targetName(sets)
+            const err = errors ? errors.get(sets) : null
+            return <tr key={sets}>
+                <td className={css.val}>{name}</td>
+                <td className={css.val}>{value.toPrecision(3).replace(/\.?0+$/, '')}</td>
+                {/*<td className={css.val}>{err ? (err.actual_frac.v * err.total_target_area).toPrecision(3) : ''}</td>*/}
+                {SparkNum(err && err.error.v * err.total_target_area)}
+                {SparkLineCell(varIdx, "red", step => getError(step, sets)?.error.v || 0)}
+            </tr>
+        }),
+        [ targets, targetName, errors, getError, ]
+    )
+
+    const varTableRows = useMemo(
+        () => {
+            // console.log(`varTableRows: ${initialCircles.length} vs ${circles.length} circles, vars:`, vars.coords.length, vars)
+            return vars.coords.map(([ circleIdx, circleCoord ], varIdx ) =>
+                circleIdx < circles.length &&
+                <tr key={varIdx}>
+                    <td>{circles[circleIdx].name}.{circleCoord}</td>
+                    {SparkNum(curStep && vars.getVal(curStep, varIdx))}
+                    {SparkLineCell(varIdx, "blue", step => vars.getVal(step, varIdx))}
+                    {SparkNum(error && -error.d[varIdx])}
+                    {SparkLineCell(varIdx, "green", step => step.error.d[varIdx])}
+                </tr>
+            )
         },
-        []
+        [ vars, initialCircles, circles, ]
     )
 
     const col5 = "col"
@@ -613,11 +634,12 @@ export default function Page() {
     const col12 = "col-12"
 
     const PlaybackControl = useCallback(
-        ({ title, hotkey, onClick, disabled, children }: {
+        ({ title, hotkey, onClick, disabled, animating, children }: {
             title: string
             hotkey: string
             onClick: () => void
             disabled: boolean
+            animating?: boolean
             children?: ReactNode
         }) => {
             title = `${title} (${hotkey})`
@@ -625,7 +647,12 @@ export default function Page() {
                 <span>
                     <Button
                         title={title}
-                        onClick={onClick}
+                        onClick={() => {
+                            onClick()
+                            if (!animating) {
+                                setRunningState("none")
+                            }
+                        }}
                         disabled={disabled}>
                         {children}
                     </Button>
@@ -701,7 +728,7 @@ export default function Page() {
             showEdgePoints && curStep && curStep.regions.edges.map((edge, idx) =>
                 fs.map(f => {
                     const midpoint = getMidpoint(edge, f)
-                    console.log("edge:", edge.c.idx, round(edge.t0 * 180 / PI), round(edge.t1 * 180 / PI), "midpoint:", midpoint)
+                    console.log("edge:", edge.c.idx, round(deg(edge.t0)), round(deg(edge.t1)), "midpoint:", midpoint)
                     return <circle
                         key={`${idx} ${f}`}
                         cx={midpoint.x}
@@ -813,36 +840,50 @@ export default function Page() {
                                     value={stepIdx}
                                     min={0}
                                     max={model.steps.length - 1}
-                                    onChange={e => setStepIdx(parseInt(e.target.value))}
+                                    onChange={e => {} /*setStepIdx(parseInt(e.target.value))*/}
                                     onMouseMove={e => {
                                         setVStepIdx(getSliderValue(e))
                                     }}
                                     onClick={e => {
                                         setStepIdx(getSliderValue(e))
+                                        setRunningState("none")
                                     }}
                                     onMouseOut={() => {
-                                        console.log("onMouseOut")
+                                        // console.log("onMouseOut")
                                         setVStepIdx(null)
                                     }}
                                 />
                             }</div>
                             <div className={`${css.buttons}`}>
                                 <PlaybackControl title={"Reset to beginning"} hotkey={"⌘←"} onClick={() => setStepIdx(0)} disabled={cantReverse}>⏮️</PlaybackControl>
-                                <PlaybackControl title={"Rewind"} hotkey={"⇧␣"} onClick={() => setRunningState(runningState == "rev" ? "none" : "rev")} disabled={cantReverse}>{runningState == "rev" ? "⏸️" : "⏪️"}</PlaybackControl>
+                                <PlaybackControl title={"Rewind"} hotkey={"⇧␣"} onClick={() => setRunningState(runningState == "rev" ? "none" : "rev")} disabled={cantReverse} animating={true}>{runningState == "rev" ? "⏸️" : "⏪️"}</PlaybackControl>
                                 <PlaybackControl title={"Reverse one step"} hotkey={"←"} onClick={() => revStep()} disabled={cantReverse}>⬅️</PlaybackControl>
                                 <PlaybackControl title={"Advance one step"} hotkey={"→"} onClick={() => fwdStep()} disabled={cantAdvance || stepIdx == maxSteps}>➡️</PlaybackControl>
-                                <PlaybackControl title={"Fast-forward"} hotkey={"␣"} onClick={() => setRunningState(runningState == "fwd" ? "none" : "fwd")} disabled={cantAdvance}>{runningState == "fwd" ? "⏸️" : "⏩"}</PlaybackControl>
+                                <PlaybackControl title={"Fast-forward"} hotkey={"␣"} onClick={() => setRunningState(runningState == "fwd" ? "none" : "fwd")} disabled={cantAdvance} animating={true}>{runningState == "fwd" ? "⏸️" : "⏩"}</PlaybackControl>
                                 <PlaybackControl title={"Seek to last computed step"} hotkey={"⌘→"} onClick={() => model && setStepIdx(model.steps.length - 1)} disabled={!model || stepIdx === null || stepIdx + 1 == model.steps.length}>⏭️</PlaybackControl>
                             </div>
                             <div className={css.stepStats}>
                                 <p>Step {stepIdx}{ error && <span>, error: {error.v.toPrecision(3)}</span> }</p>
                                 <p
-                                    onMouseOver={() => model && setVStepIdx(model.min_idx)}
-                                    onMouseOut={() => setVStepIdx(null)}
-                                    onClick={() => model && setStepIdx(model.min_idx)}
+                                    onMouseMove={() => {
+                                        if (!model) return
+                                        // console.log("mousemove set to min_idx", model.min_idx)
+                                        setVStepIdx(model.min_idx)
+                                        setRunningState("none")
+                                    }}
+                                    onMouseOut={() => {
+                                        // console.log("mousout vidx null")
+                                        setVStepIdx(null)
+                                    }}
+                                    onClick={() => {
+                                        if (!model) return
+                                        // console.log("click min_idx", model.min_idx)
+                                        setStepIdx(model.min_idx)
+                                        setRunningState("none")
+                                    }}
                                 >{
                                     model && bestStep && <>
-                                    Best step: {model.min_idx}, error: {bestStep.error.v.toPrecision(3)}
+                                        Best step: {model.min_idx}, error: {bestStep.error.v.toPrecision(3)}
                                     </>
                                 }</p>
                                 {repeatSteps && stepIdx == repeatSteps[1] ?
@@ -891,19 +932,7 @@ export default function Page() {
                             </tr>
                             </thead>
                             <tbody>
-                            {
-                                targets.map(({ sets, value}, varIdx) => {
-                                    const name = targetName(sets)
-                                    const err = errors ? errors.get(sets) : null
-                                    return <tr key={sets}>
-                                        <td className={css.val}>{name}</td>
-                                        <td className={css.val}>{value.toPrecision(3).replace(/\.?0+$/, '')}</td>
-                                        {/*<td className={css.val}>{err ? (err.actual_frac.v * err.total_target_area).toPrecision(3) : ''}</td>*/}
-                                        {SparkNum(err && err.error.v * err.total_target_area)}
-                                        {SparkLineCell(varIdx, "red", step => getError(step, sets)?.error.v || 0)}
-                                    </tr>
-                                })
-                            }
+                            {targetTableRows}
                             <tr>
                                 <td colSpan={2} style={{ textAlign: "right", fontWeight: "bold", }}>Overall:</td>
                                 {SparkNum(error && curStep && error.v * curStep.total_target_area)}
@@ -911,6 +940,16 @@ export default function Page() {
                             </tr>
                             </tbody>
                         </table>
+                        <div>
+                            <details>
+                                <summary>Examples</summary>
+                                <ul style={{ listStyle: "none", }}>
+                                    <li><a href={"#"} onClick={() => { setTargets(FizzBuzz) }}>Fizz Buzz</a></li>
+                                    <li><a href={"#"} onClick={() => { setTargets(FizzBuzzBazz) }}>Fizz Buzz Bazz</a></li>
+                                    <li><a href={"#"} onClick={() => { setTargets(ThreeEqualCircles) }}>3 symmetric circles</a></li>
+                                </ul>
+                            </details>
+                        </div>
                     </div>
                     <div className={col5}>
                         <h3 className={css.tableTitle}>Vars</h3>
@@ -922,17 +961,7 @@ export default function Page() {
                                 <th colSpan={2} style={{ textAlign: "center", }}>Δ</th>
                             </tr>
                             </thead>
-                            <tbody>{
-                                vars.coords.map(([ circleIdx, circleCoord ], varIdx ) =>
-                                    <tr key={varIdx}>
-                                        <td>{circles[circleIdx].name}.{circleCoord}</td>
-                                        {SparkNum(curStep && vars.getVal(curStep, varIdx))}
-                                        {SparkLineCell(varIdx, "blue", step => vars.getVal(step, varIdx))}
-                                        {SparkNum(error && -error.d[varIdx])}
-                                        {SparkLineCell(varIdx, "green", step => step.error.d[varIdx])}
-                                    </tr>
-                                )
-                            }</tbody>
+                            <tbody>{varTableRows}</tbody>
                         </table>
                         <div className={css.tableBreak} />
                         <h3 className={css.tableTitle}>Shapes</h3>
@@ -962,7 +991,7 @@ export default function Page() {
                     <div
                         className={col7}
                         onMouseOut={e => {
-                            console.log("onMouseOut:", e)
+                            // console.log("onMouseOut:", e)
                             setVStepIdx(null)
                         }}
                     >

@@ -1,6 +1,5 @@
-
 import React, {MouseEvent, useMemo, useState} from 'react';
-import { sqrt } from '../lib/utils';
+import { sqrt } from '../lib/math';
 import Point from './point';
 import {DragAnchor} from "./svg";
 import {XY} from "../lib/ellipse";
