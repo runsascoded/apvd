@@ -1,5 +1,5 @@
 import Grid from "../src/components/grid"
-import React, {ReactNode, MouseEvent, useCallback, useEffect, useMemo, useState} from "react"
+import React, {ReactNode, MouseEvent, useCallback, useEffect, useMemo, useState, Fragment} from "react"
 import init_apvd, {Circle, Diagram, Dual, Error, init_logs, R2, train, update_log_level} from "apvd"
 import {Edge, Model, Region, Step} from "../src/lib/regions"
 import * as apvd from "apvd"
@@ -836,9 +836,15 @@ export default function Page() {
                             </div>
                             <div className={css.stepStats}>
                                 <p>Step {stepIdx}{ error && <span>, error: {error.v.toPrecision(3)}</span> }</p>
-                                <p>{model && bestStep && <>
+                                <p
+                                    onMouseOver={() => model && setVStepIdx(model.min_idx)}
+                                    onMouseOut={() => setVStepIdx(null)}
+                                    onClick={() => model && setStepIdx(model.min_idx)}
+                                >{
+                                    model && bestStep && <>
                                     Best step: {model.min_idx}, error: {bestStep.error.v.toPrecision(3)}
-                                </>}</p>
+                                    </>
+                                }</p>
                                 {repeatSteps && stepIdx == repeatSteps[1] ?
                                     <p className={css.repeatSteps}>♻️ Step {repeatSteps[1]} repeats step {repeatSteps[0]}</p> :
                                     <p className={`${css.repeatSteps} ${css.invisible}`}>♻️ Step {"?"} repeats step {"?"}</p>
