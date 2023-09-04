@@ -1,7 +1,7 @@
 import Grid, {GridState} from "../src/components/grid"
-import React, {Fragment, ReactNode, useCallback, useEffect, useMemo, useState} from "react"
-import init_apvd, * as apvd from "apvd"
-import {Circle, Diagram, Dual, Error, init_logs, R2, train, update_log_level} from "apvd"
+import React, {Dispatch, Fragment, ReactNode, useCallback, useEffect, useMemo, useState} from "react"
+import * as apvd from "apvd"
+import {Circle, Diagram, Dual, Error, R2, train} from "apvd"
 import {Edge, makeModel, Model, Region, Step} from "../src/lib/regions"
 import css from "./circles.module.scss"
 import A from "next-utils/a"
@@ -13,6 +13,7 @@ import Tooltip from 'react-bootstrap/Tooltip'
 import {fromEntries} from "next-utils/objs";
 import {getSliderValue} from "../src/components/inputs";
 import {deg, max, PI, round, sq3, sqrt} from "../src/lib/math";
+import Apvd, { LogLevel } from "../src/components/apvd";
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false })
 
@@ -89,7 +90,6 @@ export type Vars = {
     getVal: StepVarGetter
 }
 export type RunningState = "none" | "fwd" | "rev"
-export type LogLevel = "debug" | "info" | "warn" | "error"
 
 const SparkNum = (v: number | null | undefined) =>
     <td className={css.sparkNum}>
@@ -266,6 +266,11 @@ export function VarsTable(
 }
 
 export default function Page() {
+    const [ logLevel, setLogLevel ] = useState<LogLevel>("info")
+    return <Apvd logLevel={logLevel}>{() => <Body logLevel={logLevel} setLogLevel={setLogLevel} />}</Apvd>
+}
+
+export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLevel: Dispatch<LogLevel>, }) {
     const [ initialLayout, setInitialLayout] = useState<InitialLayout>(
         OriginRightUp,
         // SymmetricCircles,
@@ -274,28 +279,6 @@ export default function Page() {
         ThreeEqualCircles,
         // FizzBuzzBazz,
     )
-
-    // Initialize wasm library
-    const [ apvdInitialized, setApvdInitialized ] = useState(false)
-    useEffect(
-        () => {
-            init_apvd().then(() => {
-                init_logs()
-                setApvdInitialized(true)
-            })
-        },
-        []
-    );
-
-    // WASM log level
-    const [ logLevel, setLogLevel ] = useState<LogLevel>("info")
-    useEffect(
-        () => {
-            if (!apvdInitialized) return
-            update_log_level(logLevel)
-        },
-        [ apvdInitialized, logLevel, ]
-    );
 
     const gridState = GridState({
         center: { x: 0.5, y: 0.5, },
@@ -408,7 +391,6 @@ export default function Page() {
     // Initialize model, stepIdx
     useEffect(
         () => {
-            if (!apvdInitialized) return
             // Naively, n circles have 3n degrees of freedom. However, WLOG, we can fix:
             // - c0 to be a unit circle at origin (x = y = 0, r = 1)
             // - c1.y = 0 (only x and r can move)
@@ -434,7 +416,7 @@ export default function Page() {
             setModel(model)
             setStepIdx(0)
         },
-        [ apvdInitialized, vars, initialCircles, wasmTargets, ]
+        [ vars, initialCircles, wasmTargets, ]
     )
 
     const fwdStep = useCallback(
@@ -511,14 +493,11 @@ export default function Page() {
     )
 
     const cantAdvance = useMemo(
-        () => !apvdInitialized || (model && model.repeat_idx && stepIdx == model.steps.length - 1) || stepIdx == maxSteps,
-        [ apvdInitialized, model, stepIdx, maxSteps ],
+        () => (model && model.repeat_idx && stepIdx == model.steps.length - 1) || stepIdx == maxSteps,
+        [ model, stepIdx, maxSteps ],
     )
 
-    const cantReverse = useMemo(
-        () => !apvdInitialized || stepIdx === 0,
-        [ apvdInitialized, stepIdx ],
-    )
+    const cantReverse = useMemo(() => stepIdx === 0, [ stepIdx ])
 
     // Keyboard shortcuts
     useEffect(() => {
@@ -827,11 +806,8 @@ export default function Page() {
     )
 
     const expandedTargets = useMemo(
-        () => {
-            if (!apvdInitialized) return null
-            return apvd.expand_areas(wasmTargets) as [ string, number ][]
-        },
-        [ apvdInitialized, wasmTargets, ]
+        () => apvd.expand_areas(wasmTargets) as [ string, number ][],
+        [ wasmTargets, ]
     )
 
     const expandedTargetsMap = useMemo(
@@ -908,7 +884,7 @@ export default function Page() {
         { name: "3 symmetric circles", targets: ThreeEqualCircles, description: <>Simple test case, 3 circles, one starts slightly off-center from the other two, "target" ratios require the 3 circles to be in perfectly symmetric position with each other.</> },
     ]
 
-    return <>
+    return (
         <div className={css.body}>
             <div className={`${css.row} ${css.content}`}>
                 <Grid className={css.svg} state={gridState}>
@@ -1114,5 +1090,5 @@ export default function Page() {
                 </div>
             </div>
         </div>
-    </>
+    )
 }
