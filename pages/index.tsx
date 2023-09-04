@@ -140,6 +140,7 @@ export default function Page({ ellipses: initialEllipses }: { ellipses: Ellipse[
             value={areasStr}
         />
         <ModelTextField
+            className={`${css.modelTextField} ${malformedEllipses ? css.malformedEllipses : ""}`}
             {...{ellipses, malformedEllipses}}
             onChange={onTextFieldChange}
         />
