@@ -1,4 +1,4 @@
-import Grid from "../src/components/grid"
+import Grid, {GridState} from "../src/components/grid"
 import React, {Fragment, ReactNode, useCallback, useEffect, useMemo, useState} from "react"
 import init_apvd, * as apvd from "apvd"
 import {Circle, Diagram, Dual, Error, init_logs, R2, train, update_log_level} from "apvd"
@@ -297,18 +297,19 @@ export default function Page() {
         [ apvdInitialized, logLevel, ]
     );
 
-    const scale = 130
-    const [width, setWidth] = useState(300);
-    const [height, setHeight] = useState(400);
-    const projection = { x: -scale / 2, y: scale / 2, s: scale }
-    const gridSize = 1
+    const gridState = GridState({
+        center: { x: 0.5, y: 0.5, },
+        scale: 120,
+        width: 300,
+        height: 400,
+    })
+    const { scale: [ scale ], } = gridState
 
     const numCircles = useMemo(() => targets[0].sets.length, [ targets ])
     const wasmTargets = useMemo(
         () => targets.map(({ sets, value }) => [ sets, value ]),
         [ targets ],
     )
-    const [ showGrid, setShowGrid ] = useState(false)
     const [ maxErrorRatioStepSize, setMaxErrorRatioStepSize ] = useState(0.7)
     const [ maxSteps, setMaxSteps ] = useState(1000)
     const [ stepBatchSize, setStepBatchSize ] = useState(10)
@@ -910,12 +911,12 @@ export default function Page() {
     return <>
         <div className={css.body}>
             <div className={`${css.row} ${css.content}`}>
-                <Grid className={css.svg} projection={projection} width={width} height={height} gridSize={gridSize} showGrid={showGrid}>
+                <Grid className={css.svg} state={gridState}>
                     <>
                         {circleNodes}
                         {edgePoints}
-                        {regionLabels}
                         {regionPaths}
+                        {regionLabels}
                     </>
                 </Grid>
                 <hr />

@@ -2,7 +2,7 @@ import React, {MouseEvent, useCallback, useMemo, useState} from 'react';
 import SvgEllipse from './svg-ellipse';
 import Ellipse, {Center, RadiusVector} from "../lib/ellipse";
 import {Point} from "./point";
-import Grid from "./grid";
+import Grid, {GridState} from "./grid";
 import Region, {Props as RegionProps} from "../lib/region"
 import css from "./svg.module.scss"
 import {sqrt} from "../lib/math";
@@ -40,31 +40,34 @@ export type Props = {
     onEllipseDrag?: (e: number, d: Center | RadiusVector) => void
     transformBy?: Ellipse
     onCursor: (p: Point, svgIdx: number) => void
-    projection: Projection
-    gridSize: number
+    gridState: GridState
     cursor: Point
     points: Point[]
     regions?: RegionProps[]
     hideCursorDot: boolean
-    showGrid: boolean
 }
 
 export type DragAnchor = 'c' | 'f1' | 'f2' | 'vx1' | 'vx2' | 'vy1' | 'vy2'
 
-export default function Svg({ ellipses, idx, onEllipseDrag, transformBy, onCursor, projection, gridSize, points, regions, hideCursorDot, cursor, showGrid, }: Props) {
+export default function Svg({ ellipses, idx, onEllipseDrag, transformBy, onCursor, gridState, points, regions, hideCursorDot, cursor, }: Props) {
     const [pointRadius, setPointRadius] = useState(3);
     const [dragEllipse, setDragEllipse] = useState<number | null>(null);
     const [dragAnchor, setDragAnchor] = useState<DragAnchor | null>(null);
-    const [width, setWidth] = useState(300);
-    const [height, setHeight] = useState(400);
     const [lastOffset, setLastOffset] = useState<Point | null>(null);
 
     function onDragEnd() {
         setDragAnchor(null);
         setDragEllipse(null);
     }
+    const {
+        center: [ center ],
+        scale: [ scale ],
+        width: [ width ],
+        height: [ height ],
+        gridSize: [ gridSize ],
+        showGrid: [ showGrid ],
+    } = gridState
 
-    const scale = projection.s
     const actual = useCallback(
         (x: number, y: number) => ({
             x: x * scale + width / 2,
@@ -261,16 +264,11 @@ export default function Svg({ ellipses, idx, onEllipseDrag, transformBy, onCurso
 
     return <Grid
         className={css.svg}
-        css={css}
         handleMouseMove={handleMouseMove}
         // handleMouseUp={}
         // handleDragStart={ellipseDragStart}
         handleMouseUp={onDragEnd}
-        projection={projection}
-        gridSize={gridSize}
-        showGrid={showGrid}
-        width={width}
-        height={height}
+        state={gridState}
         outerChildren={<>
             {cursorRawCoords}
             {cursorVirtualCoords}

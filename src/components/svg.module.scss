@@ -8,21 +8,6 @@
     fill-opacity: 0.2;
   }
 
-  .gridLine {
-    stroke: lightgrey;
-  }
-
-  .axis {
-    stroke: grey;
-  }
-
-  .cursor {
-    font-family: monospace;
-    font-size: 10px;
-    user-select: none;
-    cursor: default;
-  }
-
   .projectedCursor {
     fill: black;
   }

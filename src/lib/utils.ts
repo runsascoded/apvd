@@ -2,6 +2,7 @@ import Edge from "./edge";
 import {Point} from "../components/point";
 import {XY} from "./ellipse";
 import {r3} from "./math";
+import {Dispatch, SetStateAction} from "react";
 
 export const cmp = (a: number, b: number) => a - b;
 
@@ -102,3 +103,5 @@ export const spaces = (n: number) => {
     }
     return s;
 }
+
+export type State<T> = [T, Dispatch<SetStateAction<T>>]

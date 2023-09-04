@@ -7,6 +7,7 @@ import { lengthCmp, powerset, spaces } from '../src/lib/utils'
 import {Point} from '../src/components/point'
 import css from "./index.module.scss"
 import {pi, r3} from "../src/lib/math";
+import {GridState} from "../src/components/grid";
 
 export type Ellipse = {
     name: string
@@ -97,9 +98,12 @@ export default function Page({ ellipses: initialEllipses }: { ellipses: Ellipse[
             })
             .join("\n");
 
-    const scale = 50
-    const projection = { x: 0, y: 0, s: scale }
-    const gridSize = 1
+    const gridState = GridState({
+        scale: 50,
+        width: 300,
+        height: 400,
+        showGrid: true,
+    })
 
     const projectedSVGs =
         ellipses.map((ellipse, k) =>
@@ -109,10 +113,8 @@ export default function Page({ ellipses: initialEllipses }: { ellipses: Ellipse[
                     transformBy={ellipses[k]}
                     ellipses={ellipses}
                     points={intersections}
+                    gridState={gridState}
                     cursor={virtualCursor}
-                    showGrid={true}
-                    gridSize={gridSize}
-                    projection={projection}
                     onCursor={p => onCursor(p, k+1)}
                     hideCursorDot={activeSvg === k+1}
                 />
@@ -127,9 +129,7 @@ export default function Page({ ellipses: initialEllipses }: { ellipses: Ellipse[
             cursor={virtualCursor}
             regions={regions}
             onEllipseDrag={onEllipseDrag}
-            showGrid={true}
-            gridSize={gridSize}
-            projection={projection}
+            gridState={gridState}
             onCursor={onCursor}
             hideCursorDot={activeSvg === 0}
         />

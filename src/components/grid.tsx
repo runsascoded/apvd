@@ -1,37 +1,63 @@
 import React, {MouseEvent, ReactNode, useCallback, useMemo, useRef, useState} from "react";
 import {Point} from "./point";
-import {Projection} from "./svg";
+import {State} from "../lib/utils";
+import css from "./grid.module.scss"
+
+export type GridStateProps = {
+    center?: Point
+    scale: number
+    width: number
+    height: number
+    gridSize?: number
+    showGrid?: boolean
+}
+export type GridState = {
+    center: State<Point>
+    scale: State<number>
+    width: State<number>
+    height: State<number>
+    gridSize: State<number>
+    showGrid: State<boolean>
+}
+export function GridState(init: GridStateProps): GridState {
+    const center = useState(init.center || { x: 0, y: 0 })
+    const scale = useState(init.scale)
+    const width = useState(init.width);
+    const height = useState(init.height);
+    const gridSize = useState(init.gridSize || 1)
+    const showGrid = useState(init.showGrid || false)
+    return {
+        center,
+        scale,
+        width,
+        height,
+        gridSize,
+        showGrid,
+    }
+}
 
 export type Transform = [ string, number, number ]
-
-export type CSS = {
-    gridLine?: string
-    gridLines?: string
-    axis?: string
-    horizontal?: string
-    vertical?: string
-    projection?: string
-}
 
 export type Props = {
     handleMouseMove?: (e: MouseEvent, offset: Point, vOffset: Point) => void
     handleMouseDown?: (e: MouseEvent, rect?: DOMRect) => void
     handleMouseUp?: () => void
-    projection: Projection
-    width: number
-    height: number
-    gridSize: number
-    showGrid?: boolean
+    state: GridState
     children: ReactNode
     outerChildren?: ReactNode
     className?: string
-    css?: CSS
 }
 
-export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, projection, width, height, gridSize, showGrid, children, outerChildren, className, css, }: Props) {
+export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, state, children, outerChildren, className, }: Props) {
     const svg = useRef<SVGSVGElement>(null)
-    const scale = projection.s
-    css = css || {}
+    const {
+        center: [ center, setCenter ],
+        scale: [ scale, setScale ],
+        width: [ width, setWidth ],
+        height: [ height, setHeight ],
+        gridSize: [ gridSize, setGridSize ],
+        showGrid: [ showGrid, setShowGrid ],
+    } = state
     const virtual = useCallback(
         (x: number, y: number) => ({
             x: (x - width / 2) / scale,
@@ -61,7 +87,7 @@ export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, 
     )
 
     const onMouseUp = useCallback(
-        (e: MouseEvent) => {
+        () => {
             if (handleMouseUp) {
                 handleMouseUp()
             }
@@ -70,7 +96,7 @@ export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, 
     )
     const onMouseMove = useCallback(
         (e: MouseEvent) => {
-            const [ offset, rect ] = getOffset(e)
+            const [ offset ] = getOffset(e)
             const vOffset = virtual(offset.x, offset.y);
             // console.log("onMouseMove", offset, vOffset, dragOffset)
             if (handleMouseMove) {
@@ -80,12 +106,11 @@ export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, 
         [ getOffset, handleMouseMove, virtual, scale ]
     )
 
-    gridSize = gridSize || (Math.min(width, height) / 11 / scale);
-
     const gridLines = [];
     let xAxis = null
     let yAxis = null
-    if (showGrid !== false) {
+    console.log("showGrid:", showGrid, "gridSize:", gridSize, "css:", css)
+    if (showGrid) {
         const tl = virtual(0, 0);
         const lx = tl.x - gridSize;
         const ty = tl.y + gridSize;
@@ -135,41 +160,31 @@ export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, 
         );
     }
 
-    const transforms: Transform[] = useMemo(
+    const transforms = useMemo(
         () => {
-            const transforms: Transform[] = [];
-            if (projection) {
-                if (projection.x !== undefined || projection.y !== undefined) {
-                    transforms.push([
-                        "translate",
-                        (projection.x + width / 2) || 0,
-                        (projection.y + height / 2) || 0
-                    ]);
-                }
-                if (projection.s) {
-                    transforms.push(["scale", projection.s, -projection.s]);
-                }
+            let transforms: Transform[] = [
+                [ "translate", width / 2, height / 2, ],
+                [ "scale", scale, -scale, ],
+            ];
+            if (center.x || center.y) {
+                transforms.push([ "translate", -center.x, -center.y, ]);
             }
             return transforms
         },
-        [projection]
+        [ center, scale, width, height ]
     )
 
     return <svg
         ref={svg}
         viewBox={`0 0 ${width} ${height}`}
-        className={className || ''}
+        className={`${css.svg} ${className || ''}`}
         onMouseDown={onMouseDown}
         onMouseMove={onMouseMove}
         onMouseUp={onMouseUp}
     >
         <g
             className={`${css.projection}`}
-            transform={
-                transforms.length
-                    ? transforms.map((t) => { return t[0] + "(" + t.slice(1).join(",") + ")"; }).join(" ")
-                    : undefined
-            }
+            transform={transforms.map(([ type, x, y ]) => `${type}(${x},${y})`).join(" ")}
         >
             {gridLines}
             {xAxis}
