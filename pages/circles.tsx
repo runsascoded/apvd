@@ -967,21 +967,58 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                     </div>
                     <div className={`${col6} ${css.controlPanel}`}>
                         <div className={css.input}>
-                            <label>Max error ratio step size: <input type={"number"} value={maxErrorRatioStepSize} onChange={(e) => setMaxErrorRatioStepSize(parseFloat(e.target.value))} /></label>
+                            <label>
+                                Max error ratio step size:
+                                <input
+                                    type={"number"}
+                                    step={0.1}
+                                    value={maxErrorRatioStepSize}
+                                    onChange={(e) => setMaxErrorRatioStepSize(parseFloat(e.target.value))}
+                                    onKeyDown={e => { e.stopPropagation() }}
+                                />
+                            </label>
                         </div>
                         <div className={css.input}>
-                            <label>Max steps: <input type={"number"} value={maxSteps} onChange={(e) => setMaxSteps(parseInt(e.target.value))} /></label>
+                            <label>
+                                Max steps:
+                                <input
+                                    type={"number"}
+                                    value={maxSteps}
+                                    onChange={(e) => setMaxSteps(parseInt(e.target.value))}
+                                    onKeyDown={e => { e.stopPropagation() }}
+                                />
+                            </label>
                         </div>
                         <div className={css.input}>
-                            <label>Step batch size: <input type={"number"} value={stepBatchSize} onChange={(e) => setStepBatchSize(parseInt(e.target.value))} /></label>
+                            <label>
+                                Step batch size:
+                                <input
+                                    type={"number"}
+                                    value={stepBatchSize}
+                                    onChange={(e) => setStepBatchSize(parseInt(e.target.value))}
+                                    onKeyDown={e => { e.stopPropagation() }}
+                                />
+                            </label>
                         </div>
                         <div className={css.input}>
-                            <label>Region labels: <input type={"checkbox"} checked={showRegionLabels} onChange={e => setShowRegionLabels(e.target.checked)} /></label>
+                            <label>
+                                Region labels:
+                                <input
+                                    type={"checkbox"}
+                                    checked={showRegionLabels}
+                                    onChange={e => setShowRegionLabels(e.target.checked)}
+                                    onKeyDown={e => { e.stopPropagation() }}
+                                />
+                            </label>
                         </div>
                         <div className={css.input}>
                             <label>
                                 Log level:
-                                <select value={logLevel} onChange={e => setLogLevel(e.target.value as LogLevel)}>{
+                                <select
+                                    value={logLevel}
+                                    onChange={e => setLogLevel(e.target.value as LogLevel)}
+                                    onKeyDown={e => { e.stopPropagation() }}
+                                >{
                                     ["debug", "info", "warn"].map(level =>
                                         <option key={level} value={level}>{level}</option>
                                     )
@@ -1061,7 +1098,6 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                                         <td>{c.y.toPrecision(4)}</td>
                                         <td>{rx.toPrecision(4)}</td>
                                         <td>{ry.toPrecision(4)}</td>
-                                        <td></td>
                                     </tr>
                                 })
                             }</tbody>
