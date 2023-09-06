@@ -15,6 +15,7 @@ import {getSliderValue} from "../src/components/inputs";
 import {deg, max, PI, round, sq3, sqrt} from "../src/lib/math";
 import Apvd, {LogLevel} from "../src/components/apvd";
 import {getMidpoint, getRegionCenter} from "../src/lib/region";
+import {getCenter, getIdx, getRadii} from "../src/lib/shape";
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false })
 
@@ -765,7 +766,10 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
 
     const circleNodes = useMemo(
         () => shapes.map(({ color, ...shape }: S, idx: number) => {
+            const { x: cx, y: cy } = getCenter(shape)
             const props = {
+                key: idx,
+                cx, cy,
                 stroke: "black",
                 strokeWidth: 3 / scale,
                 fill: color,
@@ -773,16 +777,10 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
             }
             return 'Circle' in shape
                 ? <circle
-                    key={idx}
-                    cx={shape.Circle.c.x}
-                    cy={shape.Circle.c.y}
                     r={shape.Circle.r}
                     {...props}
                 />
                 : <ellipse
-                    key={idx}
-                    cx={shape.XYRR.c.x}
-                    cy={shape.XYRR.c.y}
                     rx={shape.XYRR.r.x}
                     ry={shape.XYRR.r.y}
                     {...props}
@@ -794,13 +792,13 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     const [ showEdgePoints, setShowEdgePoints ] = useState(false)
     const edgePoints = useMemo(
         () =>
-            showEdgePoints && curStep && curStep.regions.edges.map((edge, idx) =>
+            showEdgePoints && curStep && curStep.regions.edges.map((edge, edgeIdx) =>
                 fs.map(f => {
                     const midpoint = getMidpoint(edge, f)
                     const { shape } = edge
-                    console.log("edge:", 'Circle' in shape ? shape.Circle.idx : shape.XYRR.idx, round(deg(edge.t0)), round(deg(edge.t1)), "midpoint:", midpoint)
+                    console.log(`edge: ${getIdx(shape)}, ${round(deg(edge.t0))}, ${round(deg(edge.t1))}, midpoint: ${midpoint}`)
                     return <circle
-                        key={`${idx} ${f}`}
+                        key={`${edgeIdx} ${f}`}
                         cx={midpoint.x}
                         cy={midpoint.y}
                         r={0.1}
@@ -831,7 +829,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
         () =>
             showRegionLabels && curStep && curStep.regions.regions.map((region, regionIdx) => {
                 const center = getRegionCenter(region, fs)
-                const containerIdxs = region.containers.map(shape => 'Circle' in shape ? shape.Circle.idx : shape.XYRR.idx)
+                const containerIdxs = region.containers.map(getIdx)
                 containerIdxs.sort()
                 const label = containerIdxs.map(idx => shapes[idx].name).join('')
                 const { key, area } = region
@@ -862,10 +860,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                 let d = ''
                 segments.forEach(({ edge, fwd }, idx) => {
                     const { shape, i0, i1, t0, t1, } = edge
-                    const [ rx, ry ] =
-                        'Circle' in shape
-                            ? [ shape.Circle.r, shape.Circle.r ]
-                            : [ shape.XYRR.r.x, shape.XYRR.r.y ]
+                    const [ rx, ry ] = getRadii(shape)
                     const [ start, end ] = fwd ? [ i0, i1 ] : [ i1, i0 ]
                     if (idx == 0) {
                         d = `M ${start.x.v} ${start.y.v}`
@@ -1059,14 +1054,12 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                             </thead>
                             <tbody>{
                                 shapes.map(({ idx, name, ...shape }) => {
-                                    const [ cx, cy, rx, ry ] =
-                                        'Circle' in shape
-                                            ? [ shape.Circle.c.x, shape.Circle.c.y, shape.Circle.r, shape.Circle.r ]
-                                            : [ shape.XYRR.c.x, shape.XYRR.c.y, shape.XYRR.r.x, shape.XYRR.r.y ]
+                                    const c = getCenter(shape)
+                                    const [ rx, ry ] = getRadii(shape)
                                     return <tr key={idx}>
                                         <td>{name}</td>
-                                        <td>{cx.toPrecision(4)}</td>
-                                        <td>{cy.toPrecision(4)}</td>
+                                        <td>{c.x.toPrecision(4)}</td>
+                                        <td>{c.y.toPrecision(4)}</td>
                                         <td>{rx.toPrecision(4)}</td>
                                         <td>{ry.toPrecision(4)}</td>
                                         <td></td>
