@@ -3,7 +3,7 @@ import SvgEllipse from './svg-ellipse';
 import Ellipse, {Center, RadiusVector} from "../lib/ellipse";
 import {Point} from "./point";
 import Grid, {GridState} from "./grid";
-import Region, {Props as RegionProps} from "../lib/region"
+import Region, {Props as RegionProps} from "../components/region"
 import css from "./svg.module.scss"
 import {sqrt} from "../lib/math";
 

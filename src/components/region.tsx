@@ -1,7 +1,6 @@
-
 import React, { MouseEvent } from 'react';
-import Edge from "./edge";
-import Intersection from "./intersection";
+import Edge from "../lib/edge";
+import Intersection from "../lib/intersection";
 
 export type Containers = { [k: string]: boolean }
 

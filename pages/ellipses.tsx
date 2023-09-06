@@ -20,6 +20,7 @@ export function Body() {
 
     }, []);
     const e: XYRR<Dual> = {
+        idx: 0,
         c: { x: { v: 1, d: [1, 0, 0, 0] },
              y: { v: 1, d: [0, 1, 0, 0] }, },
         r: { x: { v: 2, d: [0, 0, 1, 0] },

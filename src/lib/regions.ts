@@ -1,11 +1,11 @@
 import * as apvd from "apvd";
-import {Circle, Diagram, Dual, Error, Input, Targets} from "apvd"
+import {Diagram, Dual, Error, Input, Shape, Targets} from "apvd"
 
 export type Point = {
     x: Dual
     y: Dual
-    c0: C
-    c1: C
+    c0: S
+    c1: S
     t0: Dual
     t1: Dual
     edges: Edge[]
@@ -64,7 +64,7 @@ export function makeRegions(input: apvd.Regions): Regions {
         edges: []
     }))
     const edges = input.edges.map(({ cidx, i0, i1, t0, t1, containers, containments }) => ({
-        c: shapes[cidx],
+        shape: shapes[cidx],
         i0: points[i0],
         i1: points[i1],
         t0, t1,
@@ -88,13 +88,13 @@ export function makeRegions(input: apvd.Regions): Regions {
     return { shapes, points, edges, regions, }
 }
 
-export type C = Circle<number>
+export type S = Shape<number>
 
 export type Region = {
     key: string
     segments: Segment[]
     area: Dual
-    containers: C[]
+    containers: S[]
     container_bmp: boolean[]
 }
 
@@ -104,17 +104,17 @@ export interface Segment {
 }
 
 export type Edge = {
-    c: C;
-    i0: Point;
-    i1: Point;
-    t0: number;
-    t1: number;
-    containers: C[];
-    containments: boolean[];
+    shape: S
+    i0: Point
+    i1: Point
+    t0: number
+    t1: number
+    containers: S[]
+    containments: boolean[]
 }
 
 export type Regions  = {
-    shapes: C[]
+    shapes: S[]
     points: Point[]
     edges: Edge[]
     regions: Region[]

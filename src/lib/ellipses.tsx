@@ -1,4 +1,4 @@
-import {Containers, Props as RegionProps} from "./region";
+import {Containers, Props as RegionProps} from "../components/region";
 import Edge from "./edge";
 import Ellipse from "./ellipse";
 import Intersection from "./intersection";
@@ -6,7 +6,6 @@ import {intersect, keyStr, powerset, ps, ss, sum} from "./utils";
 
 export const regionString = (r: RegionProps) => ps(r.points, r.edges);
 export const rts = regionString;
-
 
 export default class Ellipses {
     ellipses: Ellipse[]
