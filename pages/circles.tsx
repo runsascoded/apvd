@@ -16,21 +16,22 @@ import {deg, max, PI, round, sq3, sqrt} from "../src/lib/math";
 import Apvd, {LogLevel} from "../src/components/apvd";
 import {getMidpoint, getRegionCenter} from "../src/lib/region";
 import {getCenter, getIdx, getRadii} from "../src/lib/shape";
+import {InitialLayout, toShape} from "../src/lib/layout";
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false })
 
 type S = Shape<number> & { idx: number, name: string, color: string }
 const colors = [ 'green', 'orange', 'yellow', ]
-export type InitialLayout = { x: number, y: number, r: number }[]
+
 const SymmetricCircles: InitialLayout = [
-    { x:   0, y:     0, r: 1, },
-    { x:   1, y:     0, r: 1, },
-    { x: 1/2, y: sq3/2, r: 1, },
+    { c: { x:   0, y:     0, }, r: 1, },
+    { c: { x:   1, y:     0, }, r: 1, },
+    { c: { x: 1/2, y: sq3/2, }, r: 1, },
 ]
 const OriginRightUp: InitialLayout = [
-    { x:   0, y: 0, r: 1, },
-    { x:   1, y: 0, r: 1, },
-    { x:   0, y: 1, r: 1, },
+    { c: { x:   0, y: 0, }, r: 1, },
+    { c: { x:   1, y: 0, }, r: 1, },
+    { c: { x:   0, y: 1, }, r: 1, },
 ]
 
 const ThreeEqualCircles: Target[] = [
@@ -344,17 +345,15 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
         () =>
             initialLayout
                 .slice(0, numShapes)
-                .map(({ x, y, r }, idx) =>
-                    ({
+                .map((s, idx) => {
+                    const shape = toShape(s, idx)
+                    return {
                         idx,
                         name: String.fromCharCode('A'.charCodeAt(0) + idx),
                         color: colors[idx],
-                        Circle: {
-                            idx,
-                            c: { x, y }, r,
-                        }
-                    })
-                ),
+                        ...shape,
+                    }
+                }),
         [ numShapes, initialLayout, ]
     )
 
