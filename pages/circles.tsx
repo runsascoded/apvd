@@ -31,7 +31,13 @@ const SymmetricCircles: InitialLayout = [
 const OriginRightUp: InitialLayout = [
     { c: { x:   0, y: 0, }, r: 1, },
     { c: { x:   1, y: 0, }, r: 1, },
-    { c: { x:   0, y: 1, }, r: 1, },
+    { c: { x:   0, y: 1, }, r: { x: 2, y: 1, }, },
+]
+
+const CircleEllipses: InitialLayout = [
+    { c: { x: 0, y: 0, }, r: 1, },
+    { c: { x: 1, y: 0, }, r: { x: 1, y: 1, }, },
+    { c: { x: 0, y: 1, }, r: { x: 1, y: 1, }, },
 ]
 
 const ThreeEqualCircles: Target[] = [
@@ -291,12 +297,14 @@ export default function Page() {
 
 export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLevel: Dispatch<LogLevel>, }) {
     const [ initialLayout, setInitialLayout] = useState<InitialLayout>(
-        OriginRightUp,
+        CircleEllipses
+        // OriginRightUp,
         // SymmetricCircles,
     )
     const [ targets, setTargets ] = useState<Target[]>(
-        ThreeEqualCircles,
-        // FizzBuzzBazz,
+        // FizzBuzz,
+        // ThreeEqualCircles,
+        FizzBuzzBazz,
     )
 
     const gridState = GridState({
@@ -380,7 +388,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                 // Fix shapes[1].y. This can be done WLOG if it's a Circle. Having the second shape be an XYRR (aligned
                 // ellipse, no rotation) is effectively equivalent to it being an XYRRT (ellipse with rotation allowed),
                 // but where the rotation has been factored out WLOG.
-                ['y'],
+                ['cy'],
             ]
             const numSkipVars = ([] as string[]).concat(...skipVars).length
             const numVars = numCoords - numSkipVars
