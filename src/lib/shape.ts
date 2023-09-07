@@ -1,5 +1,7 @@
 import {R2, Shape} from "apvd";
 
+export type S = Shape<number> & { idx: number, name: string, color: string }
+
 export const getRadii = <D>(s: Shape<D>): [D, D] =>
     'Circle' in s
         ? [ s.Circle.r, s.Circle.r ]
@@ -14,3 +16,5 @@ export const getCenter = <D>(s: Shape<D>): R2<D> =>
     'Circle' in s
         ? s.Circle.c
         : s.XYRR.c
+
+export const shapeType = <D>(s: Shape<D>): 'Circle' | 'Ellipse' => 'Circle' in s ? 'Circle' : 'Ellipse'
