@@ -20,6 +20,7 @@ import {InitialLayout, toShape} from "../src/lib/layout";
 import {VarsTable} from "../src/components/tables/vars";
 import {SparkLineProps} from "../src/components/spark-lines";
 import {CircleCoord, CircleCoords, CircleFloatGetters, Coord, VarCoord, Vars, XYRRCoord, XYRRCoords, XYRRFloatGetters} from "../src/lib/vars";
+import {ShapesTable} from "../src/components/tables/shapes";
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false })
 
@@ -760,7 +761,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                                 Max error ratio step size:
                                 <input
                                     type={"number"}
-                                    step={0.1}
+                                    min={0} max={1.2} step={0.1}
                                     value={maxErrorRatioStepSize}
                                     onChange={(e) => setMaxErrorRatioStepSize(parseFloat(e.target.value))}
                                     onKeyDown={e => { e.stopPropagation() }}
@@ -867,32 +868,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                         }
                         <div className={css.tableBreak} />
                         <h3 className={css.tableTitle}>Shapes</h3>
-                        <table>
-                            <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>x</th>
-                                <th>y</th>
-                                <th>rx</th>
-                                <th>ry</th>
-                                <th>Type</th>
-                            </tr>
-                            </thead>
-                            <tbody>{
-                                shapes.map(({ idx, name, ...shape }) => {
-                                    const c = getCenter(shape)
-                                    const [ rx, ry ] = getRadii(shape)
-                                    return <tr key={idx}>
-                                        <td style={{ textAlign: "right", }}>{name}</td>
-                                        <td>{c.x.toPrecision(4)}</td>
-                                        <td>{c.y.toPrecision(4)}</td>
-                                        <td>{rx.toPrecision(4)}</td>
-                                        <td>{ry.toPrecision(4)}</td>
-                                        <td>{shapeType(shape)}</td>
-                                    </tr>
-                                })
-                            }</tbody>
-                        </table>
+                        <ShapesTable shapes={shapes} />
                     </div>
                 </div>
                 <div className={"row"}>

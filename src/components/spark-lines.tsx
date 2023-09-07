@@ -17,17 +17,20 @@ export function SparkLineCell(
         stepIdx: number
     } & SparkLineProps
 ) {
+    let data =
+        model
+            .steps
+            .slice(
+                max(0, stepIdx - sparkLineLimit),
+                stepIdx + 1
+            )
+            .map(fn)
+    if (data.length < sparkLineLimit) {
+        data = [ ...Array(sparkLineLimit - data.length).fill(data[0]), ...data ]
+    }
     return <td>
         <Sparklines
-            data={
-                model
-                    .steps
-                    .slice(
-                        max(0, stepIdx - sparkLineLimit),
-                        stepIdx + 1
-                    )
-                    .map(fn)
-            }
+            data={data}
             limit={sparkLineLimit}
             width={40} height={20}
             svgWidth={sparkLineWidth} svgHeight={sparkLineHeight}
