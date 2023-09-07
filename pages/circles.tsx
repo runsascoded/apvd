@@ -868,7 +868,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                         }
                         <div className={css.tableBreak} />
                         <h3 className={css.tableTitle}>Shapes</h3>
-                        <ShapesTable shapes={shapes} />
+                        <ShapesTable shapes={shapes} vars={vars} />
                     </div>
                 </div>
                 <div className={"row"}>

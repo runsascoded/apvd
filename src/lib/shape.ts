@@ -1,4 +1,4 @@
-import {R2, Shape} from "apvd";
+import {Circle, R2, Shape, XYRR} from "apvd";
 
 export type S = Shape<number> & { idx: number, name: string, color: string }
 
@@ -18,3 +18,13 @@ export const getCenter = <D>(s: Shape<D>): R2<D> =>
         : s.XYRR.c
 
 export const shapeType = <D>(s: Shape<D>): 'Circle' | 'Ellipse' => 'Circle' in s ? 'Circle' : 'Ellipse'
+
+export function map<D, O>(
+    s: Shape<D>,
+    circleFn: (c: Circle<D>) => O,
+    ellipseFn: (e: XYRR<D>) => O,
+): O {
+    return 'Circle' in s
+        ? circleFn(s.Circle)
+        : ellipseFn(s.XYRR)
+}
