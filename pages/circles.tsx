@@ -1,12 +1,11 @@
 import Grid, {GridState} from "../src/components/grid"
 import React, {Dispatch, Fragment, ReactNode, useCallback, useEffect, useMemo, useState} from "react"
 import * as apvd from "apvd"
-import {Circle, Diagram, Dual, Shape, train, XYRR} from "apvd"
+import {Diagram, Shape, train} from "apvd"
 import {makeModel, Model, Step} from "../src/lib/regions"
 import css from "./circles.module.scss"
 import A from "next-utils/a"
 import dynamic from "next/dynamic"
-import {Sparklines, SparklinesLine} from 'react-sparklines'
 import Button from 'react-bootstrap/Button'
 import OverlayTrigger from 'react-bootstrap/OverlayTrigger'
 import Tooltip from 'react-bootstrap/Tooltip'
@@ -15,12 +14,15 @@ import {getSliderValue} from "../src/components/inputs";
 import {deg, max, PI, round, sq3, sqrt} from "../src/lib/math";
 import Apvd, {LogLevel} from "../src/components/apvd";
 import {getMidpoint, getRegionCenter} from "../src/lib/region";
-import {getCenter, getIdx, getRadii} from "../src/lib/shape";
+import {getCenter, getIdx, getRadii, S, shapeType} from "../src/lib/shape";
+import {Target, TargetsTable} from "../src/components/tables/targets";
 import {InitialLayout, toShape} from "../src/lib/layout";
+import {VarsTable} from "../src/components/tables/vars";
+import {SparkLineProps} from "../src/components/spark-lines";
+import {CircleCoord, CircleCoords, CircleFloatGetters, Coord, VarCoord, Vars, XYRRCoord, XYRRCoords, XYRRFloatGetters} from "../src/lib/vars";
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false })
 
-type S = Shape<number> & { idx: number, name: string, color: string }
 const colors = [ 'green', 'orange', 'yellow', ]
 
 const SymmetricCircles: InitialLayout = [
@@ -31,7 +33,8 @@ const SymmetricCircles: InitialLayout = [
 const OriginRightUp: InitialLayout = [
     { c: { x:   0, y: 0, }, r: 1, },
     { c: { x:   1, y: 0, }, r: 1, },
-    { c: { x:   0, y: 1, }, r: { x: 2, y: 1, }, },
+    { c: { x:   0, y: 1, }, r: 1, },
+    // { c: { x:   0, y: 1, }, r: { x: 2, y: 1, }, },
 ]
 
 const CircleEllipses: InitialLayout = [
@@ -66,229 +69,7 @@ const FizzBuzzBazz: Target[] = [ // Fractions scaled up by LCM
     { sets: "012", value:  1 },  // 1 / 105
 ]
 
-type Target = {
-    sets: string
-    value: number
-}
-
-export type CircleCoord = 'x' | 'y' | 'r'
-export type CircleGetter<T> = (c: Circle<T>) => T
-export type CircleGetters<T> = { [k in CircleCoord]: CircleGetter<T> }
-const CircleCoords: CircleCoord[] = [ 'x', 'y', 'r' ]
-export function CircleGetters<T>(): CircleGetters<T> {
-    return {
-        'x': c => c.c.x,
-        'y': c => c.c.y,
-        'r': c => c.r,
-    }
-}
-export const CircleFloatGetters = CircleGetters<number>()
-export const CircleDualGetters = CircleGetters<Dual>()
-
-export type XYRRCoord = 'cx' | 'cy' | 'rx' | 'ry'
-export type XYRRGetter<T> = (e: XYRR<T>) => T
-export type XYRRGetters<T> = { [k in XYRRCoord]: XYRRGetter<T> }
-const XYRRCoords: XYRRCoord[] = [ 'cx', 'cy', 'rx', 'ry', ]
-export function XYRRGetters<T>(): XYRRGetters<T> {
-    return {
-        'cx': e => e.c.x,
-        'cy': e => e.c.y,
-        'rx': e => e.r.x,
-        'ry': e => e.r.y,
-    }
-}
-export const XYRRFloatGetters = XYRRGetters<number>()
-export const XYRRDualGetters = XYRRGetters<Dual>()
-
-export type Coord = CircleCoord | XYRRCoord
-export type VarCoord = [ number, Coord ]
-export type StepVarGetter = (step: Step, varIdx: number) => number
-
-export type Vars = {
-    allCoords: Coord[][]
-    skipVars: Coord[][]
-    vars: Coord[][]
-    numCoords: number
-    numVars: number
-    numSkipVars: number
-    coords: VarCoord[]
-    getVal: StepVarGetter
-}
 export type RunningState = "none" | "fwd" | "rev"
-
-const SparkNum = (v: number | null | undefined) =>
-    <td className={css.sparkNum}>
-        <span>{v === null || v === undefined ? '' : v.toPrecision(4)}</span>
-    </td>
-
-export function SparkLineCell(
-    { color, fn, model, stepIdx, sparkLineLimit, sparkLineStrokeWidth, sparkLineMargin, sparkLineWidth, sparkLineHeight, }: {
-        color: string
-        fn: (step: Step) => number
-        model: Model
-        stepIdx: number
-    } & SparkLineProps
-) {
-    return <td>
-        <Sparklines
-            data={
-                model
-                    .steps
-                    .slice(
-                        max(0, stepIdx - sparkLineLimit),
-                        stepIdx + 1
-                    )
-                    .map(fn)
-            }
-            limit={sparkLineLimit}
-            width={40} height={20}
-            svgWidth={sparkLineWidth} svgHeight={sparkLineHeight}
-            margin={sparkLineMargin}
-        >
-            <SparklinesLine
-                color={color}
-                style={{strokeWidth: sparkLineStrokeWidth,}}
-                // onMouseMove={(e, v, { x, y }) => {
-                //     console.log("sparkline mousemove:", e, v, x, y)
-                // }}
-            />
-        </Sparklines>
-    </td>
-}
-
-export type SparkLineProps = {
-    sparkLineLimit: number
-    sparkLineStrokeWidth: number
-    sparkLineMargin: number
-    sparkLineWidth: number
-    sparkLineHeight: number
-}
-export type SparkLineCellProps = SparkLineProps & {
-    model: Model
-    stepIdx: number
-}
-
-export function TargetsTable(
-    { initialShapes, targets, model, curStep, error, stepIdx, ...sparkLineProps }: {
-        initialShapes: S[]
-        targets: Target[]
-        model: Model
-        curStep: Step
-        error: Dual
-        stepIdx: number
-    } & SparkLineProps
-) {
-    const targetName = useCallback(
-        (sets: string) =>
-            sets.split('').map((ch: string, idx: number) => {
-                const name = initialShapes[idx].name
-                // console.log("targetName:", ch, idx, circle, initialCircles)
-                if (ch === '*') {
-                    return <span key={idx}></span>
-                } else if (ch == '-') {
-                    return <span key={idx} style={{textDecoration: "line-through",}}>{name}</span>
-                } else {
-                    return <span key={idx}>{name}</span>
-                }
-            }),
-        [ initialShapes, ],
-    )
-
-    const [ showTargetCurCol, setShowTargetCurCol ] = useState(false)
-    const cellProps = { model, stepIdx, ...sparkLineProps, }
-    const targetTableRows = targets.map(({ sets, value}) => {
-        const name = targetName(sets)
-        const err = curStep.errors.get(sets)
-        return <tr key={sets}>
-            <td className={css.val}>{name}</td>
-            <td className={css.val}>{value.toPrecision(3).replace(/\.?0+$/, '')}</td>
-            {
-                showTargetCurCol &&
-                <td className={css.val}>{
-                    err ? (err.actual_frac.v * err.total_target_area).toPrecision(3) : ''
-                }</td>
-            }
-            {SparkNum(err && err.error.v * err.total_target_area)}
-            <SparkLineCell
-                color={"red"}
-                fn={step => step.errors.get(sets)?.error.v || 0}
-                {...cellProps}
-            />
-        </tr>
-    })
-
-    return (
-        <table className={css.sparkLinesTable}>
-            <thead>
-            <tr>
-                <th></th>
-                <th>Goal</th>
-                {showTargetCurCol && <th>Cur</th>}
-                <th style={{ textAlign: "center" }} colSpan={2}>Error</th>
-            </tr>
-            </thead>
-            <tbody>
-            {targetTableRows}
-            <tr>
-                <td colSpan={2 + (showTargetCurCol ? 1 : 0)} style={{ textAlign: "right", fontWeight: "bold", }}>Overall:</td>
-                {SparkNum(error.v * curStep.total_target_area)}
-                <SparkLineCell
-                    color={"red"}
-                    fn={step => step.error.v}
-                    {...cellProps}
-                />
-            </tr>
-            </tbody>
-        </table>
-    )
-}
-
-export function VarsTable(
-    { vars, initialShapes, shapes, curStep, error, ...sparkLineCellProps }: {
-        vars: Vars
-        initialShapes: S[]
-        shapes: S[]
-        curStep: Step
-        error: Dual
-    } & SparkLineCellProps
-) {
-    const varTableRows = useMemo(
-        () => {
-            // console.log(`varTableRows: ${initialCircles.length} vs ${circles.length} circles, vars:`, vars.coords.length, vars)
-            return vars.coords.map(([ circleIdx, coord ], varIdx ) =>
-                circleIdx < shapes.length &&
-                <tr key={varIdx}>
-                    <td>{shapes[circleIdx].name}.{coord}</td>
-                    {SparkNum(vars.getVal(curStep, varIdx))}
-                    <SparkLineCell
-                        color={"blue"}
-                        fn={step => vars.getVal(step, varIdx)}
-                        {...sparkLineCellProps}
-                    />
-                    {SparkNum(-error.d[varIdx])}
-                    <SparkLineCell
-                        color={"green"}
-                        fn={step => step.error.d[varIdx]}
-                        {...sparkLineCellProps}
-                    />
-                </tr>
-            )
-        },
-        [ vars, initialShapes, shapes, ]
-    )
-    return (
-        <table className={css.sparkLinesTable}>
-            <thead>
-            <tr>
-                <th>Var</th>
-                <th colSpan={2} style={{ textAlign: "center", }}>Value</th>
-                <th colSpan={2} style={{ textAlign: "center", }}>Δ</th>
-            </tr>
-            </thead>
-            <tbody>{varTableRows}</tbody>
-        </table>
-    )
-}
 
 export default function Page() {
     const [ logLevel, setLogLevel ] = useState<LogLevel>("info")
@@ -321,7 +102,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
         [ targets ],
     )
     const [ maxErrorRatioStepSize, setMaxErrorRatioStepSize ] = useState(0.7)
-    const [ maxSteps, setMaxSteps ] = useState(1000)
+    const [ maxSteps, setMaxSteps ] = useState(1500)
     const [ stepBatchSize, setStepBatchSize ] = useState(10)
 
     const [ model, setModel ] = useState<Model | null>(null)
@@ -388,7 +169,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                 // Fix shapes[1].y. This can be done WLOG if it's a Circle. Having the second shape be an XYRR (aligned
                 // ellipse, no rotation) is effectively equivalent to it being an XYRRT (ellipse with rotation allowed),
                 // but where the rotation has been factored out WLOG.
-                ['cy'],
+                ['y'],
             ]
             const numSkipVars = ([] as string[]).concat(...skipVars).length
             const numVars = numCoords - numSkipVars
@@ -834,7 +615,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     const [ showRegionLabels, setShowRegionLabels ] = useState(true)
     const regionLabels = useMemo(
         () =>
-            showRegionLabels && curStep && curStep.regions.regions.map((region, regionIdx) => {
+            curStep && curStep.regions.regions.map((region, regionIdx) => {
                 const center = getRegionCenter(region, fs)
                 const containerIdxs = region.containers.map(getIdx)
                 containerIdxs.sort()
@@ -850,9 +631,9 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                             textAnchor={"middle"}
                             dominantBaseline={"middle"}
                             fontSize={16 / scale}
-                        >
-                            {label}
-                        </text>
+                        >{
+                            showRegionLabels && label
+                        }</text>
                     </OverlayTrigger>
                 )
             }),
@@ -882,7 +663,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                         stroke={"black"}
                         strokeWidth={1 / scale}
                         fill={"grey"}
-                        fillOpacity={isHovered ? 0.5 : 0}
+                        fillOpacity={isHovered ? 0.4 : 0}
                         onMouseOver={() => setHoveredRegion(key)}
                         // onMouseLeave={() => setHoveredRegion(null)}
                         onMouseOut={() => setHoveredRegion(null)}
@@ -906,8 +687,8 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                     <>
                         {circleNodes}
                         {edgePoints}
-                        {regionPaths}
                         {regionLabels}
+                        {regionPaths}
                     </>
                 </Grid>
                 <hr />
@@ -1094,6 +875,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                                 <th>y</th>
                                 <th>rx</th>
                                 <th>ry</th>
+                                <th>Type</th>
                             </tr>
                             </thead>
                             <tbody>{
@@ -1101,11 +883,12 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                                     const c = getCenter(shape)
                                     const [ rx, ry ] = getRadii(shape)
                                     return <tr key={idx}>
-                                        <td>{name}</td>
+                                        <td style={{ textAlign: "right", }}>{name}</td>
                                         <td>{c.x.toPrecision(4)}</td>
                                         <td>{c.y.toPrecision(4)}</td>
                                         <td>{rx.toPrecision(4)}</td>
                                         <td>{ry.toPrecision(4)}</td>
+                                        <td>{shapeType(shape)}</td>
                                     </tr>
                                 })
                             }</tbody>
