@@ -4,6 +4,7 @@ import React, {useCallback, useState} from "react";
 import css from "../../../pages/circles.module.scss";
 import {SparkLineCell, SparkLineProps, SparkNum} from "../spark-lines";
 import {S} from "../../lib/shape";
+import { abs } from "../../lib/math";
 
 export type Target = {
     sets: string
@@ -53,7 +54,7 @@ export function TargetsTable(
             {SparkNum(err && err.error.v * err.total_target_area)}
             <SparkLineCell
                 color={"red"}
-                fn={step => step.errors.get(sets)?.error.v || 0}
+                fn={step => abs(step.errors.get(sets)?.error.v || 0)}
                 {...cellProps}
             />
         </tr>
@@ -72,7 +73,7 @@ export function TargetsTable(
             <tbody>
             {targetTableRows}
             <tr>
-                <td colSpan={2 + (showTargetCurCol ? 1 : 0)} style={{ textAlign: "right", fontWeight: "bold", }}>Overall:</td>
+                <td colSpan={2 + (showTargetCurCol ? 1 : 0)} style={{ textAlign: "right", fontWeight: "bold", }}>Total:</td>
                 {SparkNum(error.v * curStep.total_target_area)}
                 <SparkLineCell
                     color={"red"}
