@@ -49,15 +49,15 @@ https://github.com/runsascoded/apvd/assets/465045/2bcaa761-1989-4d6e-8424-8b5937
 
 https://www.hindawi.com/journals/bmri/2015/456479/
 
-![Venn Diagram comprised of 5 nonconvex blobs](5-blobs.png)
+![Venn Diagram comprised of 5 nonconvex blobs](public/img/5-blobs.png)
 
 https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3753564/pdf/btt375.pdf
 
-![Venn Diagram comprised of 4 ellipses](4-ellipses.png)
+![Venn Diagram comprised of 4 ellipses](public/img/4-ellipses.png)
 
 ### Area-proportional Venn Diagrams (circles only) <a id="circles"></a>
 
-![Venn Diagram comprised of 3 circles, with region areas displayed](3-circles.png)
+![Venn Diagram comprised of 3 circles, with region areas displayed](public/img/3-circles.png)
 
 [Blog (2013)](https://www.benfrederickson.com/venn-diagrams-with-d3.js/), [follow-up (2013)](https://www.benfrederickson.com/calculating-the-intersection-of-3-or-more-circles/), [benfred/venn.js](https://github.com/benfred/venn.js), [upsetjs/venn.js](https://github.com/upsetjs/venn.js)
 
@@ -65,30 +65,30 @@ https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3753564/pdf/btt375.pdf
 https://www.combinatorics.org/files/Surveys/ds5/ds5v3-2005/VennEJC.html
 
 #### 5 symmetric triangles <a id="5-triangles"></a>
-![Venn Diagram comprised of 5 symmetric triangles](5-triangles.gif)
+![Venn Diagram comprised of 5 symmetric triangles](public/img/5-triangles.gif)
 
 https://www.combinatorics.org/files/Surveys/ds5/ds5v3-2005/VennSymmExamples.html
 
 #### 6 triangles <a id="6-triangles"></a>
-![Venn Diagram comprised of 6 differently-shaped triangles](6-triangles.gif)
+![Venn Diagram comprised of 6 differently-shaped triangles](public/img/6-triangles.gif)
 https://www.combinatorics.org/files/Surveys/ds5/ds5v3-2005/VennTriangleEJC.html
 
 #### Polyominoes <a id="polyominoes"></a>
 https://www.combinatorics.org/files/Surveys/ds5/ds5v3-2005/VennPoly67EJC.html
 
 > Shown below is a 6-Venn diagram formed entirely from curves drawn from axis-aligned edges. It is a minimum-area diagram; that is, each region is composed of a single square of unit area. Note that many edges overlap, so the diagram is [infinitely intersecting](https://www.combinatorics.org/files/Surveys/ds5/ds5v3-2005/VennOtherEJC.html#infinite). As with many other diagrams in these pages, regions are coloured by weight. The diagrams on this page are from \[[CR05](https://www.combinatorics.org/files/Surveys/ds5/ds5v3-2005/VennRefs.html#CR05)\].
-> ![](polyvenn6-diag.png)
+> ![](public/img/polyvenn6-diag.png)
 >
 > The six component curves of the diagram, overlaid on a grayed-out version of the entire diagram:
-> ![](polyvenn6-curves.png)
+> ![](public/img/polyvenn6-curves.png)
 >
 > This is a 7-Venn diagram formed entirely from curves drawn from axis-aligned edges. Like the above it is minimum-area and infinitely intersecting.
 >
-> ![](polyvenn7-diag.png)
+> ![](public/img/polyvenn7-diag.png)
 >
 > The seven component curves:
 >
-> ![](polyvenn7-curves.png)
+> ![](public/img/polyvenn7-curves.png)
 
 ## Other misc references <a id="misc"></a>
 - [venneuler R package](https://www.rforge.net/venneuler/) ([paper](https://www.cs.uic.edu/~wilkinson/Publications/venneuler.pdf))
