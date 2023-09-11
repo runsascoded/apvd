@@ -148,9 +148,9 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
         () => targets.map(({ sets, value }) => [ sets, value ]),
         [ targets ],
     )
-    const [ maxErrorRatioStepSize, setMaxErrorRatioStepSize ] = useState(0.001)
+    const [ maxErrorRatioStepSize, setMaxErrorRatioStepSize ] = useState(0.7)
     const [ maxSteps, setMaxSteps ] = useState(1500)
-    const [ stepBatchSize, setStepBatchSize ] = useState(1)
+    const [ stepBatchSize, setStepBatchSize ] = useState(10)
 
     const [ model, setModel ] = useState<Model | null>(null)
     // const minIdx = useMemo(() => model ? model.min_idx : null, [ model ])
