@@ -3,6 +3,7 @@ Area-Proportional Venn Diagram generator (WIP)
 
 <!-- toc -->
 - [Demos](#demos)
+    - [Gradient descent toward target region sizes: runsascoded.com/apvd/circles](#demo)
     - [Ellipse intersections: runsascoded.com/apvd](#ellipses)
     - [Differentiable intersections: runsascoded.com/apvd/circles](#circles)
 - [Status](#status)
@@ -21,23 +22,25 @@ Area-Proportional Venn Diagram generator (WIP)
 
 ## Demos <a id="demos"></a>
 
+### Gradient descent toward target region sizes: [runsascoded.com/apvd/circles](https://runsascoded/apvd/circles) <a id="demo"></a>
+
+https://github.com/runsascoded/apvd/assets/465045/52733e34-1603-43c1-8fc1-99afbd008df2
+
+(*uses [runsascoded/shapes] to compute intersections + areas, in terms of circle's center/radius gradients, and gradient-descend to target proportions*)
+
 ### Ellipse intersections: [runsascoded.com/apvd](https://runsascoded/apvd) <a id="ellipses"></a>
 
 https://github.com/runsascoded/apvd/assets/465045/2bcaa761-1989-4d6e-8424-8b593759fb53
 
 (*+ projections where each ellipse becomes a unit circle; useful for computing / debugging intersections*)
 
-### Differentiable intersections: [runsascoded.com/apvd/circles] <a id="circles"></a>
-
-https://github.com/runsascoded/apvd/assets/465045/6dffc8d6-efd8-4f00-bee4-638516496ded
-
-(*uses [runsascoded/shapes] to compute intersections + areas, in terms of circle's center/radius gradients, and gradient-descend to target proportions*)
-
 ## Status <a id="status"></a>
 - [x] Compute ellipse intersections / areas
 - Autodiff computations + gradient-descend to optimal solution (see [runsascoded/shapes])
-  - [x] circles ([runsascoded.com/apvd/circles])
-  - [ ] ellipses
+  - [x] circles
+  - [ ] ellipses (WIP)
+    - hit numeric-stability issues with "roots" crate quartic solver ([roots#30](https://github.com/vorot/roots/issues/30))
+    - working on one [in runsascoded/shapes](https://github.com/runsascoded/shapes/blob/e2d0d1bfd3e8c25ba8bb73f2066b374347de261d/src/math/quartic.rs#L219-L238)
   - [ ] polygons?
 
 ## Inspiration <a id="inspo"></a>
@@ -45,12 +48,15 @@ https://github.com/runsascoded/apvd/assets/465045/6dffc8d6-efd8-4f00-bee4-638516
 ### Non-area-proportional Venn Diagrams in papers <a id="papers"></a>
 
 https://www.hindawi.com/journals/bmri/2015/456479/
+
 ![Venn Diagram comprised of 5 nonconvex blobs](5-blobs.png)
 
 https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3753564/pdf/btt375.pdf
+
 ![Venn Diagram comprised of 4 ellipses](4-ellipses.png)
 
 ### Area-proportional Venn Diagrams (circles only) <a id="circles"></a>
+
 ![Venn Diagram comprised of 3 circles, with region areas displayed](3-circles.png)
 
 [Blog (2013)](https://www.benfrederickson.com/venn-diagrams-with-d3.js/), [follow-up (2013)](https://www.benfrederickson.com/calculating-the-intersection-of-3-or-more-circles/), [benfred/venn.js](https://github.com/benfred/venn.js), [upsetjs/venn.js](https://github.com/upsetjs/venn.js)
