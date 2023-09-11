@@ -55,7 +55,6 @@ export const cubic = (a: number, b: number, c?: number, d?: number): number[] =>
         roots.sort(cmp);
         return roots;
     } else {
-
         if (r === 0) {
             return [ 3*q/p, -q2/p3, -q2/p3 ].sort(cmp);
         } else {

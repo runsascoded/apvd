@@ -24,7 +24,12 @@ import {ShapesTable} from "../src/components/tables/shapes";
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false })
 
-const colors = [ 'green', 'orange', 'yellow', ]
+export const colors = [
+    '#f99',  // red
+    'green',
+    'orange',
+    '#99f',  // blue
+]
 
 const SymmetricCircles: InitialLayout = [
     { c: { x:   0, y:     0, }, r: 1, },
@@ -42,6 +47,23 @@ const CircleEllipses: InitialLayout = [
     { c: { x: 0, y: 0, }, r: 1, },
     { c: { x: 1, y: 0, }, r: { x: 1, y: 1, }, },
     { c: { x: 0, y: 1, }, r: { x: 1, y: 1, }, },
+]
+
+const r = 2
+const r2 = r * r
+const r2sq = sqrt(1 + r2)
+let c0 = 1/r2sq
+let c1 = r2 * c0
+export const Ellipses4: InitialLayout = [
+    { c: { x:   c0-.1, y:   c1, }, r: { x: 1, y: r, }, },
+    { c: { x: 1+c0, y:   c1, }, r: { x: 1, y: r, }, },
+    { c: { x:   c1, y:   c0, }, r: { x: r, y: 1, }, },
+    // { c: { x:   c1, y: 1+c0, }, r: { x: r, y: 1, }, },
+]
+
+export const Repro: InitialLayout = [
+    { c: { x: -1.100285308561806, y: -1.1500279763995946e-5 }, r: { x: 1.000263820108834, y: 1.0000709021402923 } },
+    { c: { x: 0, y: 0, }, r: 1, },
 ]
 
 const ThreeEqualCircles: Target[] = [
@@ -70,30 +92,54 @@ const FizzBuzzBazz: Target[] = [ // Fractions scaled up by LCM
     { sets: "012", value:  1 },  // 1 / 105
 ]
 
+// Cenomic variants identified by 4 variant callers: VarScan, SomaticSniper, Strelka, JSM2
+// cf. https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3753564/pdf/btt375.pdf, ../4-ellipses.png
+const VariantCallers: Target[] = [
+    { sets: "0---", value: 633 },
+    { sets: "-1--", value: 618 },
+    { sets: "--2-", value: 187 },
+    { sets: "---3", value: 319 },
+    { sets: "01--", value: 112 },
+    { sets: "0-2-", value:   0 },
+    { sets: "0--3", value:  13 },
+    { sets: "-12-", value:  14 },
+    { sets: "-1-3", value:  55 },
+    { sets: "--23", value:  21 },
+    { sets: "012-", value:   1 },
+    { sets: "01-3", value:  17 },
+    { sets: "0-23", value:   0 },
+    { sets: "-123", value:   9 },
+    { sets: "0123", value:  36 },
+]
+
 export type RunningState = "none" | "fwd" | "rev"
 
 export default function Page() {
-    const [ logLevel, setLogLevel ] = useState<LogLevel>("info")
+    const [ logLevel, setLogLevel ] = useState<LogLevel>("debug")
     return <Apvd logLevel={logLevel}>{() => <Body logLevel={logLevel} setLogLevel={setLogLevel} />}</Apvd>
 }
 
 export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLevel: Dispatch<LogLevel>, }) {
     const [ initialLayout, setInitialLayout] = useState<InitialLayout>(
-        CircleEllipses
+        // Ellipses4
+        Repro,
+        // CircleEllipses
         // OriginRightUp,
         // SymmetricCircles,
     )
     const [ targets, setTargets ] = useState<Target[]>(
-        // FizzBuzz,
         // ThreeEqualCircles,
-        FizzBuzzBazz,
+        FizzBuzz,
+        // FizzBuzzBazz,
+        // VariantCallers,
     )
 
     const gridState = GridState({
-        center: { x: 0.5, y: 0.5, },
-        scale: 120,
-        width: 300,
-        height: 400,
+        center: { x: 1, y: 1, },
+        scale: 60,
+        width: 600,
+        height: 800,
+        showGrid: true,
     })
     const { scale: [ scale ], } = gridState
 
@@ -102,9 +148,9 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
         () => targets.map(({ sets, value }) => [ sets, value ]),
         [ targets ],
     )
-    const [ maxErrorRatioStepSize, setMaxErrorRatioStepSize ] = useState(0.7)
+    const [ maxErrorRatioStepSize, setMaxErrorRatioStepSize ] = useState(0.001)
     const [ maxSteps, setMaxSteps ] = useState(1500)
-    const [ stepBatchSize, setStepBatchSize ] = useState(10)
+    const [ stepBatchSize, setStepBatchSize ] = useState(1)
 
     const [ model, setModel ] = useState<Model | null>(null)
     // const minIdx = useMemo(() => model ? model.min_idx : null, [ model ])
@@ -166,11 +212,12 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
             const numCoords = ([] as string[]).concat(...allCoords).length
             const skipVars: Coord[][] = [
                 // Fix all coords of shapes[0], it is the unit circle centered at the origin, WLOG
-                CircleCoords,
+                // CircleCoords,
+                XYRRCoords,
                 // Fix shapes[1].y. This can be done WLOG if it's a Circle. Having the second shape be an XYRR (aligned
                 // ellipse, no rotation) is effectively equivalent to it being an XYRRT (ellipse with rotation allowed),
                 // but where the rotation has been factored out WLOG.
-                ['y'],
+                // ['y'],
             ]
             const numSkipVars = ([] as string[]).concat(...skipVars).length
             const numVars = numCoords - numSkipVars
