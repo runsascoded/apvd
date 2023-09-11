@@ -42,6 +42,7 @@
     "start": "next start",
     "lint": "next lint",
     "export": "next build && next export -o out/apvd",
-    "gha-export": "next build && next export && touch out/.nojekyll"
+    "gha-export": "next build && next export && touch out/.nojekyll",
+    "test": "jest"
   }
 }
