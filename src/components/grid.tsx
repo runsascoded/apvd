@@ -123,8 +123,10 @@ export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, 
         const vLines = [];
         for (let x = startX; x <= rx; x += gridSize) {
             const d = "M" + x + " " + ty + "V" + by;
+            const key = `v-${x}`
             const vLine = <path
-                key={"v-"+x}
+                key={key}
+                id={key}
                 className={(css.gridLine || '') + (x === 0 ? ` ${css.axis || ''}` : "")}
                 strokeWidth={gridSize / 20}
                 d={d}
@@ -135,15 +137,17 @@ export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, 
                 vLines.push(vLine);
             }
         }
-        gridLines.push(<g key="vertical" className={`${css.gridLines || ''} ${css.vertical || ''}`}>{vLines}</g>);
+        gridLines.push(<g key="vertical" id={"grid-vLines"} className={`${css.gridLines || ''} ${css.vertical || ''}`}>{vLines}</g>);
 
         const startY = by - (by % gridSize);
 
         const hLines = [];
         for (let y = startY; y <= ty; y += gridSize) {
             const d = "M" + lx + " " + y + "H" + rx;
+            const key = `h-${y}`
             const hLine = <path
-                key={"h-"+y}
+                key={key}
+                id={key}
                 className={(css.gridLine || '') + (y === 0 ? ` ${css.axis || ''}` : "")}
                 strokeWidth={gridSize / 20}
                 d={d}
@@ -155,7 +159,7 @@ export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, 
             }
         }
         gridLines.push(
-            <g key="horizontal" className={`${css.gridLines || ''} ${css.horizontal || ''}`}>{hLines}</g>
+            <g key="horizontal" id={"grid-hLines"} className={`${css.gridLines || ''} ${css.horizontal || ''}`}>{hLines}</g>
         );
     }
 
@@ -186,8 +190,10 @@ export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, 
             transform={transforms.map(([ type, x, y ]) => `${type}(${x},${y})`).join(" ")}
         >
             {gridLines}
-            {xAxis}
-            {yAxis}
+            <g id={"axes"}>
+                {xAxis}
+                {yAxis}
+            </g>
             {children}
         </g>
         {outerChildren}

@@ -1,4 +1,4 @@
-import {getCenter, getRadii, map, S, shapeType} from "../../lib/shape";
+import {getCenter, getRadii, mapShape, S, shapeType} from "../../lib/shape";
 import React, {ReactNode} from "react";
 import {Vars} from "../../lib/vars";
 import css from "./shapes.module.scss"
@@ -8,7 +8,7 @@ import Tooltip from "react-bootstrap/Tooltip";
 export type Props = {
     shapes: S[]
     vars: Vars
-    precision: number
+    precision?: number
 }
 
 export function VarCell({ skipped, children }: { skipped: boolean, children: ReactNode }) {
@@ -43,7 +43,7 @@ export function ShapesTable({ shapes, vars, precision = 4 }: Props) {
                     const [ rx, ry ] = getRadii(shape)
                     const skipCx = skippedVars.includes("x")
                     const skipCy = skippedVars.includes("y")
-                    const [ skipRx, skipRy ] = map(
+                    const [ skipRx, skipRy ] = mapShape(
                         shape,
                         c => {
                             const skip = skippedVars.includes("r")

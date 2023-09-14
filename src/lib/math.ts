@@ -13,4 +13,4 @@ export const clamp = (v: number, m: number, M: number): number => max(m, min(M, 
 export const deg = (t: number) => 180 * t / pi;
 export const rad = (d: number) => pi * d / 180;
 
-export const pd = (t: number) => r3(deg(t)) + "°";
+export const degStr = (t: number) => r3(deg(t)) + "°";

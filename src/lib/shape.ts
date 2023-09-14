@@ -19,7 +19,7 @@ export const getCenter = <D>(s: Shape<D>): R2<D> =>
 
 export const shapeType = <D>(s: Shape<D>): 'Circle' | 'Ellipse' => 'Circle' in s ? 'Circle' : 'Ellipse'
 
-export function map<D, O>(
+export function mapShape<D, O>(
     s: Shape<D>,
     circleFn: (c: Circle<D>) => O,
     ellipseFn: (e: XYRR<D>) => O,

@@ -69,10 +69,8 @@
     }
 
     .controlPanel {
-
       .input {
         text-align: right;
-
         input, option {
           text-align: right;
           max-width: 5em;
@@ -80,7 +78,6 @@
       }
 
       .controls {
-
         .slider {
           width: 15em;
           input {
@@ -133,11 +130,20 @@
     }
 
     .plot {
-      width: 20em;
+      width: 15em;
       height: 15em;
     }
     .stats {
       width: auto;
+    }
+
+    .shapesPreContainer {
+      max-width: 25em;
+      overflow: scroll;
+      cursor: pointer;
+      pre {
+        overflow: scroll;
+      }
     }
 
     .sparkLinesTable {

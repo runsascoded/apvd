@@ -1,6 +1,6 @@
 import React from 'react';
 import {pc, pp,} from './utils';
-import {pd, pi, tpi} from './math';
+import {degStr, pi, tpi} from './math';
 import Ellipse, {XY} from "./ellipse";
 import Intersection from "./intersection";
 import {deg} from "./math";
@@ -104,7 +104,7 @@ export default class Edge {
     toString() {
         const pp1 = pp(this.x1, this.y1);
         const pp2 = pp(this.x2, this.y2);
-        return `"Edge(${this.i}: ${pp1} → ${pp2}, ${pd(this.t1)}→${pd(this.t2)}, ${pp(this.mp)})`
+        return `"Edge(${this.i}: ${pp1} → ${pp2}, ${degStr(this.t1)}→${degStr(this.t2)}, ${pp(this.mp)})`
     }
 
     s() {

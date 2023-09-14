@@ -11,10 +11,10 @@ import OverlayTrigger from 'react-bootstrap/OverlayTrigger'
 import Tooltip from 'react-bootstrap/Tooltip'
 import {fromEntries} from "next-utils/objs";
 import {getSliderValue} from "../src/components/inputs";
-import {deg, max, PI, round, sq3, sqrt} from "../src/lib/math";
+import {deg, max, degStr, PI, round, sq3, sqrt} from "../src/lib/math";
 import Apvd, {LogLevel} from "../src/components/apvd";
 import {getMidpoint, getRegionCenter} from "../src/lib/region";
-import {getCenter, getIdx, getRadii, S, shapeType} from "../src/lib/shape";
+import {getCenter, getIdx, getRadii, mapShape, S, shapeType} from "../src/lib/shape";
 import {Target, TargetsTable} from "../src/components/tables/targets";
 import {InitialLayout, toShape} from "../src/lib/layout";
 import {VarsTable} from "../src/components/tables/vars";
@@ -55,10 +55,10 @@ const r2sq = sqrt(1 + r2)
 let c0 = 1/r2sq
 let c1 = r2 * c0
 export const Ellipses4: InitialLayout = [
-    { c: { x:   c0-.1, y:   c1, }, r: { x: 1, y: r, }, },
+    { c: { x:   c0, y:   c1, }, r: { x: 1, y: r, }, },
     { c: { x: 1+c0, y:   c1, }, r: { x: 1, y: r, }, },
     { c: { x:   c1, y:   c0, }, r: { x: r, y: 1, }, },
-    // { c: { x:   c1, y: 1+c0, }, r: { x: r, y: 1, }, },
+    { c: { x:   c1, y: 1+c0, }, r: { x: r, y: 1, }, },
 ]
 
 export const Repro: InitialLayout = [
@@ -115,28 +115,28 @@ const VariantCallers: Target[] = [
 export type RunningState = "none" | "fwd" | "rev"
 
 export default function Page() {
-    const [ logLevel, setLogLevel ] = useState<LogLevel>("debug")
+    const [ logLevel, setLogLevel ] = useState<LogLevel>("info")
     return <Apvd logLevel={logLevel}>{() => <Body logLevel={logLevel} setLogLevel={setLogLevel} />}</Apvd>
 }
 
 export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLevel: Dispatch<LogLevel>, }) {
     const [ initialLayout, setInitialLayout] = useState<InitialLayout>(
         // Ellipses4
-        Repro,
-        // CircleEllipses
+        // Repro,
+        CircleEllipses
         // OriginRightUp,
         // SymmetricCircles,
     )
     const [ targets, setTargets ] = useState<Target[]>(
         // ThreeEqualCircles,
-        FizzBuzz,
-        // FizzBuzzBazz,
+        // FizzBuzz,
+        FizzBuzzBazz,
         // VariantCallers,
     )
 
     const gridState = GridState({
         center: { x: 1, y: 1, },
-        scale: 60,
+        scale: 150,
         width: 600,
         height: 800,
         showGrid: true,
@@ -212,8 +212,8 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
             const numCoords = ([] as string[]).concat(...allCoords).length
             const skipVars: Coord[][] = [
                 // Fix all coords of shapes[0], it is the unit circle centered at the origin, WLOG
-                // CircleCoords,
-                XYRRCoords,
+                CircleCoords,
+                // XYRRCoords,
                 // Fix shapes[1].y. This can be done WLOG if it's a Circle. Having the second shape be an XYRR (aligned
                 // ellipse, no rotation) is effectively equivalent to it being an XYRRT (ellipse with rotation allowed),
                 // but where the rotation has been factored out WLOG.
@@ -601,28 +601,61 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     // const fs = [ 0.5, ];
 
     const circleNodes = useMemo(
-        () => shapes.map(({ color, ...shape }: S, idx: number) => {
-            const { x: cx, y: cy } = getCenter(shape)
-            const props = {
-                key: idx,
-                cx, cy,
-                stroke: "black",
-                strokeWidth: 3 / scale,
-                fill: color,
-                fillOpacity: 0.3,
-            }
-            return 'Circle' in shape
-                ? <circle
-                    r={shape.Circle.r}
-                    {...props}
-                />
-                : <ellipse
-                    rx={shape.XYRR.r.x}
-                    ry={shape.XYRR.r.y}
-                    {...props}
-                />
-        }),
+        () => <g id={"shapes"}>{
+            shapes.map(({ color, ...shape }: S, idx: number) => {
+                const { x: cx, y: cy } = getCenter(shape)
+                const props = {
+                    key: idx,
+                    cx, cy,
+                    stroke: "black",
+                    strokeWidth: 3 / scale,
+                    fill: color,
+                    fillOpacity: 0.3,
+                }
+                return 'Circle' in shape
+                    ? <circle
+                        r={shape.Circle.r}
+                        {...props}
+                    />
+                    : <ellipse
+                        rx={shape.XYRR.r.x}
+                        ry={shape.XYRR.r.y}
+                        {...props}
+                    />
+            })
+        }</g>,
         [ shapes, scale ],
+    )
+
+    const [ showIntersectionPoints, setShowIntersectionPoints ] = useState(false)
+    const intersectionNodes = useMemo(
+        () => showIntersectionPoints && <g id={"intersections"}>{
+            curStep && curStep.regions.points.map(({ x, y, c0, c1, t0, t1 }, pointIdx) => {
+                return (
+                    <OverlayTrigger
+                        key={pointIdx}
+                        overlay={
+                            <Tooltip>
+                                <div>x: {x.v.toPrecision(4)}</div>
+                                <div>y: {y.v.toPrecision(4)}</div>
+                                <div>{getIdx(c0)}@{degStr(t0.v)}</div>
+                                <div>{getIdx(c1)}@{degStr(t1.v)}</div>
+                            </Tooltip>
+                        }>
+                        <circle
+                            cx={x.v}
+                            cy={y.v}
+                            r={0.05}
+                            stroke={"black"}
+                            strokeWidth={1 / scale}
+                            fill={"black"}
+                            fillOpacity={0.8}
+                        />
+                    </OverlayTrigger>
+                )
+            })
+        }</g>,
+        [ showIntersectionPoints, curStep, scale, ],
     )
 
     const [ showEdgePoints, setShowEdgePoints ] = useState(false)
@@ -663,28 +696,30 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     const [ showRegionLabels, setShowRegionLabels ] = useState(true)
     const regionLabels = useMemo(
         () =>
-            curStep && curStep.regions.regions.map((region, regionIdx) => {
-                const center = getRegionCenter(region, fs)
-                const containerIdxs = region.containers.map(getIdx)
-                containerIdxs.sort()
-                const label = containerIdxs.map(idx => shapes[idx].name).join('')
-                const { key, area } = region
-                const target = expandedTargetsMap && expandedTargetsMap[key]
-                const tooltip = target ? `${label}: ${(area.v / curStep.total_area.v * curStep.total_target_area).toPrecision(3)} ${target.toPrecision(3)}` : key
-                // console.log("key:", key, "hoveredRegion:", hoveredRegion)
-                return (
-                    <OverlayTrigger key={`${regionIdx}-${key}`} show={key == hoveredRegion} overlay={<Tooltip onMouseOver={() => setHoveredRegion(key)}>{tooltip}</Tooltip>}>
-                        <text
-                            transform={`translate(${center.x}, ${center.y}) scale(1, -1)`}
-                            textAnchor={"middle"}
-                            dominantBaseline={"middle"}
-                            fontSize={16 / scale}
-                        >{
-                            showRegionLabels && label
-                        }</text>
-                    </OverlayTrigger>
-                )
-            }),
+            curStep && <g id={"regionLabels"}>{
+                curStep.regions.regions.map((region, regionIdx) => {
+                    const center = getRegionCenter(region, fs)
+                    const containerIdxs = region.containers.map(getIdx)
+                    containerIdxs.sort()
+                    const label = containerIdxs.map(idx => shapes[idx].name).join('')
+                    const { key, area } = region
+                    const target = expandedTargetsMap && expandedTargetsMap[key]
+                    const tooltip = target ? `${label}: ${(area.v / curStep.total_area.v * curStep.total_target_area).toPrecision(3)} ${target.toPrecision(3)}` : key
+                    // console.log("key:", key, "hoveredRegion:", hoveredRegion)
+                    return (
+                        <OverlayTrigger key={`${regionIdx}-${key}`} show={key == hoveredRegion} overlay={<Tooltip onMouseOver={() => setHoveredRegion(key)}>{tooltip}</Tooltip>}>
+                            <text
+                                transform={`translate(${center.x}, ${center.y}) scale(1, -1)`}
+                                textAnchor={"middle"}
+                                dominantBaseline={"middle"}
+                                fontSize={16 / scale}
+                            >{
+                                showRegionLabels && label
+                            }</text>
+                        </OverlayTrigger>
+                    )
+                })
+            }</g>,
         [ curStep, scale, showRegionLabels, hoveredRegion, ],
     )
 
@@ -692,32 +727,35 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
 
     const regionPaths = useMemo(
         () =>
-            curStep && curStep.regions.regions.map(({ key, segments, area, }, regionIdx) => {
-                let d = ''
-                segments.forEach(({ edge, fwd }, idx) => {
-                    const { shape, i0, i1, t0, t1, } = edge
-                    const [ rx, ry ] = getRadii(shape)
-                    const [ start, end ] = fwd ? [ i0, i1 ] : [ i1, i0 ]
-                    if (idx == 0) {
-                        d = `M ${start.x.v} ${start.y.v}`
-                    }
-                    d += ` A ${rx},${ry} 0 ${t1 - t0 > PI ? 1 : 0} ${fwd ? 1 : 0} ${end.x.v},${end.y.v}`
+            curStep && <g id={"regionPaths"}>{
+                curStep.regions.regions.map(({ key, segments, area, containers }, regionIdx) => {
+                    let d = ''
+                    segments.forEach(({ edge, fwd }, idx) => {
+                        const { shape, i0, i1, t0, t1, } = edge
+                        const [ rx, ry ] = getRadii(shape)
+                        const [ start, end ] = fwd ? [ i0, i1 ] : [ i1, i0 ]
+                        if (idx == 0) {
+                            d = `M ${start.x.v} ${start.y.v}`
+                        }
+                        d += ` A ${rx},${ry} 0 ${t1 - t0 > PI ? 1 : 0} ${fwd ? 1 : 0} ${end.x.v},${end.y.v}`
+                    })
+                    const isHovered = hoveredRegion == key
+                    return (
+                        <path
+                            key={`${regionIdx}-${key}`}
+                            id={key}
+                            d={d}
+                            stroke={"black"}
+                            strokeWidth={1 / scale}
+                            fill={"grey"}
+                            fillOpacity={isHovered ? 0.4 : 0}
+                            onMouseOver={() => setHoveredRegion(key)}
+                            // onMouseLeave={() => setHoveredRegion(null)}
+                            onMouseOut={() => setHoveredRegion(null)}
+                        />
+                    )
                 })
-                const isHovered = hoveredRegion == key
-                return (
-                    <path
-                        key={`${regionIdx}-${key}`}
-                        d={d}
-                        stroke={"black"}
-                        strokeWidth={1 / scale}
-                        fill={"grey"}
-                        fillOpacity={isHovered ? 0.4 : 0}
-                        onMouseOver={() => setHoveredRegion(key)}
-                        // onMouseLeave={() => setHoveredRegion(null)}
-                        onMouseOut={() => setHoveredRegion(null)}
-                    />
-                )
-            }),
+            }</g>,
         [ curStep, scale, hoveredRegion, ],
     )
 
@@ -728,6 +766,17 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
         { name: "3 symmetric circles", targets: ThreeEqualCircles, description: <>Simple test case, 3 circles, one starts slightly off-center from the other two, "target" ratios require the 3 circles to be in perfectly symmetric position with each other.</> },
     ]
 
+    const shapeText = useMemo(
+        () => curStep && curStep.inputs.map(([ shape ]) =>
+                mapShape(
+                    shape,
+                    ({ idx, c: { x, y }, r }) => `Circle { idx: ${idx}, c: { x: ${x}, y: ${y} }, r: ${r} }`,
+                    ({ idx, c: { x, y}, r: { x: rx, y: ry } }) => `XYRR { idx: ${idx}, c: { x: ${x}, y: ${y} }, r: { x: ${rx}, y: ${ry} } }`,
+                )
+        ).join(",\n"),
+        [ curStep],
+    )
+
     return (
         <div className={css.body}>
             <div className={`${css.row} ${css.content}`}>
@@ -737,6 +786,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                         {edgePoints}
                         {regionLabels}
                         {regionPaths}
+                        {intersectionNodes}
                     </>
                 </Grid>
                 <hr />
@@ -850,6 +900,17 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                         </div>
                         <div className={css.input}>
                             <label>
+                                Intersections:
+                                <input
+                                    type={"checkbox"}
+                                    checked={showIntersectionPoints}
+                                    onChange={e => setShowIntersectionPoints(e.target.checked)}
+                                    onKeyDown={e => { e.stopPropagation() }}
+                                />
+                            </label>
+                        </div>
+                        <div className={css.input}>
+                            <label>
                                 Log level:
                                 <select
                                     value={logLevel}
@@ -899,6 +960,15 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                                 }</ul>
                             </details>
                         </div>
+                        <div
+                            onMouseOut={e => {
+                                // console.log("onMouseOut:", e)
+                                setVStepIdx(null)
+                            }}
+                        >
+                            <h3 className={css.tableTitle}>Error</h3>
+                            {plot}
+                        </div>
                     </div>
                     <div className={col5}>
                         <h3 className={css.tableTitle}>Vars</h3>
@@ -916,20 +986,11 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                         <div className={css.tableBreak} />
                         <h3 className={css.tableTitle}>Shapes</h3>
                         <ShapesTable shapes={shapes} vars={vars} />
-                    </div>
-                </div>
-                <div className={"row"}>
-                    <div
-                        className={col7}
-                        onMouseOut={e => {
-                            // console.log("onMouseOut:", e)
-                            setVStepIdx(null)
-                        }}
-                    >
-                        <h3 className={css.tableTitle}>Error</h3>
-                        {plot}
-                    </div>
-                    <div className={col5}>
+                        <div className={css.shapesPreContainer} onClick={() => {
+                            navigator.clipboard.writeText(shapeText)
+                        }}>
+                            <pre>{shapeText}</pre>
+                        </div>
                     </div>
                 </div>
                 <hr />

@@ -17,34 +17,19 @@ export function Body() {
         height: 600,
         showGrid: true,
     })
-    // const e: XYRR<Dual> = {
-    //     idx: 0,
-    //     c: { x: { v: 1, d: [1, 0, 0, 0] },
-    //          y: { v: 1, d: [0, 1, 0, 0] }, },
-    //     r: { x: { v: 2, d: [0, 0, 1, 0] },
-    //          y: { v: 3, d: [0, 0, 0, 1] }, },
-    // }
+    const e: XYRR<number> = {
+        idx: 0,
+        c: { x: -0.6708203932499369, y: 0.34164078649987384, },
+        r: { x: 0.5, y: 2, },
+    }
     // const points = xyrr_unit(e) as R2<Dual>[]
     // console.log("points:", points)
 
     return <div className={css.body}>
         <div className={`${css.row} ${css.content}`}>
             <Grid className={css.svg} state={gridState}>
-                {
-                    (Ellipses4 as XYRR<number>[]).map(({ c, r }, shapeIdx) =>
-                        <ellipse
-                            key={shapeIdx}
-                            cx={c.x}
-                            cy={c.y}
-                            rx={r.x}
-                            ry={r.y}
-                            fill={colors[shapeIdx]}
-                            fillOpacity={0.3}
-                        />
-                    )
-                }
-                {/*<circle cx={0} cy={0} r={1} fill={"green"} fillOpacity={0.3} />*/}
-                {/*<ellipse cx={e.c.x.v} cy={e.c.y.v} rx={e.r.x.v} ry={e.r.y.v} fill={"orange"} fillOpacity={0.3} />*/}
+                <circle cx={0} cy={0} r={1} fill={"green"} fillOpacity={0.3} />
+                <ellipse cx={e.c.x} cy={e.c.y} rx={e.r.x} ry={e.r.y} fill={"orange"} fillOpacity={0.3} />
                 {/*{*/}
                 {/*    points.map(({ x, y }, i) =>*/}
                 {/*        <circle key={i} cx={x.v} cy={y.v} r={0.05} fill={"red"} />*/}
