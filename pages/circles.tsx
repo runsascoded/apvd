@@ -121,22 +121,22 @@ export default function Page() {
 
 export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLevel: Dispatch<LogLevel>, }) {
     const [ initialLayout, setInitialLayout] = useState<InitialLayout>(
-        // Ellipses4
+        Ellipses4
         // Repro,
-        CircleEllipses
+        // CircleEllipses
         // OriginRightUp,
         // SymmetricCircles,
     )
     const [ targets, setTargets ] = useState<Target[]>(
         // ThreeEqualCircles,
         // FizzBuzz,
-        FizzBuzzBazz,
-        // VariantCallers,
+        // FizzBuzzBazz,
+        VariantCallers,
     )
 
     const gridState = GridState({
-        center: { x: 1, y: 1, },
-        scale: 150,
+        center: { x: 2, y: 2, },
+        scale: 75,
         width: 600,
         height: 800,
         showGrid: true,
@@ -148,9 +148,9 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
         () => targets.map(({ sets, value }) => [ sets, value ]),
         [ targets ],
     )
-    const [ maxErrorRatioStepSize, setMaxErrorRatioStepSize ] = useState(0.7)
-    const [ maxSteps, setMaxSteps ] = useState(1500)
-    const [ stepBatchSize, setStepBatchSize ] = useState(10)
+    const [ maxErrorRatioStepSize, setMaxErrorRatioStepSize ] = useState(0.2)
+    const [ maxSteps, setMaxSteps ] = useState(10000)
+    const [ stepBatchSize, setStepBatchSize ] = useState(50)
 
     const [ model, setModel ] = useState<Model | null>(null)
     // const minIdx = useMemo(() => model ? model.min_idx : null, [ model ])
@@ -212,7 +212,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
             const numCoords = ([] as string[]).concat(...allCoords).length
             const skipVars: Coord[][] = [
                 // Fix all coords of shapes[0], it is the unit circle centered at the origin, WLOG
-                CircleCoords,
+                // CircleCoords,
                 // XYRRCoords,
                 // Fix shapes[1].y. This can be done WLOG if it's a Circle. Having the second shape be an XYRR (aligned
                 // ellipse, no rotation) is effectively equivalent to it being an XYRRT (ellipse with rotation allowed),
@@ -842,7 +842,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                                     }}
                                 >{
                                     model && curStep && bestStep && <>
-                                        Best step: {model.min_idx}, error: {(bestStep.error.v * curStep.total_target_area).toPrecision(3)}
+                                        Best step: {model.min_idx}, error: {(bestStep.error.v * curStep.total_target_area).toPrecision(3)} ({(bestStep.error.v * 100).toPrecision(3)}%)
                                     </>
                                 }</p>
                                 {repeatSteps && stepIdx == repeatSteps[1] ?

@@ -1,6 +1,6 @@
 import {Model, Step} from "../../lib/regions";
 import {Dual} from "apvd";
-import React, {useCallback, useState} from "react";
+import React, {useCallback, useMemo, useState} from "react";
 import css from "../../../pages/circles.module.scss";
 import {SparkLineCell, SparkLineProps, SparkNum} from "../spark-lines";
 import {S} from "../../lib/shape";
@@ -27,14 +27,19 @@ export function TargetsTable(
                 const name = initialShapes[idx].name
                 // console.log("targetName:", ch, idx, circle, initialCircles)
                 if (ch === '*') {
-                    return <span key={idx}></span>
+                    return <span key={idx}>*</span>
                 } else if (ch == '-') {
-                    return <span key={idx} style={{textDecoration: "line-through",}}>{name}</span>
+                    return <span key={idx} className={css.excludedSetId}>-</span>
                 } else {
                     return <span key={idx}>{name}</span>
                 }
             }),
         [ initialShapes, ],
+    )
+
+    const sum = useMemo(
+        () => targets.map(({ value }) => value).reduce((a, b) => a + b, 0),
+        [ targets, ],
     )
 
     const [ showTargetCurCol, setShowTargetCurCol ] = useState(false)
@@ -72,8 +77,9 @@ export function TargetsTable(
             </thead>
             <tbody>
             {targetTableRows}
-            <tr>
-                <td colSpan={2 + (showTargetCurCol ? 1 : 0)} style={{ textAlign: "right", fontWeight: "bold", }}>Total:</td>
+            <tr className={css.totalRow}>
+                <td style={{ textAlign: "right", }}>Σ</td>
+                <td>{sum}</td>
                 {SparkNum(error.v * curStep.total_target_area)}
                 <SparkLineCell
                     color={"red"}
