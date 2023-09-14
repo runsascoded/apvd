@@ -4,17 +4,18 @@ import {Sparklines, SparklinesLine} from "react-sparklines";
 import {max} from "../lib/math";
 import React from "react";
 
-export const SparkNum = (v: number | null | undefined) =>
-    <td className={css.sparkNum}>
+export const SparkNum = (v: number | null | undefined, className: string = '') =>
+    <td className={`${css.sparkNum} ${className}`}>
         <span>{v === null || v === undefined ? '' : v.toPrecision(4)}</span>
     </td>
 
 export function SparkLineCell(
-    { color, fn, model, stepIdx, sparkLineLimit, sparkLineStrokeWidth, sparkLineMargin, sparkLineWidth, sparkLineHeight, }: {
+    { color, fn, model, stepIdx, sparkLineLimit, sparkLineStrokeWidth, sparkLineMargin, sparkLineWidth, sparkLineHeight, className = '', }: {
         color: string
         fn: (step: Step) => number
         model: Model
         stepIdx: number
+        className?: string
     } & SparkLineProps
 ) {
     let data =
@@ -28,7 +29,7 @@ export function SparkLineCell(
     if (data.length < sparkLineLimit) {
         data = [ ...Array(sparkLineLimit - data.length).fill(data[0]), ...data ]
     }
-    return <td>
+    return <td className={className}>
         <Sparklines
             data={data}
             limit={sparkLineLimit}

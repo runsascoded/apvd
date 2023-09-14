@@ -79,7 +79,7 @@ export function TargetsTable(
             {targetTableRows}
             <tr className={css.totalRow}>
                 <td style={{ textAlign: "right", }}>Σ</td>
-                <td>{sum}</td>
+                <td className={css.sparkNum}>{sum}</td>
                 {SparkNum(error.v * curStep.total_target_area)}
                 <SparkLineCell
                     color={"red"}

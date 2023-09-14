@@ -11,10 +11,10 @@ import OverlayTrigger from 'react-bootstrap/OverlayTrigger'
 import Tooltip from 'react-bootstrap/Tooltip'
 import {fromEntries} from "next-utils/objs";
 import {getSliderValue} from "../src/components/inputs";
-import {deg, max, degStr, PI, round, sq3, sqrt} from "../src/lib/math";
+import {deg, max, min, degStr, PI, round, sq3, sqrt} from "../src/lib/math";
 import Apvd, {LogLevel} from "../src/components/apvd";
 import {getMidpoint, getRegionCenter} from "../src/lib/region";
-import {getCenter, getIdx, getRadii, mapShape, S, shapeType} from "../src/lib/shape";
+import {BoundingBox, getCenter, getIdx, getRadii, mapShape, S, shapeBox, shapeType} from "../src/lib/shape";
 import {Target, TargetsTable} from "../src/components/tables/targets";
 import {InitialLayout, toShape} from "../src/lib/layout";
 import {VarsTable} from "../src/components/tables/vars";
@@ -130,30 +130,34 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     const [ targets, setTargets ] = useState<Target[]>(
         // ThreeEqualCircles,
         // FizzBuzz,
-        // FizzBuzzBazz,
-        VariantCallers,
+        FizzBuzzBazz,
+        // VariantCallers,
     )
 
     const gridState = GridState({
-        center: { x: 2, y: 2, },
+        center: { x: 0, y: 0, },
         scale: 75,
         width: 600,
         height: 800,
-        showGrid: true,
+        // showGrid: true,
     })
-    const { scale: [ scale ], } = gridState
+    const {
+        scale: [ scale, setScale ],
+        center: [ center, setGridCenter ],
+        width: [ gridWidth ],
+        height: [ gridHeight ],
+    } = gridState
 
     const numShapes = useMemo(() => targets[0].sets.length, [ targets ])
     const wasmTargets = useMemo(
         () => targets.map(({ sets, value }) => [ sets, value ]),
         [ targets ],
     )
-    const [ maxErrorRatioStepSize, setMaxErrorRatioStepSize ] = useState(0.2)
+    const [ maxErrorRatioStepSize, setMaxErrorRatioStepSize ] = useState(0.5)
     const [ maxSteps, setMaxSteps ] = useState(10000)
     const [ stepBatchSize, setStepBatchSize ] = useState(50)
 
     const [ model, setModel ] = useState<Model | null>(null)
-    // const minIdx = useMemo(() => model ? model.min_idx : null, [ model ])
     const [ modelStepIdx, setModelStepIdx ] = useState<number | null>(null)
     const [ vStepIdx, setVStepIdx ] = useState<number | null>(null)
     const [ runningState, setRunningState ] = useState<RunningState>("none")
@@ -175,6 +179,41 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     const curStep: Step | null = useMemo(
         () => (!model || stepIdx === null) ? null : model.steps[stepIdx],
         [ model, stepIdx ],
+    )
+
+    const boundingBox = useMemo(
+        () =>
+            curStep && curStep.inputs.reduce<BoundingBox<number> | null>(
+                (cur, [shape]) => {
+                    const box = shapeBox(shape)
+                    if (!cur) return box
+                    return [{
+                        x: min(cur[0].x, box[0].x),
+                        y: min(cur[0].y, box[0].y),
+                    }, {
+                        x: max(cur[1].x, box[1].x),
+                        y: max(cur[1].y, box[1].y),
+                    }]
+                },
+                null
+            ),
+        [ curStep, ]
+    )
+
+    useEffect(
+        () => {
+            if (!boundingBox) return
+            const [ { x: xlo, y: ylo }, { x: xhi, y: yhi } ] = boundingBox
+            const cx = (xlo + xhi) / 2
+            const cy = (ylo + yhi) / 2
+            const center = { x: cx, y: cy }
+            const width = xhi - xlo
+            const height = yhi - ylo
+            const scale = min(gridWidth / width, gridHeight / height)
+            setScale(scale)
+            setGridCenter(center)
+        },
+        [ boundingBox, ]
     )
 
     const initialShapes: S[] = useMemo(
@@ -763,19 +802,32 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     const exampleTargets = [
         { name: "Fizz Buzz", targets: FizzBuzz, description: <>2 circles, of size 1/3 and 1/5, representing integers divisible by 3 and by 5. Inspired by {fizzBuzzLink}.</> },
         { name: "Fizz Buzz Bazz", targets: FizzBuzzBazz, description: <>Extended version of {fizzBuzzLink} above, with 3 sets, representing integers divisible by 3, 5, or 7. This is impossible to model accurately with 3 circles, but gradient descent gets as close as it can.</> },
-        { name: "3 symmetric circles", targets: ThreeEqualCircles, description: <>Simple test case, 3 circles, one starts slightly off-center from the other two, "target" ratios require the 3 circles to be in perfectly symmetric position with each other.</> },
+        { name: "3 symmetric sets", targets: ThreeEqualCircles, description: <>Simple test case, 3 circles, one starts slightly off-center from the other two, "target" ratios require the 3 circles to be in perfectly symmetric position with each other.</> },
+        { name: "Variant callers", targets: VariantCallers, description: <>Values from <A href={"https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3753564/pdf/btt375.pdf"}>Roberts et al (2013)</A>, "A comparative analysis of algorithms for somatic SNV detection
+                in cancer," Fig. 3</>}
     ]
 
     const shapeText = useMemo(
         () => curStep && curStep.inputs.map(([ shape ]) =>
-                mapShape(
-                    shape,
-                    ({ idx, c: { x, y }, r }) => `Circle { idx: ${idx}, c: { x: ${x}, y: ${y} }, r: ${r} }`,
-                    ({ idx, c: { x, y}, r: { x: rx, y: ry } }) => `XYRR { idx: ${idx}, c: { x: ${x}, y: ${y} }, r: { x: ${rx}, y: ${ry} } }`,
-                )
+            mapShape(
+                shape,
+                ({ idx, c: { x, y }, r }) => `Circle { idx: ${idx}, c: { x: ${x}, y: ${y} }, r: ${r} }`,
+                ({ idx, c: { x, y}, r: { x: rx, y: ry } }) => `XYRR { idx: ${idx}, c: { x: ${x}, y: ${y} }, r: { x: ${rx}, y: ${ry} } }`,
+            )
         ).join(",\n"),
         [ curStep],
     )
+
+    const centerDot =
+        <circle
+            cx={center.x}
+            cy={center.y}
+            r={0.05}
+            stroke={"black"}
+            strokeWidth={1 / scale}
+            fill={"black"}
+            fillOpacity={0.8}
+        />
 
     return (
         <div className={css.body}>
@@ -787,6 +839,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                         {regionLabels}
                         {regionPaths}
                         {intersectionNodes}
+                        {/*{centerDot}*/}
                     </>
                 </Grid>
                 <hr />
@@ -987,9 +1040,11 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                         <h3 className={css.tableTitle}>Shapes</h3>
                         <ShapesTable shapes={shapes} vars={vars} />
                         <div className={css.shapesPreContainer} onClick={() => {
-                            navigator.clipboard.writeText(shapeText)
+                            shapeText && navigator.clipboard.writeText(shapeText)
                         }}>
-                            <pre>{shapeText}</pre>
+                            <OverlayTrigger overlay={<Tooltip>Click to copy</Tooltip>}>
+                                <pre>{shapeText}</pre>
+                            </OverlayTrigger>
                         </div>
                     </div>
                 </div>

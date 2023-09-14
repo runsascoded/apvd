@@ -28,3 +28,11 @@ export function mapShape<D, O>(
         ? circleFn(s.Circle)
         : ellipseFn(s.XYRR)
 }
+
+export type BoundingBox<D> = [R2<D>, R2<D>]
+export function shapeBox(s: Shape<number>): BoundingBox<number> {
+    return mapShape(s,
+        ({ c, r }) => [ { x: c.x - r, y: c.y - r }, { x: c.x + r, y: c.y + r } ],
+        ({ c, r }) => [ { x: c.x - r.x, y: c.y - r.y }, { x: c.x + r.x, y: c.y + r.y } ],
+    )
+}
