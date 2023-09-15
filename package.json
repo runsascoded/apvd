@@ -10,7 +10,7 @@
     "apvd": "https://gitpkg.now.sh/runsascoded/shapes?f80bc91",
     "bootstrap": "^5.3.1",
     "next": "^13.4.13",
-    "next-utils": "https://gitpkg.now.sh/runsascoded/next-utils/dist?81a0d83",
+    "next-utils": "https://gitpkg.now.sh/runsascoded/next-utils/dist?ae33f51",
     "react": "^18.0.0",
     "react-bootstrap": "^2.8.0",
     "react-dom": "^18.0.0",
@@ -41,8 +41,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "export": "next build && next export -o out/apvd",
-    "gha-export": "next build && next export && touch out/.nojekyll",
+    "export": "next build && next export -o out/apvd && write-redirects -b apvd",
+    "gha-export": "next build && next export && write-redirects && touch out/.nojekyll",
     "test": "jest"
   }
 }
