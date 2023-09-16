@@ -51,7 +51,7 @@ export function ShapesTable({ shapes, vars, precision = 4 }: Props) {
                         },
                         e => [ skippedVars.includes("rx"), skippedVars.includes("ry") ]
                     )
-                    return <tr key={idx}>
+                    return <tr key={shapeIdx}>
                         <td style={{ textAlign: "right", }}>{name}</td>
                         <VarCell skipped={skipCx}>{c.x.toPrecision(precision)}</VarCell>
                         <VarCell skipped={skipCy}>{c.y.toPrecision(precision)}</VarCell>
