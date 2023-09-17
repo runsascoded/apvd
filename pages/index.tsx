@@ -157,7 +157,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     )
     const [ maxErrorRatioStepSize, setMaxErrorRatioStepSize ] = useState(0.5)
     const [ maxSteps, setMaxSteps ] = useState(10000)
-    const [ stepBatchSize, setStepBatchSize ] = useState(50)
+    const [ stepBatchSize, setStepBatchSize ] = useState(25)
 
     const [ model, setModel ] = useState<Model | null>(null)
     const [ modelStepIdx, setModelStepIdx ] = useState<number | null>(null)
@@ -210,7 +210,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
             const width = hi.x - lo.x
             const height = hi.y - lo.y
             const sceneScale = min(gridWidth / width, gridHeight / height) * 0.9
-            const interp = 0.05
+            const interp = 0.08
             const newCenter = {
                 x: gridCenter.x + (sceneCenter.x - gridCenter.x) * interp,
                 y: gridCenter.y + (sceneCenter.y - gridCenter.y) * interp,
