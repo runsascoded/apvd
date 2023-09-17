@@ -1,9 +1,8 @@
 import Grid, {GridState} from "../src/components/grid";
-import React, {useEffect} from "react";
-import css from "./circles.module.scss"
-import {Dual, R2, XYRR, xyrr_unit} from "apvd";
+import React from "react";
+import css from "./index.module.scss"
+import {XYRR} from "apvd";
 import Apvd from "../src/components/apvd";
-import {colors, Ellipses4} from "./index";
 
 export default function Page() {
     return <Apvd logLevel={"debug"}>{() => <Body />}</Apvd>

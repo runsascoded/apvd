@@ -1,9 +1,9 @@
 import Grid, {GridState} from "../src/components/grid";
 import React, {useEffect} from "react";
-import css from "./circles.module.scss"
+import css from "./index.module.scss"
 import {Dual, R2, XYRR, xyrr_unit} from "apvd";
 import Apvd from "../src/components/apvd";
-import {colors, Ellipses4} from "./index";
+import {colors, Ellipses4, SymmetricCircleDiamond} from "./index";
 
 export default function Page() {
     return <Apvd logLevel={"debug"}>{() => <Body />}</Apvd>
@@ -31,7 +31,7 @@ export function Body() {
         <div className={`${css.row} ${css.content}`}>
             <Grid className={css.svg} state={gridState}>
                 {
-                    (Ellipses4 as XYRR<number>[]).map(({ c, r }, shapeIdx) =>
+                    (SymmetricCircleDiamond as XYRR<number>[]).map(({ c, r }, shapeIdx) =>
                         <ellipse
                             key={shapeIdx}
                             cx={c.x}

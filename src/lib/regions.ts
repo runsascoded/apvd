@@ -4,10 +4,10 @@ import {Diagram, Dual, Error, Input, Shape, Targets} from "apvd"
 export type Point = {
     x: Dual
     y: Dual
-    c0: S
-    c1: S
-    t0: Dual
-    t1: Dual
+    // c0: S
+    // c1: S
+    // t0: Dual
+    // t1: Dual
     edges: Edge[]
 }
 
@@ -56,11 +56,8 @@ export function makeStep(diagram: Diagram): Step {
 export function makeRegions(input: apvd.Regions): Regions {
     // console.log("makeRegions:", input)
     const shapes = input.shapes
-    const points: Point[] = input.points.map(({ i: { x, y, c0idx, c1idx, t0, t1, } }) => ({
+    const points: Point[] = input.points.map(({ p: { x, y }}) => ({
         x, y,
-        c0: shapes[c0idx],
-        c1: shapes[c1idx],
-        t0, t1,
         edges: []
     }))
     const edges = input.edges.map(({ cidx, i0, i1, t0, t1, containers, containments }) => ({

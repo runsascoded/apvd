@@ -5,7 +5,7 @@ import EllipseC, {Center, RadiusVector} from '../src/lib/ellipse'
 import Ellipses from '../src/lib/ellipses'
 import {lengthCmp, powerset, spaces} from '../src/lib/utils'
 import {Point} from '../src/components/point'
-import css from "./index.module.scss"
+import css from "./ellipses.module.scss"
 import {pi, r3} from "../src/lib/math";
 import {GridState} from "../src/components/grid";
 

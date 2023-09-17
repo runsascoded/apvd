@@ -1,7 +1,7 @@
 import {Model, Step} from "../../lib/regions";
 import {Dual} from "apvd";
 import React, {useCallback, useMemo, useState} from "react";
-import css from "../../../pages/circles.module.scss";
+import css from "../../../pages/index.module.scss";
 import {SparkLineCell, SparkLineProps, SparkNum} from "../spark-lines";
 import {S} from "../../lib/shape";
 import { abs } from "../../lib/math";

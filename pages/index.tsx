@@ -4,7 +4,7 @@ import React, {Dispatch, Fragment, ReactNode, useCallback, useEffect, useMemo, u
 import * as apvd from "apvd"
 import {Diagram, Shape, train} from "apvd"
 import {makeModel, Model, Step} from "../src/lib/regions"
-import css from "./circles.module.scss"
+import css from "./index.module.scss"
 import A from "next-utils/a"
 import dynamic from "next/dynamic"
 import Button from 'react-bootstrap/Button'
@@ -32,13 +32,13 @@ export const colors = [
     '#99f',  // blue
 ]
 
-const SymmetricCircles: InitialLayout = [
+export const SymmetricCircleDiamond: InitialLayout = [
     { c: { x:   0, y:      0, }, r: { x: 1, y: 1 }, },
     { c: { x:   1, y:      0, }, r: { x: 1, y: 1 }, },
     { c: { x: 1/2, y:  sq3/2, }, r: { x: 1, y: 1 }, },
     { c: { x: 1/2, y: -sq3/2, }, r: { x: 1, y: 1 }, },
 ]
-const OriginRightUp: InitialLayout = [
+export const SymmetricCircleLattice: InitialLayout = [
     { c: { x: 0, y: 0, }, r: { x: 1, y: 1 }, },
     { c: { x: 1, y: 0, }, r: { x: 1, y: 1 }, },
     { c: { x: 0, y: 1, }, r: { x: 1, y: 1 }, },
@@ -46,7 +46,7 @@ const OriginRightUp: InitialLayout = [
     // { c: { x:   0, y: 1, }, r: { x: 2, y: 1, }, },
 ]
 
-const CircleEllipses: InitialLayout = [
+export const CircleEllipses: InitialLayout = [
     { c: { x: 0, y: 0, }, r: 1, },
     { c: { x: 1, y: 0, }, r: { x: 1, y: 1, }, },
     { c: { x: 0, y: 1, }, r: { x: 1, y: 1, }, },
@@ -166,11 +166,11 @@ export default function Page() {
 
 export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLevel: Dispatch<LogLevel>, }) {
     const [ initialLayout, setInitialLayout] = useState<InitialLayout>(
-        Ellipses4
+        // Ellipses4
+        SymmetricCircleDiamond,
+        // Lattice_0_1
         // Repro,
         // CircleEllipses
-        // OriginRightUp,
-        // SymmetricCircles,
     )
     const [ targets, setTargets ] = useState<Target[]>(
         // ThreeEqualCircles,
@@ -723,7 +723,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     const [ showIntersectionPoints, setShowIntersectionPoints ] = useState(false)
     const intersectionNodes = useMemo(
         () => showIntersectionPoints && <g id={"intersections"}>{
-            curStep && curStep.regions.points.map(({ x, y, c0, c1, t0, t1 }, pointIdx) => {
+            curStep && curStep.regions.points.map(({ x, y, }, pointIdx) => {
                 return (
                     <OverlayTrigger
                         key={pointIdx}
@@ -731,8 +731,6 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                             <Tooltip>
                                 <div>x: {x.v.toPrecision(4)}</div>
                                 <div>y: {y.v.toPrecision(4)}</div>
-                                <div>{getIdx(c0)}@{degStr(t0.v)}</div>
-                                <div>{getIdx(c1)}@{degStr(t1.v)}</div>
                             </Tooltip>
                         }>
                         <circle
