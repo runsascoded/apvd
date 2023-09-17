@@ -1096,14 +1096,14 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                         <p>Given "target" values:</p>
                         <ul>
                             <li>Model each set with an ellipse</li>
-                            <li>Compute intersections and areas (using "<A href={"https://en.wikipedia.org/wiki/Dual_number"}>dual numbers</A>" to preserve "forward-mode" derivatives)</li>
-                            <li>Gradient-descend until areas match targets</li>
+                            <li>Compute intersections and areas (using "<A href={"https://en.wikipedia.org/wiki/Dual_number"}>dual numbers</A>" to preserve derivatives)</li>
+                            <li>Gradient-descend shapes' coordinates (against overall error) until areas match targets</li>
                         </ul>
                         <h4>See also</h4>
                         <ul>
                             <li><A href={"https://github.com/runsascoded/shapes"}>runsascoded/shapes</A>: Rust implementation of differentiable shape-intersection</li>
                             <li><A href={"https://github.com/runsascoded/apvd"}>runsascoded/apvd</A>: this app</li>
-                            <li><A href={"/ellipses"}>Ellipse-intersection demo</A> (non-differentiable)</li>
+                            <li><A href={"/ellipses"}>Ellipse-intersection demo</A> (earlier version, draggable but non-differentiable)</li>
                         </ul>
                     </div>
                 </div>
