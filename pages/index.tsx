@@ -197,6 +197,8 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
         () => targets.map(({ sets, value }) => [ sets, value ]),
         [ targets ],
     )
+
+    const [ showSettings, setShowSettings ] = useState(false)
     const [ maxErrorRatioStepSize, setMaxErrorRatioStepSize ] = useState(0.5)
     const [ maxSteps, setMaxSteps ] = useState(10000)
     const [ stepBatchSize, setStepBatchSize ] = useState(25)
@@ -973,32 +975,35 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                             </div>
                         </div>
                     </div>
-                    <div className={`${col6} ${css.controlPanel}`}>
-                        <Number
-                            label={"Max error ratio step size"} value={maxErrorRatioStepSize} setValue={setMaxErrorRatioStepSize} float={true}
-                            min={0} max={1.2} step={0.1}
-                        />
-                        <Number label={"Max steps"} value={maxSteps} setValue={setMaxSteps} />
-                        <Number label={"Step batch size"} value={stepBatchSize} setValue={setStepBatchSize} />
-                        <Checkbox label={"Region labels"} checked={showRegionLabels} setChecked={setShowRegionLabels} />
-                        <Checkbox label={"Intersection points"} checked={showIntersectionPoints} setChecked={setShowIntersectionPoints} />
-                        <Checkbox label={"Grid"} checked={showGrid} setChecked={setShowGrid} />
-                        {/*<Checkbox label={"Edge points"} checked={showEdgePoints} setChecked={setShowEdgePoints} />*/}
-                        <Checkbox label={"Auto-center"} checked={autoCenter} setChecked={setAutoCenter} />
-                        <div className={css.input}>
-                            <label>
-                                Log level:
-                                <select
-                                    value={logLevel}
-                                    onChange={e => setLogLevel(e.target.value as LogLevel)}
-                                    onKeyDown={e => { e.stopPropagation() }}
-                                >{
-                                    ["debug", "info", "warn"].map(level =>
-                                        <option key={level} value={level}>{level}</option>
-                                    )
-                                }</select>
-                            </label>
-                        </div>
+                    <div className={`${col6} ${css.settings}`}>
+                        <details open={showSettings}>
+                            <summary onClick={() => setShowSettings(!showSettings)}>⚙️</summary>
+                            <Number
+                                label={"Max error ratio step size"} value={maxErrorRatioStepSize} setValue={setMaxErrorRatioStepSize} float={true}
+                                min={0} max={1.2} step={0.1}
+                            />
+                            <Number label={"Max steps"} value={maxSteps} setValue={setMaxSteps} />
+                            <Number label={"Step batch size"} value={stepBatchSize} setValue={setStepBatchSize} />
+                            <Checkbox label={"Region labels"} checked={showRegionLabels} setChecked={setShowRegionLabels} />
+                            <Checkbox label={"Intersection points"} checked={showIntersectionPoints} setChecked={setShowIntersectionPoints} />
+                            <Checkbox label={"Grid"} checked={showGrid} setChecked={setShowGrid} />
+                            {/*<Checkbox label={"Edge points"} checked={showEdgePoints} setChecked={setShowEdgePoints} />*/}
+                            <Checkbox label={"Auto-center"} checked={autoCenter} setChecked={setAutoCenter} />
+                            <div className={css.input}>
+                                <label>
+                                    Log level:
+                                    <select
+                                        value={logLevel}
+                                        onChange={e => setLogLevel(e.target.value as LogLevel)}
+                                        onKeyDown={e => { e.stopPropagation() }}
+                                    >{
+                                        ["debug", "info", "warn"].map(level =>
+                                            <option key={level} value={level}>{level}</option>
+                                        )
+                                    }</select>
+                                </label>
+                            </div>
+                        </details>
                     </div>
                 </div>
                 <hr />
