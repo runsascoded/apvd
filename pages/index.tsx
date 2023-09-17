@@ -135,14 +135,12 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
         // VariantCallers,
     )
 
-    const [ zoom, setZoom ] = useState(1)
-    const [ viewCenter, setViewCenter ] = useState({ x: 0, y: 0, })
     const gridState = GridState({
         center: { x: 1, y: 1, },
         scale: 100,
         width: 800,
         height: 600,
-        showGrid: true,
+        // showGrid: true,
     })
     const {
         scale: [ scale, setScale ],
@@ -206,18 +204,22 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
 
     useEffect(
         () => {
-            if (!boundingBox) return
-            const [ { x: xlo, y: ylo }, { x: xhi, y: yhi } ] = boundingBox
-            const cx = (xlo + xhi) / 2
-            const cy = (ylo + yhi) / 2
-            const center = { x: cx + viewCenter.x, y: cy + viewCenter.y }
-            const width = xhi - xlo
-            const height = yhi - ylo
-            const scale = min(gridWidth / width, gridHeight / height) * zoom
-            // setScale(scale)
-            // setGridCenter(center)
+            if (!boundingBox || runningState == 'none') return
+            const [ lo, hi ] = boundingBox
+            const sceneCenter = { x: (lo.x + hi.x) / 2, y: (lo.y + hi.y) / 2, }
+            const width = hi.x - lo.x
+            const height = hi.y - lo.y
+            const sceneScale = min(gridWidth / width, gridHeight / height) * 0.9
+            const interp = 0.05
+            const newCenter = {
+                x: gridCenter.x + (sceneCenter.x - gridCenter.x) * interp,
+                y: gridCenter.y + (sceneCenter.y - gridCenter.y) * interp,
+            }
+            const newScale = scale + (sceneScale - scale) * interp
+            setScale(newScale)
+            setGridCenter(newCenter)
         },
-        [ boundingBox, zoom, ]
+        [ curStep, runningState, boundingBox, ]
     )
 
     const initialShapes: S[] = useMemo(
@@ -839,19 +841,6 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                 <Grid
                     className={css.svg}
                     state={gridState}
-                    handleMouseWheelUp={({ x, y }) => {
-                        console.log("wheel up:", x, y)
-                        setZoom(zoom * 1.1)
-                    }}
-                    handleMouseWheelDown={({ x, y }) => {
-                        console.log("wheel down:", x, y)
-                        setZoom(zoom / 1.1)
-                    }}
-                    handleMouseMove={(e, o, v) => {
-                        // console.log("mousemove:", e, o, v)
-                        //setGridCenter({ x: v.x, y: v.y })
-                    }}
-                    wheelProps={{ timeout: 0, preventScroll: true, }}
                 >
                     <>
                         {circleNodes}
@@ -859,7 +848,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                         {regionLabels}
                         {regionPaths}
                         {intersectionNodes}
-                        {centerDot}
+                        {/*{centerDot}*/}
                     </>
                 </Grid>
                 <hr />

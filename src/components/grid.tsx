@@ -2,7 +2,7 @@ import React, {MouseEvent, ReactNode, useCallback, useEffect, useMemo, useRef, u
 import {Point} from "./point";
 import {State} from "../lib/utils";
 import css from "./grid.module.scss"
-import ReactScrollWheelHandler, {ReactScrollWheelHandlerProps} from "react-scroll-wheel-handler";
+import ReactScrollWheelHandler from "react-scroll-wheel-handler";
 import {ceil, floor} from "../lib/math";
 
 export type GridStateProps = {
@@ -48,9 +48,6 @@ export type Props = {
     children: ReactNode
     outerChildren?: ReactNode
     className?: string
-    handleMouseWheelDown?: (p: Point) => void,
-    handleMouseWheelUp?: (p: Point) => void,
-    wheelProps?: Omit<ReactScrollWheelHandlerProps, "ref">,
 }
 
 export type ClientEvent = {
@@ -63,7 +60,7 @@ export type OffsetEvent = {
     offsetY: number
 }
 
-export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, state, children, outerChildren, className, handleMouseWheelDown, handleMouseWheelUp, wheelProps, }: Props) {
+export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, state, children, outerChildren, className, }: Props) {
     const svg = useRef<SVGSVGElement>(null)
     const {
         center: [ center, setCenter ],
@@ -265,12 +262,11 @@ export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, 
         {outerChildren}
     </svg>;
 
-    if (handleMouseWheelDown || handleMouseWheelUp) {
-        wheelProps = {
-            ...(wheelProps || {}),
-            // upHandler: e => handleMouseWheelUp && e && handleMouseWheelUp(virtualMouseCoords(e)),
-            // downHandler: e => handleMouseWheelDown && e && handleMouseWheelDown(virtualMouseCoords(e)),
-            upHandler: e => {
+    return (
+        <ReactScrollWheelHandler
+            timeout={0}
+            preventScroll={true}
+            upHandler={e => {
                 if (!e) {
                     console.warn("Grid.wheelProps.upHandler: no event")
                     return
@@ -284,8 +280,8 @@ export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, 
                 }
                 setScale(scale * 1.1)
                 setCenter(newCenter)
-            },
-            downHandler: e => {
+            }}
+            downHandler={e => {
                 if (!e) {
                     console.warn("Grid.wheelProps.downHandler: no event")
                     return
@@ -299,12 +295,9 @@ export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, 
                 }
                 setScale(scale / 1.1)
                 setCenter(newCenter)
-            }
-        }
-        return <ReactScrollWheelHandler {...wheelProps}>{
+            }}
+        >{
             svgNode
         }</ReactScrollWheelHandler>
-    } else {
-        return svgNode
-    }
+    )
 }
