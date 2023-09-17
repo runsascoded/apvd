@@ -1,4 +1,4 @@
-export const { abs, min, max, PI, round, sqrt } = Math
+export const { abs, ceil, floor, min, max, PI, round, sqrt } = Math
 
 export const pi = Math.PI;
 export const r3 = (x: number) => Math.round(1000 * x) / 1000;

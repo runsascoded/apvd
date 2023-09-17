@@ -7,7 +7,7 @@
     "email": "ryan@runsascoded.com"
   },
   "dependencies": {
-    "apvd": "https://gitpkg.now.sh/runsascoded/shapes?f80bc91",
+    "apvd": "https://gitpkg.now.sh/runsascoded/shapes?f946cf1",
     "bootstrap": "^5.3.1",
     "next": "^13.4.13",
     "next-utils": "https://gitpkg.now.sh/runsascoded/next-utils/dist?f44fed9",
@@ -15,6 +15,7 @@
     "react-bootstrap": "^2.8.0",
     "react-dom": "^18.0.0",
     "react-plotly.js": "^2.6.0",
+    "react-scroll-wheel-handler": "^2.2.0",
     "react-sparklines": "^1.7.0",
     "sass": "^1.66.1"
   },

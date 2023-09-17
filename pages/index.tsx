@@ -1,3 +1,4 @@
+import ReactScrollWheelHandler from "react-scroll-wheel-handler";
 import Grid, {GridState} from "../src/components/grid"
 import React, {Dispatch, Fragment, ReactNode, useCallback, useEffect, useMemo, useState} from "react"
 import * as apvd from "apvd"
@@ -134,18 +135,21 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
         // VariantCallers,
     )
 
+    const [ zoom, setZoom ] = useState(1)
+    const [ viewCenter, setViewCenter ] = useState({ x: 0, y: 0, })
     const gridState = GridState({
-        center: { x: 0, y: 0, },
-        scale: 75,
-        width: 600,
-        height: 800,
-        // showGrid: true,
+        center: { x: 1, y: 1, },
+        scale: 100,
+        width: 800,
+        height: 600,
+        showGrid: true,
     })
     const {
         scale: [ scale, setScale ],
-        center: [ center, setGridCenter ],
+        center: [ gridCenter, setGridCenter ],
         width: [ gridWidth ],
         height: [ gridHeight ],
+        showGrid: [ showGrid, setShowGrid ],
     } = gridState
 
     const numShapes = useMemo(() => targets[0].sets.length, [ targets ])
@@ -206,14 +210,14 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
             const [ { x: xlo, y: ylo }, { x: xhi, y: yhi } ] = boundingBox
             const cx = (xlo + xhi) / 2
             const cy = (ylo + yhi) / 2
-            const center = { x: cx, y: cy }
+            const center = { x: cx + viewCenter.x, y: cy + viewCenter.y }
             const width = xhi - xlo
             const height = yhi - ylo
-            const scale = min(gridWidth / width, gridHeight / height)
-            setScale(scale)
-            setGridCenter(center)
+            const scale = min(gridWidth / width, gridHeight / height) * zoom
+            // setScale(scale)
+            // setGridCenter(center)
         },
-        [ boundingBox, ]
+        [ boundingBox, zoom, ]
     )
 
     const initialShapes: S[] = useMemo(
@@ -820,8 +824,8 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
 
     const centerDot =
         <circle
-            cx={center.x}
-            cy={center.y}
+            cx={gridCenter.x}
+            cy={gridCenter.y}
             r={0.05}
             stroke={"black"}
             strokeWidth={1 / scale}
@@ -832,14 +836,30 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     return (
         <div className={css.body}>
             <div className={`${css.row} ${css.content}`}>
-                <Grid className={css.svg} state={gridState}>
+                <Grid
+                    className={css.svg}
+                    state={gridState}
+                    handleMouseWheelUp={({ x, y }) => {
+                        console.log("wheel up:", x, y)
+                        setZoom(zoom * 1.1)
+                    }}
+                    handleMouseWheelDown={({ x, y }) => {
+                        console.log("wheel down:", x, y)
+                        setZoom(zoom / 1.1)
+                    }}
+                    handleMouseMove={(e, o, v) => {
+                        // console.log("mousemove:", e, o, v)
+                        //setGridCenter({ x: v.x, y: v.y })
+                    }}
+                    wheelProps={{ timeout: 0, preventScroll: true, }}
+                >
                     <>
                         {circleNodes}
                         {edgePoints}
                         {regionLabels}
                         {regionPaths}
                         {intersectionNodes}
-                        {/*{centerDot}*/}
+                        {centerDot}
                     </>
                 </Grid>
                 <hr />
@@ -958,6 +978,17 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                                     type={"checkbox"}
                                     checked={showIntersectionPoints}
                                     onChange={e => setShowIntersectionPoints(e.target.checked)}
+                                    onKeyDown={e => { e.stopPropagation() }}
+                                />
+                            </label>
+                        </div>
+                        <div className={css.input}>
+                            <label>
+                                Grid:
+                                <input
+                                    type={"checkbox"}
+                                    checked={showGrid}
+                                    onChange={e => setShowGrid(e.target.checked)}
                                     onKeyDown={e => { e.stopPropagation() }}
                                 />
                             </label>
