@@ -74,9 +74,11 @@
     .controlPanel {
       .input {
         text-align: right;
-        input, option {
+        user-select: none;
+        input, option, select {
           text-align: right;
           max-width: 5em;
+          margin-left: 0.3em;
         }
       }
 

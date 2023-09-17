@@ -115,6 +115,22 @@ const VariantCallers: Target[] = [
 
 export type RunningState = "none" | "fwd" | "rev"
 
+export function Checkbox({ label, checked, setChecked, }: { label: string, checked: boolean, setChecked: Dispatch<boolean>, }) {
+    return (
+        <div className={css.input}>
+            <label>
+                {label}:
+                <input
+                    type={"checkbox"}
+                    checked={checked}
+                    onChange={e => setChecked(e.target.checked)}
+                    onKeyDown={e => { e.stopPropagation() }}
+                />
+            </label>
+        </div>
+    )
+}
+
 export default function Page() {
     const [ logLevel, setLogLevel ] = useState<LogLevel>("info")
     return <Apvd logLevel={logLevel}>{() => <Body logLevel={logLevel} setLogLevel={setLogLevel} />}</Apvd>
@@ -966,50 +982,11 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                                 />
                             </label>
                         </div>
-                        <div className={css.input}>
-                            <label>
-                                Region labels:
-                                <input
-                                    type={"checkbox"}
-                                    checked={showRegionLabels}
-                                    onChange={e => setShowRegionLabels(e.target.checked)}
-                                    onKeyDown={e => { e.stopPropagation() }}
-                                />
-                            </label>
-                        </div>
-                        <div className={css.input}>
-                            <label>
-                                Intersections:
-                                <input
-                                    type={"checkbox"}
-                                    checked={showIntersectionPoints}
-                                    onChange={e => setShowIntersectionPoints(e.target.checked)}
-                                    onKeyDown={e => { e.stopPropagation() }}
-                                />
-                            </label>
-                        </div>
-                        <div className={css.input}>
-                            <label>
-                                Grid:
-                                <input
-                                    type={"checkbox"}
-                                    checked={showGrid}
-                                    onChange={e => setShowGrid(e.target.checked)}
-                                    onKeyDown={e => { e.stopPropagation() }}
-                                />
-                            </label>
-                        </div>
-                        <div className={css.input}>
-                            <label>
-                                Auto-center:
-                                <input
-                                    type={"checkbox"}
-                                    checked={autoCenter}
-                                    onChange={e => setAutoCenter(e.target.checked)}
-                                    onKeyDown={e => { e.stopPropagation() }}
-                                />
-                            </label>
-                        </div>
+                        <Checkbox label={"Region labels"} checked={showRegionLabels} setChecked={setShowRegionLabels} />
+                        <Checkbox label={"Intersection points"} checked={showIntersectionPoints} setChecked={setShowIntersectionPoints} />
+                        <Checkbox label={"Grid"} checked={showGrid} setChecked={setShowGrid} />
+                        {/*<Checkbox label={"Edge points"} checked={showEdgePoints} setChecked={setShowEdgePoints} />*/}
+                        <Checkbox label={"Auto-center"} checked={autoCenter} setChecked={setAutoCenter} />
                         <div className={css.input}>
                             <label>
                                 Log level:
