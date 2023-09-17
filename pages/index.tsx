@@ -115,6 +115,32 @@ const VariantCallers: Target[] = [
 
 export type RunningState = "none" | "fwd" | "rev"
 
+export function Number(
+    { label, value, setValue, float, ...props }: {
+        label: string
+        value: number
+        setValue: Dispatch<number>
+        float?: boolean
+    } & React.DetailedHTMLProps<React.InputHTMLAttributes<HTMLInputElement>, HTMLInputElement>
+) {
+    const parse = float ? parseFloat : parseInt
+    return (
+        <div className={css.input}>
+            <label>
+                {label}:
+                <input
+                    type={"number"}
+                    {...props}
+                    // min={0} max={1.2} step={0.1}
+                    value={value}
+                    onChange={(e) => setValue(parse(e.target.value))}
+                    onKeyDown={e => { e.stopPropagation() }}
+                />
+            </label>
+        </div>
+    )
+}
+
 export function Checkbox({ label, checked, setChecked, }: { label: string, checked: boolean, setChecked: Dispatch<boolean>, }) {
     return (
         <div className={css.input}>
@@ -948,40 +974,12 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                         </div>
                     </div>
                     <div className={`${col6} ${css.controlPanel}`}>
-                        <div className={css.input}>
-                            <label>
-                                Max error ratio step size:
-                                <input
-                                    type={"number"}
-                                    min={0} max={1.2} step={0.1}
-                                    value={maxErrorRatioStepSize}
-                                    onChange={(e) => setMaxErrorRatioStepSize(parseFloat(e.target.value))}
-                                    onKeyDown={e => { e.stopPropagation() }}
-                                />
-                            </label>
-                        </div>
-                        <div className={css.input}>
-                            <label>
-                                Max steps:
-                                <input
-                                    type={"number"}
-                                    value={maxSteps}
-                                    onChange={(e) => setMaxSteps(parseInt(e.target.value))}
-                                    onKeyDown={e => { e.stopPropagation() }}
-                                />
-                            </label>
-                        </div>
-                        <div className={css.input}>
-                            <label>
-                                Step batch size:
-                                <input
-                                    type={"number"}
-                                    value={stepBatchSize}
-                                    onChange={(e) => setStepBatchSize(parseInt(e.target.value))}
-                                    onKeyDown={e => { e.stopPropagation() }}
-                                />
-                            </label>
-                        </div>
+                        <Number
+                            label={"Max error ratio step size"} value={maxErrorRatioStepSize} setValue={setMaxErrorRatioStepSize} float={true}
+                            min={0} max={1.2} step={0.1}
+                        />
+                        <Number label={"Max steps"} value={maxSteps} setValue={setMaxSteps} />
+                        <Number label={"Step batch size"} value={stepBatchSize} setValue={setStepBatchSize} />
                         <Checkbox label={"Region labels"} checked={showRegionLabels} setChecked={setShowRegionLabels} />
                         <Checkbox label={"Intersection points"} checked={showIntersectionPoints} setChecked={setShowIntersectionPoints} />
                         <Checkbox label={"Grid"} checked={showGrid} setChecked={setShowGrid} />
