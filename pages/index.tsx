@@ -198,7 +198,8 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
         [ targets ],
     )
 
-    const [ showSettings, setShowSettings ] = useState(false)
+    const initialSettingsShown = false
+    const [ settingsShown, setSettingsShown ] = useState(initialSettingsShown)
     const [ maxErrorRatioStepSize, setMaxErrorRatioStepSize ] = useState(0.5)
     const [ maxSteps, setMaxSteps ] = useState(10000)
     const [ stepBatchSize, setStepBatchSize ] = useState(25)
@@ -976,8 +977,11 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                         </div>
                     </div>
                     <div className={`${col6} ${css.settings}`}>
-                        <details open={showSettings}>
-                            <summary onClick={() => setShowSettings(!showSettings)}>⚙️</summary>
+                        <details open={initialSettingsShown} onToggle={e => {
+                            console.log("toggle settings:", settingsShown)
+                            setSettingsShown((e.currentTarget as HTMLDetailsElement).open)
+                        }}>
+                            <summary>⚙️</summary>
                             <Number
                                 label={"Max error ratio step size"} value={maxErrorRatioStepSize} setValue={setMaxErrorRatioStepSize} float={true}
                                 min={0} max={1.2} step={0.1}
