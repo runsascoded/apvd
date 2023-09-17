@@ -97,7 +97,7 @@ export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, 
 
     useEffect(
         () => {
-            console.log("svg dims:", svg.current?.clientWidth, svg.current?.clientHeight)
+            // console.log("svg dims:", svg.current?.clientWidth, svg.current?.clientHeight)
             if (svg.current?.clientWidth) {
                 setWidth(svg.current.clientWidth)
             }

@@ -22,7 +22,7 @@ export const quartic = (a: number, b: number, c: number, d?: number, e?: number)
         return quartic(p, q, r).map(x => { return x - a/4; });
     }
 
-    console.debug("depressed quartic:", a, b, c);
+    // console.debug("depressed quartic:", a, b, c);
 
     let roots: number[] = [];
     if (Math.abs(b) < 1e-15) {
