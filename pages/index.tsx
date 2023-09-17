@@ -1029,7 +1029,11 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                 <hr />
                 <div className={"row"}>
                     <div className={`${col7}`}>
-                        <h3 className={css.tableTitle}>Targets</h3>
+                        <h3 className={css.tableTitle}>
+                            <OverlayTrigger overlay={<Tooltip>Desired sizes for each subset, and current deltas/errors</Tooltip>}>
+                                <span>Targets</span>
+                            </OverlayTrigger>
+                        </h3>
                         {
                             model && curStep && error && sparkLineCellProps &&
                             <TargetsTable
@@ -1073,7 +1077,15 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                         </div>
                     </div>
                     <div className={col5}>
-                        <h3 className={css.tableTitle}>Vars</h3>
+                        <h3 className={css.tableTitle}>
+                            <OverlayTrigger overlay={
+                                <Tooltip>
+                                    Shapes' coordinates: raw values, and overall error gradient with respect to each coordinate
+                                </Tooltip>
+                            }>
+                                <span>Vars</span>
+                            </OverlayTrigger>
+                        </h3>
                         {
                             curStep && error && sparkLineCellProps &&
                             <VarsTable
