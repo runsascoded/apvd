@@ -164,6 +164,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     const [ vStepIdx, setVStepIdx ] = useState<number | null>(null)
     const [ runningState, setRunningState ] = useState<RunningState>("none")
     const [ frameLen, setFrameLen ] = useState(0)
+    const [ autoCenter, setAutoCenter ] = useState(true)
 
     const [ stepIdx, setStepIdx ] = useMemo(
         () => {
@@ -204,7 +205,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
 
     useEffect(
         () => {
-            if (!boundingBox || runningState == 'none') return
+            if (!autoCenter || !boundingBox || runningState == 'none') return
             const [ lo, hi ] = boundingBox
             const sceneCenter = { x: (lo.x + hi.x) / 2, y: (lo.y + hi.y) / 2, }
             const width = hi.x - lo.x
@@ -738,6 +739,21 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
 
     const [ hoveredRegion, setHoveredRegion ] = useState<string | null>(null)
 
+    const totalRegionAreas = useMemo(
+        () => {
+            if (!curStep) return
+            let regionAreas: { [k: string]: number } = {}
+            curStep.regions.regions.forEach(({ key, area }) => {
+                if (!(key in regionAreas)) {
+                    regionAreas[key] = 0
+                }
+                regionAreas[key] += area.v
+            })
+            return regionAreas
+        },
+        [ curStep ]
+    )
+
     const [ showRegionLabels, setShowRegionLabels ] = useState(true)
     const regionLabels = useMemo(
         () =>
@@ -747,9 +763,10 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                     const containerIdxs = region.containers.map(getIdx)
                     containerIdxs.sort()
                     const label = containerIdxs.map(idx => shapes[idx].name).join('')
-                    const { key, area } = region
-                    const target = expandedTargetsMap && expandedTargetsMap[key]
-                    const tooltip = target ? `${label}: ${(area.v / curStep.total_area.v * curStep.total_target_area).toPrecision(3)} ${target.toPrecision(3)}` : key
+                    const { key } = region
+                    const area = totalRegionAreas && totalRegionAreas[key] || 0
+                    const target = expandedTargetsMap ? expandedTargetsMap[key] : 0
+                    const tooltip = `${label}: ${(area / curStep.total_area.v * curStep.total_target_area).toPrecision(3)} ${target.toPrecision(3)}`
                     // console.log("key:", key, "hoveredRegion:", hoveredRegion)
                     return (
                         <OverlayTrigger key={`${regionIdx}-${key}`} show={key == hoveredRegion} overlay={<Tooltip onMouseOver={() => setHoveredRegion(key)}>{tooltip}</Tooltip>}>
@@ -765,7 +782,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                     )
                 })
             }</g>,
-        [ curStep, scale, showRegionLabels, hoveredRegion, ],
+        [ curStep, scale, showRegionLabels, hoveredRegion, totalRegionAreas, ],
     )
 
     // console.log("expandedTargets:", expandedTargets)
@@ -984,6 +1001,17 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                         </div>
                         <div className={css.input}>
                             <label>
+                                Auto-center:
+                                <input
+                                    type={"checkbox"}
+                                    checked={autoCenter}
+                                    onChange={e => setAutoCenter(e.target.checked)}
+                                    onKeyDown={e => { e.stopPropagation() }}
+                                />
+                            </label>
+                        </div>
+                        <div className={css.input}>
+                            <label>
                                 Log level:
                                 <select
                                     value={logLevel}
@@ -1009,6 +1037,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                                 targets={targets}
                                 curStep={curStep}
                                 error={error}
+                                hoveredRegion={hoveredRegion}
                                 {...sparkLineCellProps}
                             />
                         }

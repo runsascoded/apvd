@@ -12,13 +12,14 @@ export type Target = {
 }
 
 export function TargetsTable(
-    { initialShapes, targets, model, curStep, error, stepIdx, ...sparkLineProps }: {
+    { initialShapes, targets, model, curStep, error, stepIdx, hoveredRegion, ...sparkLineProps }: {
         initialShapes: S[]
         targets: Target[]
         model: Model
         curStep: Step
         error: Dual
         stepIdx: number
+        hoveredRegion: string | null
     } & SparkLineProps
 ) {
     const targetName = useCallback(
@@ -42,12 +43,39 @@ export function TargetsTable(
         [ targets, ],
     )
 
+    const regionContains = useCallback(
+        (sets: string, region: string | null) => {
+            if (region === null) {
+                return false
+            }
+            if (sets.length !== region.length) {
+                console.error("regionContains: sets.length !== region.length", sets, region)
+                return false
+            }
+            for (let i = 0; i < region.length; i++) {
+                if (!(sets[i] == '*' || sets[i] == region[i] || region[i] != '-')) {
+                    // console.log(`${sets} doesn't contain ${region}`)
+                    return false
+                }
+            }
+            // console.log(`${sets} contains ${region}`)
+            return true
+        },
+        [],
+    )
+
+    const targetsMap = useMemo(
+        () => new Map(targets.map(({ sets, value }) => [ sets, value ])),
+        [ targets, ],
+    )
+
     const [ showTargetCurCol, setShowTargetCurCol ] = useState(false)
     const cellProps = { model, stepIdx, ...sparkLineProps, }
     const targetTableRows = targets.map(({ sets, value}) => {
         const name = targetName(sets)
         const err = curStep.errors.get(sets)
-        return <tr key={sets}>
+        const activeRegion = sets == hoveredRegion || (!(hoveredRegion && targetsMap.has(hoveredRegion)) && regionContains(sets, hoveredRegion))
+        return <tr className={activeRegion ? css.activeRegion : ''} key={sets}>
             <td className={css.val}>{name}</td>
             <td className={css.val}>{value.toPrecision(3).replace(/\.?0+$/, '')}</td>
             {
