@@ -33,14 +33,16 @@ export const colors = [
 ]
 
 const SymmetricCircles: InitialLayout = [
-    { c: { x:   0, y:     0, }, r: 1, },
-    { c: { x:   1, y:     0, }, r: 1, },
-    { c: { x: 1/2, y: sq3/2, }, r: 1, },
+    { c: { x:   0, y:      0, }, r: { x: 1, y: 1 }, },
+    { c: { x:   1, y:      0, }, r: { x: 1, y: 1 }, },
+    { c: { x: 1/2, y:  sq3/2, }, r: { x: 1, y: 1 }, },
+    { c: { x: 1/2, y: -sq3/2, }, r: { x: 1, y: 1 }, },
 ]
 const OriginRightUp: InitialLayout = [
-    { c: { x:   0, y: 0, }, r: 1, },
-    { c: { x:   1, y: 0, }, r: 1, },
-    { c: { x:   0, y: 1, }, r: 1, },
+    { c: { x: 0, y: 0, }, r: { x: 1, y: 1 }, },
+    { c: { x: 1, y: 0, }, r: { x: 1, y: 1 }, },
+    { c: { x: 0, y: 1, }, r: { x: 1, y: 1 }, },
+    { c: { x: 1, y: 1, }, r: { x: 1, y: 1 }, },
     // { c: { x:   0, y: 1, }, r: { x: 2, y: 1, }, },
 ]
 
