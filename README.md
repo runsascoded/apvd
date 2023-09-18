@@ -3,9 +3,8 @@ Area-Proportional Venn Diagram generator (WIP)
 
 <!-- toc -->
 - [Demos](#demos)
-    - [Gradient descent toward target region sizes: runsascoded.com/apvd/circles](#demo)
-    - [Ellipse intersections: runsascoded.com/apvd](#ellipses)
-    - [Differentiable intersections: runsascoded.com/apvd/circles](#circles)
+    - [Gradient descent toward target region sizes: runsascoded.com/apvd](#demo)
+    - [Draggable ellipses + intersections: runsascoded.com/apvd/ellipses](#ellipses)
 - [Status](#status)
 - [Inspiration](#inspo)
     - [Non-area-proportional Venn Diagrams in papers](#papers)
@@ -22,13 +21,13 @@ Area-Proportional Venn Diagram generator (WIP)
 
 ## Demos <a id="demos"></a>
 
-### Gradient descent toward target region sizes: [runsascoded.com/apvd/circles](https://runsascoded/apvd/circles) <a id="demo"></a>
+### Gradient descent toward target region sizes: [runsascoded.com/apvd](https://runsascoded/apvd) <a id="demo"></a>
 
 https://github.com/runsascoded/apvd/assets/465045/52733e34-1603-43c1-8fc1-99afbd008df2
 
 (*uses [runsascoded/shapes] to compute intersections + areas, in terms of circle's center/radius gradients, and gradient-descend to target proportions*)
 
-### Ellipse intersections: [runsascoded.com/apvd](https://runsascoded/apvd) <a id="ellipses"></a>
+### Draggable ellipses + intersections: [runsascoded.com/apvd/ellipses](https://runsascoded/apvd/ellipses) <a id="ellipses"></a>
 
 https://github.com/runsascoded/apvd/assets/465045/2bcaa761-1989-4d6e-8424-8b593759fb53
 
@@ -113,4 +112,3 @@ Core code is from a [web solver](http://www.akiti.ca/Quad4Deg.html) written by [
 Partial Scala.js implementation in [this repo's @scala branch](https://github.com/runsascoded/apvd/tree/scala), including [cubic](https://github.com/runsascoded/apvd/tree/scala/cubic/shared/src/main/scala/cubic) and [quartic](https://github.com/runsascoded/apvd/tree/scala/quartic/shared/src/main/scala/quartic) equation solvers.
 
 [runsascoded/shapes]: https://github.com/runsascoded/shapes
-[runsascoded.com/apvd/circles]: https://runsascoded/apvd/circles
