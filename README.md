@@ -21,13 +21,13 @@ Area-Proportional Venn Diagram generator (WIP)
 
 ## Demos <a id="demos"></a>
 
-### Gradient descent toward target region sizes: [runsascoded.com/apvd](https://runsascoded/apvd) <a id="demo"></a>
+### Gradient descent toward target region sizes: [runsascoded.com/apvd](https://runsascoded.com/apvd) <a id="demo"></a>
 
 https://github.com/runsascoded/apvd/assets/465045/52733e34-1603-43c1-8fc1-99afbd008df2
 
 (*uses [runsascoded/shapes] to compute intersections + areas, in terms of circle's center/radius gradients, and gradient-descend to target proportions*)
 
-### Draggable ellipses + intersections: [runsascoded.com/apvd/ellipses](https://runsascoded/apvd/ellipses) <a id="ellipses"></a>
+### Draggable ellipses + intersections: [runsascoded.com/apvd/ellipses](https://runsascoded.com/apvd/ellipses) <a id="ellipses"></a>
 
 https://github.com/runsascoded/apvd/assets/465045/2bcaa761-1989-4d6e-8424-8b593759fb53
 
