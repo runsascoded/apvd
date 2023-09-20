@@ -34,10 +34,10 @@ export const colors = [
 ]
 
 export const SymmetricCircleDiamond: InitialLayout = [
-    { c: { x:   0, y:      0, }, r: { x: 1, y: 1 }, },
-    { c: { x:   1, y:      0, }, r: { x: 1, y: 1 }, },
-    { c: { x: 1/2, y:  sq3/2, }, r: { x: 1, y: 1 }, },
-    { c: { x: 1/2, y: -sq3/2, }, r: { x: 1, y: 1 }, },
+    { c: { x: -0.5, y:      0, }, r: { x: 1, y: 1 }, },
+    { c: { x:  0  , y:  sq3/2, }, r: { x: 1, y: 1 }, },
+    { c: { x:  0.5, y:      0, }, r: { x: 1, y: 1 }, },
+    { c: { x:  0  , y: -sq3/2, }, r: { x: 1, y: 1 }, },
 ]
 
 export const Disjoint: InitialLayout = [
@@ -84,6 +84,12 @@ export const Repro: InitialLayout = [
     { c: { x: 0, y: 0, }, r: 1, },
 ]
 
+export const TwoOverOne: InitialLayout = [
+    { c: { x:  0. , y: 0. }, r: { x: 1., y: 3. } },
+    { c: { x:  0.5, y: 1. }, r: { x: 1., y: 1. } },
+    { c: { x: -0.5, y: 1. }, r: { x: 1., y: 1. } },
+]
+
 const ThreeEqualCircles: Target[] = [
     { sets: "0**", value: PI },
     { sets: "*1*", value: PI },
@@ -126,6 +132,16 @@ const FizzBuzzBazzQux: Target[] = [ // Fractions scaled up by LCM
     { sets: "0*23", value:   3 },  // 1 / 70
     { sets: "*123", value:   2 },  // 1 / 105
     { sets: "0123", value:   1 },  // 1 / 210
+]
+
+const CentroidRepel: Target[] = [
+    { sets: "0**", value: 3.  },
+    { sets: "*1*", value: 1.  },
+    { sets: "**2", value: 1.  },
+    { sets: "01*", value: 0.3 },
+    { sets: "0*2", value: 0.3 },
+    { sets: "*12", value: 0.3 },
+    { sets: "012", value: 0.1 },
 ]
 
 // Cenomic variants identified by 4 variant callers: VarScan, SomaticSniper, Strelka, JSM2
@@ -200,8 +216,9 @@ export default function Page() {
 export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLevel: Dispatch<LogLevel>, }) {
     const [ initialLayout, setInitialLayout] = useState<InitialLayout>(
         // Ellipses4
-        Disjoint
-        // SymmetricCircleDiamond,
+        // Disjoint
+        // TwoOverOne
+        SymmetricCircleDiamond,
         // FBBQBug,
         // Lattice_0_1
         // Repro,
@@ -215,16 +232,17 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     ]
 
     const [ targets, setTargets ] = useState<Target[]>(
-        // ThreeEqualCircles,
-        FizzBuzz,
-        // FizzBuzzBazz,
-        // FizzBuzzBazzQux,
-        // VariantCallers,
+        // ThreeEqualCircles
+        // FizzBuzz
+        FizzBuzzBazz
+        // FizzBuzzBazzQux
+        // CentroidRepel
+        // VariantCallers
     )
 
     const gridState = GridState({
-        center: { x: 1, y: 1, },
-        scale: 100,
+        center: { x: 0, y: sq3/4, },
+        scale: 150,
         width: 800,
         height: 600,
         // showGrid: true,
@@ -247,7 +265,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     const [ settingsShown, setSettingsShown ] = useState(initialSettingsShown)
     const [ maxErrorRatioStepSize, setMaxErrorRatioStepSize ] = useState(0.5)
     const [ maxSteps, setMaxSteps ] = useState(10000)
-    const [ stepBatchSize, setStepBatchSize ] = useState(10)
+    const [ stepBatchSize, setStepBatchSize ] = useState(25)
 
     const [ model, setModel ] = useState<Model | null>(null)
     const [ modelStepIdx, setModelStepIdx ] = useState<number | null>(null)

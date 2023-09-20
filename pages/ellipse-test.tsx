@@ -61,6 +61,12 @@ export function Body() {
         { idx: 3, c: { x: 4.271631577807546, y: -5.4473446956862155 }, r: { x: 2.652054463066812, y: 10.753963707585315 } },
     ]
 
+    const CentroidRepel = [
+        { c: { x:  0. , y: 0. }, r: { x: 1., y: 3. } },
+        { c: { x:  0.5, y: 1. }, r: { x: 1., y: 1. } },
+        { c: { x: -0.5, y: 1. }, r: { x: 1., y: 1. } },
+    ]
+
     const Components = [
         { idx: 0, c: { x: 0. , y: 0. }, r: { x: 1, y: 1, } },
         { idx: 1, c: { x: 1. , y: 0. }, r: { x: 1, y: 1, } },
@@ -72,7 +78,7 @@ export function Body() {
         <div className={`${css.row} ${css.content}`}>
             <Grid className={css.svg} state={gridState}>
                 {
-                    (Components as XYRR<number>[]).map(({ c, r }, shapeIdx) =>
+                    (CentroidRepel as XYRR<number>[]).map(({ c, r }, shapeIdx) =>
                         <ellipse
                             key={shapeIdx}
                             cx={c.x}
