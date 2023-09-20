@@ -2,7 +2,7 @@ import ReactScrollWheelHandler from "react-scroll-wheel-handler";
 import Grid, {GridState} from "../src/components/grid"
 import React, {Dispatch, Fragment, ReactNode, useCallback, useEffect, useMemo, useState} from "react"
 import * as apvd from "apvd"
-import {Diagram, Shape, train} from "apvd"
+import {Shape, train} from "apvd"
 import {makeModel, Model, Step} from "../src/lib/regions"
 import css from "./index.module.scss"
 import A from "next-utils/a"
@@ -15,13 +15,14 @@ import {getSliderValue} from "../src/components/inputs";
 import {deg, max, min, degStr, PI, round, sq3, sqrt} from "../src/lib/math";
 import Apvd, {LogLevel} from "../src/components/apvd";
 import {getMidpoint, getRegionCenter} from "../src/lib/region";
-import {BoundingBox, getCenter, getIdx, getRadii, mapShape, S, shapeBox, shapeType} from "../src/lib/shape";
+import {BoundingBox, getCenter, getRadii, mapShape, S, shapeBox, shapeType} from "../src/lib/shape";
 import {Target, TargetsTable} from "../src/components/tables/targets";
 import {InitialLayout, toShape} from "../src/lib/layout";
 import {VarsTable} from "../src/components/tables/vars";
 import {SparkLineProps} from "../src/components/spark-lines";
 import {CircleCoord, CircleCoords, CircleFloatGetters, Coord, VarCoord, Vars, XYRRCoord, XYRRCoords, XYRRFloatGetters} from "../src/lib/vars";
 import {ShapesTable} from "../src/components/tables/shapes";
+import {components} from "next-utils/md";
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false })
 
@@ -38,6 +39,13 @@ export const SymmetricCircleDiamond: InitialLayout = [
     { c: { x: 1/2, y:  sq3/2, }, r: { x: 1, y: 1 }, },
     { c: { x: 1/2, y: -sq3/2, }, r: { x: 1, y: 1 }, },
 ]
+
+export const Disjoint: InitialLayout = [
+    { c: { x: 0, y: 0, }, r: { x: 1, y: 1 }, },
+    { c: { x: 3, y: 0, }, r: { x: 1, y: 1 }, },
+    { c: { x: 0, y: 3, }, r: { x: 1, y: 1 }, },
+    { c: { x: 3, y: 3, }, r: { x: 1, y: 1 }, },
+]
 export const SymmetricCircleLattice: InitialLayout = [
     { c: { x: 0, y: 0, }, r: { x: 1, y: 1 }, },
     { c: { x: 1, y: 0, }, r: { x: 1, y: 1 }, },
@@ -50,6 +58,13 @@ export const CircleEllipses: InitialLayout = [
     { c: { x: 0, y: 0, }, r: 1, },
     { c: { x: 1, y: 0, }, r: { x: 1, y: 1, }, },
     { c: { x: 0, y: 1, }, r: { x: 1, y: 1, }, },
+]
+
+export const FBBQBug: InitialLayout = [
+    { c: { x: -2.0547374714862916, y: 0.7979432881804286 }, r: { x: 15.303664487498873, y: 17.53077114567813 } },
+    { c: { x: -11.526407092112622, y: 3.0882189920409058 }, r: { x: 22.75383340199038, y: 5.964648612528639 } },
+    { c: { x: 10.550418544451459, y: 0.029458342547552023 }, r: { x: 6.102407875525676, y: 11.431493472697646 } },
+    { c: { x: 4.271631577807546, y: -5.4473446956862155 }, r: { x: 2.652054463066812, y: 10.753963707585315 } },
 ]
 
 const r = 2
@@ -93,6 +108,24 @@ const FizzBuzzBazz: Target[] = [ // Fractions scaled up by LCM
     { sets: "0*2", value:  5 },  // 1 / 21
     { sets: "*12", value:  3 },  // 1 / 35
     { sets: "012", value:  1 },  // 1 / 105
+]
+
+const FizzBuzzBazzQux: Target[] = [ // Fractions scaled up by LCM
+    { sets: "0***", value: 105 },  // 1 / 2
+    { sets: "*1**", value:  70 },  // 1 / 3
+    { sets: "**2*", value:  42 },  // 1 / 5
+    { sets: "***3", value:  30 },  // 1 / 7
+    { sets: "01**", value:  35 },  // 1 / 6
+    { sets: "0*2*", value:  21 },  // 1 / 10
+    { sets: "0**3", value:  15 },  // 1 / 14
+    { sets: "*12*", value:  14 },  // 1 / 15
+    { sets: "*1*3", value:  10 },  // 1 / 21
+    { sets: "**23", value:   6 },  // 1 / 35
+    { sets: "012*", value:   7 },  // 1 / 30
+    { sets: "01*3", value:   5 },  // 1 / 42
+    { sets: "0*23", value:   3 },  // 1 / 70
+    { sets: "*123", value:   2 },  // 1 / 105
+    { sets: "0123", value:   1 },  // 1 / 210
 ]
 
 // Cenomic variants identified by 4 variant callers: VarScan, SomaticSniper, Strelka, JSM2
@@ -167,15 +200,25 @@ export default function Page() {
 export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLevel: Dispatch<LogLevel>, }) {
     const [ initialLayout, setInitialLayout] = useState<InitialLayout>(
         // Ellipses4
-        SymmetricCircleDiamond,
+        Disjoint
+        // SymmetricCircleDiamond,
+        // FBBQBug,
         // Lattice_0_1
         // Repro,
         // CircleEllipses
     )
+    //const [ layout, setLayout ] = useState<InitialLayout>(initialLayout)
+    const layouts = [
+        { name: "Ellipses4", layout: Ellipses4, description: "4 ellipses intersecting to form all 15 possible regions", },
+        { name: "CircleDiamond", layout: SymmetricCircleDiamond, description: "4 circles in a diamond shape, such that 2 different subsets (of 3) are symmetric, and 11 of 15 possible regions are represented (missing 2 4C2's and 2 4C3's).", },
+        { name: "Disjoint", layout: Disjoint, description: "4 disjoint circles" }
+    ]
+
     const [ targets, setTargets ] = useState<Target[]>(
         // ThreeEqualCircles,
-        // FizzBuzz,
-        FizzBuzzBazz,
+        FizzBuzz,
+        // FizzBuzzBazz,
+        // FizzBuzzBazzQux,
         // VariantCallers,
     )
 
@@ -204,7 +247,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     const [ settingsShown, setSettingsShown ] = useState(initialSettingsShown)
     const [ maxErrorRatioStepSize, setMaxErrorRatioStepSize ] = useState(0.5)
     const [ maxSteps, setMaxSteps ] = useState(10000)
-    const [ stepBatchSize, setStepBatchSize ] = useState(25)
+    const [ stepBatchSize, setStepBatchSize ] = useState(10)
 
     const [ model, setModel ] = useState<Model | null>(null)
     const [ modelStepIdx, setModelStepIdx ] = useState<number | null>(null)
@@ -280,20 +323,23 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                         idx,
                         name: String.fromCharCode('A'.charCodeAt(0) + idx),
                         color: colors[idx],
-                        ...shape,
+                        shape,
                     }
                 }),
         [ numShapes, initialLayout, ]
     )
 
-    const shapes: S[] = useMemo(
+    const sets: S[] = useMemo(
         () =>
             curStep
-                ? curStep
-                    .regions
-                    .shapes
-                    .map((c: Shape<number>, idx: number) => (
-                        { ...initialShapes[idx], ...c, }
+                ? ([] as S[]).concat(...curStep
+                    .components
+                    .map(component =>
+                        component
+                            .sets
+                            .map((set: S) => (
+                                { ...initialShapes[set.idx], ...set, }
+                            ))
                     ))
                 : initialShapes.slice(0, numShapes),
         [ curStep, initialShapes, numShapes ],
@@ -327,8 +373,9 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                 })
             })
             function getVal(step: Step, varIdx: number): number {
-                const [ shapeIdx, coord ] = coords[varIdx]
-                const shape = step.regions.shapes[shapeIdx]
+                const [ setIdx, coord ] = coords[varIdx]
+                const [ set ] = ([] as S[]).concat(...step.components.map(component => component.sets.filter(s => s.idx == setIdx)))
+                const shape = set.shape
                 if ('Circle' in shape) {
                     const c = shape.Circle
                     const getter = CircleFloatGetters[coord as CircleCoord]
@@ -362,7 +409,8 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
             // resulting in 4 fewer free variables.
             let curIdx = 0
             const { numVars, skipVars } = vars
-            const inputs = initialShapes.map((shape: Shape<number>, shapeIdx: number) => {
+            const inputs = initialShapes.map((set: S, shapeIdx: number) => {
+                const shape = set.shape;
                 const coords: Coord[] = 'Circle' in shape ? CircleCoords : XYRRCoords
                 return [
                     'Circle' in shape ? { Circle: shape.Circle } : { XYRR: shape.XYRR },
@@ -378,6 +426,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                 ]
             })
             console.log("inputs:", inputs)
+            // console.log("wasmtargets:", wasmTargets)
             const model = makeModel(apvd.make_model(inputs, wasmTargets))
             console.log("new model:", model)
             setModel(model)
@@ -419,12 +468,12 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                 console.log(`Clamping advance to ${n} steps due to maxSteps ${maxSteps}`)
             }
 
-            const lastDiagram: Diagram = model.lastDiagram
+            const lastStep: Step = model.lastStep
             const batchSeed: apvd.Model = {
-                steps: [ lastDiagram ],
+                steps: [ lastStep ],
                 repeat_idx: null,
                 min_idx: 0,
-                min_error: lastDiagram.error.v,
+                min_error: lastStep.error.v,
             }
             const batch = makeModel(train(batchSeed, maxErrorRatioStepSize, batchSize))
             const batchMinStep = batch.steps[batch.min_idx]
@@ -438,7 +487,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                 repeat_idx: batch.repeat_idx ? batch.repeat_idx + model.steps.length - 1 : null,
                 min_idx,
                 min_error,
-                lastDiagram: batch.lastDiagram,
+                lastStep: batch.lastStep,
             }
             console.log("newModel:", newModel)
             setModel(newModel)
@@ -589,7 +638,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                     style={plotInitialized ? {} : { display: "none", }}
                     data={[
                         {
-                            // x: steps.map((_: Diagram, idx: number) => xlo + idx),
+                            // x: steps.map((_: Step, idx: number) => xlo + idx),
                             y: steps.map(step => step.error.v),
                             type: 'scatter',
                             mode: 'lines',
@@ -695,7 +744,8 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
 
     const circleNodes = useMemo(
         () => <g id={"shapes"}>{
-            shapes.map(({ color, ...shape }: S, idx: number) => {
+            sets.map(({ color, ...set }: S, idx: number) => {
+                const shape = set.shape
                 const { x: cx, y: cy } = getCenter(shape)
                 const props = {
                     key: idx,
@@ -717,16 +767,16 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                     />
             })
         }</g>,
-        [ shapes, scale ],
+        [ sets, scale ],
     )
 
     const [ showIntersectionPoints, setShowIntersectionPoints ] = useState(false)
     const intersectionNodes = useMemo(
         () => showIntersectionPoints && <g id={"intersections"}>{
-            curStep && curStep.regions.points.map(({ x, y, }, pointIdx) => {
+            curStep && ([] as ReactNode[]).concat(...curStep.components.map((component, componentIdx) => component.points.map(({ x, y, }, pointIdx) => {
                 return (
                     <OverlayTrigger
-                        key={pointIdx}
+                        key={`${componentIdx}-${pointIdx}`}
                         overlay={
                             <Tooltip>
                                 <div>x: {x.v.toPrecision(4)}</div>
@@ -744,7 +794,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                         />
                     </OverlayTrigger>
                 )
-            })
+            })))
         }</g>,
         [ showIntersectionPoints, curStep, scale, ],
     )
@@ -752,13 +802,13 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     const [ showEdgePoints, setShowEdgePoints ] = useState(false)
     const edgePoints = useMemo(
         () =>
-            showEdgePoints && curStep && curStep.regions.edges.map((edge, edgeIdx) =>
+            showEdgePoints && curStep && ([] as ReactNode[]).concat(...curStep.components.map((component, componentIdx) => component.edges.map((edge, edgeIdx) =>
                 fs.map(f => {
                     const midpoint = getMidpoint(edge, f)
-                    const { shape } = edge
-                    console.log(`edge: ${getIdx(shape)}, ${round(deg(edge.t0))}, ${round(deg(edge.t1))}, midpoint: ${midpoint}`)
+                    const { set } = edge
+                    // console.log(`edge: ${set.idx}, ${round(deg(edge.theta0))}, ${round(deg(edge.theta1))}, midpoint: ${midpoint}`)
                     return <circle
-                        key={`${edgeIdx} ${f}`}
+                        key={`${componentIdx}-${edgeIdx} ${f}`}
                         cx={midpoint.x}
                         cy={midpoint.y}
                         r={0.1}
@@ -768,12 +818,12 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                         fillOpacity={0.5}
                     />
                 })
-            ),
+            ))),
         [ showEdgePoints, curStep, scale, ]
     )
 
     const expandedTargets = useMemo(
-        () => apvd.expand_areas(wasmTargets) as [ string, number ][],
+        () => apvd.expand_targets(wasmTargets).all as [ string, number ][],
         [ wasmTargets, ]
     )
 
@@ -788,12 +838,12 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
         () => {
             if (!curStep) return
             let regionAreas: { [k: string]: number } = {}
-            curStep.regions.regions.forEach(({ key, area }) => {
+            curStep.components.forEach(component => component.regions.forEach(({ key, area }) => {
                 if (!(key in regionAreas)) {
                     regionAreas[key] = 0
                 }
                 regionAreas[key] += area.v
-            })
+            }))
             return regionAreas
         },
         [ curStep ]
@@ -803,18 +853,18 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     const regionLabels = useMemo(
         () =>
             curStep && <g id={"regionLabels"}>{
-                curStep.regions.regions.map((region, regionIdx) => {
+                ([] as ReactNode[]).concat(...curStep.components.map((component, componentIdx) => component.regions.map((region, regionIdx) => {
                     const center = getRegionCenter(region, fs)
-                    const containerIdxs = region.containers.map(getIdx)
+                    const containerIdxs = region.containers.map(set => set.idx)
                     containerIdxs.sort()
-                    const label = containerIdxs.map(idx => shapes[idx].name).join('')
+                    const label = containerIdxs.map(idx => sets[idx].name).join('')
                     const { key } = region
                     const area = totalRegionAreas && totalRegionAreas[key] || 0
                     const target = expandedTargetsMap ? expandedTargetsMap[key] : 0
-                    const tooltip = `${label}: ${(area / curStep.total_area.v * curStep.total_target_area).toPrecision(3)} ${target.toPrecision(3)}`
+                    const tooltip = `${label}: ${(area / curStep.total_area.v * curStep.targets.total_area).toPrecision(3)} ${target.toPrecision(3)}`
                     // console.log("key:", key, "hoveredRegion:", hoveredRegion)
                     return (
-                        <OverlayTrigger key={`${regionIdx}-${key}`} show={key == hoveredRegion} overlay={<Tooltip onMouseOver={() => setHoveredRegion(key)}>{tooltip}</Tooltip>}>
+                        <OverlayTrigger key={`${componentIdx}-${regionIdx}-${key}`} show={key == hoveredRegion} overlay={<Tooltip onMouseOver={() => setHoveredRegion(key)}>{tooltip}</Tooltip>}>
                             <text
                                 transform={`translate(${center.x}, ${center.y}) scale(1, -1)`}
                                 textAnchor={"middle"}
@@ -825,7 +875,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                             }</text>
                         </OverlayTrigger>
                     )
-                })
+                })))
             }</g>,
         [ curStep, scale, showRegionLabels, hoveredRegion, totalRegionAreas, ],
     )
@@ -835,21 +885,21 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     const regionPaths = useMemo(
         () =>
             curStep && <g id={"regionPaths"}>{
-                curStep.regions.regions.map(({ key, segments, area, containers }, regionIdx) => {
+                ([] as ReactNode[]).concat(...curStep.components.map((component, componentIdx) => component.regions.map(({ key, segments, area, containers }, regionIdx) => {
                     let d = ''
                     segments.forEach(({ edge, fwd }, idx) => {
-                        const { shape, i0, i1, t0, t1, } = edge
-                        const [ rx, ry ] = getRadii(shape)
-                        const [ start, end ] = fwd ? [ i0, i1 ] : [ i1, i0 ]
+                        const { set, node0, node1, theta0, theta1, } = edge
+                        const [ rx, ry ] = getRadii(set.shape)
+                        const [ start, end ] = fwd ? [ node0, node1 ] : [ node1, node0 ]
                         if (idx == 0) {
                             d = `M ${start.x.v} ${start.y.v}`
                         }
-                        d += ` A ${rx},${ry} 0 ${t1 - t0 > PI ? 1 : 0} ${fwd ? 1 : 0} ${end.x.v},${end.y.v}`
+                        d += ` A ${rx},${ry} 0 ${theta1 - theta0 > PI ? 1 : 0} ${fwd ? 1 : 0} ${end.x.v},${end.y.v}`
                     })
                     const isHovered = hoveredRegion == key
                     return (
                         <path
-                            key={`${regionIdx}-${key}`}
+                            key={`${componentIdx}-${regionIdx}-${key}`}
                             id={key}
                             d={d}
                             stroke={"black"}
@@ -861,7 +911,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                             onMouseOut={() => setHoveredRegion(null)}
                         />
                     )
-                })
+                })))
             }</g>,
         [ curStep, scale, hoveredRegion, ],
     )
@@ -946,7 +996,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                                 <PlaybackControl title={"Seek to last computed step"} hotkey={"⌘→"} onClick={() => model && setStepIdx(model.steps.length - 1)} disabled={!model || stepIdx === null || stepIdx + 1 == model.steps.length}>⏭️</PlaybackControl>
                             </div>
                             <div className={css.stepStats}>
-                                <p>Step {stepIdx}{ curStep && error && <span>, error: {(error.v * curStep.total_target_area).toPrecision(3)}</span> }</p>
+                                <p>Step {stepIdx}{ curStep && error && <span>, error: {(error.v * curStep.targets.total_area).toPrecision(3)}</span> }</p>
                                 <p
                                     onMouseMove={() => {
                                         if (!model) return
@@ -966,7 +1016,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                                     }}
                                 >{
                                     model && curStep && bestStep && <>
-                                        Best step: {model.min_idx}, error: {(bestStep.error.v * curStep.total_target_area).toPrecision(3)} ({(bestStep.error.v * 100).toPrecision(3)}%)
+                                        Best step: {model.min_idx}, error: {(bestStep.error.v * curStep.targets.total_area).toPrecision(3)} ({(bestStep.error.v * 100).toPrecision(3)}%)
                                     </>
                                 }</p>
                                 {repeatSteps && stepIdx == repeatSteps[1] ?
@@ -1075,7 +1125,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                             <VarsTable
                                 vars={vars}
                                 initialShapes={initialShapes}
-                                shapes={shapes}
+                                shapes={sets}
                                 curStep={curStep}
                                 error={error}
                                 {...sparkLineCellProps}
@@ -1083,7 +1133,26 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                         }
                         <div className={css.tableBreak} />
                         <h3 className={css.tableTitle}>Shapes</h3>
-                        <ShapesTable shapes={shapes} vars={vars} />
+                        <ShapesTable sets={sets} vars={vars} />
+                        <details>
+                            <summary>Layouts</summary>
+                            <ul style={{ listStyle: "none", }}>{
+                                layouts.map(({ name, layout, description }, idx) => {
+                                    const overlay = <Tooltip>{description}</Tooltip>
+                                    return (
+                                        <li key={idx}>
+                                            <OverlayTrigger overlay={overlay}>
+                                                <a href={"#"} onClick={() => { setInitialLayout([ ...layout ]) }}>{name}</a>
+                                            </OverlayTrigger>
+                                            {' '}
+                                            <OverlayTrigger trigger="click" placement="right" overlay={overlay}>
+                                                <span className={css.info}>ℹ️</span>
+                                            </OverlayTrigger>
+                                        </li>
+                                    )
+                                })
+                            }</ul>
+                        </details>
                         <div className={css.shapesPreContainer} onClick={() => {
                             shapeText && navigator.clipboard.writeText(shapeText)
                         }}>

@@ -69,6 +69,7 @@ export function TargetsTable(
         [ targets, ],
     )
 
+    const totalTargetArea = curStep.targets.total_area
     const [ showTargetCurCol, setShowTargetCurCol ] = useState(false)
     const cellProps = { model, stepIdx, ...sparkLineProps, }
     const targetTableRows = targets.map(({ sets, value}) => {
@@ -81,10 +82,10 @@ export function TargetsTable(
             {
                 showTargetCurCol &&
                 <td className={css.val}>{
-                    err ? (err.actual_frac.v * err.total_target_area).toPrecision(3) : ''
+                    err ? (err.actual_frac.v * totalTargetArea).toPrecision(3) : ''
                 }</td>
             }
-            {SparkNum(err && err.error.v * err.total_target_area)}
+            {SparkNum(err && err.error.v * totalTargetArea)}
             <SparkLineCell
                 color={"red"}
                 fn={step => abs(step.errors.get(sets)?.error.v || 0)}
@@ -108,7 +109,7 @@ export function TargetsTable(
             <tr className={css.totalRow}>
                 <td style={{ textAlign: "right", }}>Σ</td>
                 <td className={css.sparkNum}>{sum}</td>
-                {SparkNum(error.v * curStep.total_target_area)}
+                {SparkNum(error.v * totalTargetArea)}
                 <SparkLineCell
                     color={"red"}
                     fn={step => step.error.v}

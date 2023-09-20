@@ -1,13 +1,9 @@
 import * as apvd from "apvd";
-import {Diagram, Dual, Error, Input, Shape, Targets} from "apvd"
+import {Dual, Error, Input, Targets} from "apvd"
 
 export type Point = {
     x: Dual
     y: Dual
-    // c0: S
-    // c1: S
-    // t0: Dual
-    // t1: Dual
     edges: Edge[]
 }
 
@@ -15,9 +11,12 @@ export type Errors = Map<string, Error>
 
 export type Step = {
     inputs: Input[]
-    regions: Regions
-    targets: Targets
-    total_target_area: number
+    sets: S[]
+    points: Point[]
+    edges: Edge[]
+    regions: Region[]
+    components: Component[]
+    targets: Targets<number>
     total_area: Dual
     errors: Errors
     error: Dual
@@ -28,71 +27,76 @@ export type Model = {
     repeat_idx: number | null
     min_idx: number
     min_error: number
-    lastDiagram: Diagram
+    lastStep: Step
 }
 
 export function makeModel(model: apvd.Model): Model {
     // console.log("makeModel:", model)
     const { steps, ...rest } = model
-    const lastDiagram = model.steps[model.steps.length - 1]
+    const lastStep = model.steps[model.steps.length - 1]
     return {
-        steps: steps.map(diagram => makeStep(diagram)),
-        lastDiagram,
+        steps: steps.map((step: Step) => makeStep(step)),
+        lastStep,
         ...rest,
     }
 }
 
-export function makeStep(diagram: Diagram): Step {
-    // console.log("makeStep:", diagram)
-    const { regions, errors, ...rest } = diagram
+export function makeStep(step: apvd.Step): Step {
+    // console.log("makeStep:", step)
+    const { components, errors, ...rest } = step
+    const sets = components.flatMap(c => c.sets)
+    // console.log("initial sets:", sets)
+    const points = components.flatMap(c => c.points)
+    const edges = components.flatMap(c => c.edges)
+    const regions = components.flatMap(c => c.regions)
     return {
-        regions: makeRegions(regions),
+        sets,
+        points,
+        edges,
+        regions,
+        components: components.map(c => makeComponent(c, sets)),
         // tsify `#[declare]` erroneously emits Record<K, V> instead of Map<K, V>: https://github.com/madonoharu/tsify/issues/26
         errors: errors as any as Errors,
         ...rest
     }
 }
 
-export function makeRegions(input: apvd.Regions): Regions {
-    // console.log("makeRegions:", input)
-    const shapes = input.shapes
-    const points: Point[] = input.points.map(({ p: { x, y }}) => ({
+export function makeComponent(component: apvd.Component, allSets: S[]): Component {
+    // console.log("makeComponent:", component)
+    const points: Point[] = component.points.map(({ p: { x, y }}) => ({
         x, y,
         edges: []
     }))
-    const edges = input.edges.map(({ cidx, i0, i1, t0, t1, containers, containments }) => ({
-        shape: shapes[cidx],
-        i0: points[i0],
-        i1: points[i1],
-        t0, t1,
-        containers: containers.map(cidx => shapes[cidx]),
-        containments,
+    const edges: Edge[] = component.edges.map(({ set_idx, node0_idx, node1_idx, theta0, theta1, container_idxs, }) => ({
+        set: allSets[set_idx],
+        node0: points[node0_idx],
+        node1: points[node1_idx],
+        theta0, theta1,
+        containers: container_idxs.map(setIdx => allSets[setIdx]),
     }))
-    input.points.forEach(({ edge_idxs }, pointIdx) => {
+    component.points.forEach(({ edge_idxs }, pointIdx) => {
         const point = points[pointIdx]
         point.edges = edge_idxs.map(edgeIdx => edges[edgeIdx])
     })
-    const regions = input.regions.map(({ key, segments, area, container_idxs, container_bmp }) => ({
+    const regions: Region[] = component.regions.map(({ key, segments, area, container_idxs }) => ({
         key,
         segments: segments.map(({ edge_idx, fwd }) => ({
             edge: edges[edge_idx],
             fwd,
         })),
         area,
-        containers: container_idxs.map(cidx => shapes[cidx]),
-        container_bmp,
+        containers: container_idxs.map(cidx => allSets[cidx]),
     }))
-    return { shapes, points, edges, regions, }
+    return { sets: component.sets, points, edges, regions, }
 }
 
-export type S = Shape<number>
+export type S = apvd.Set<number>
 
 export type Region = {
     key: string
     segments: Segment[]
     area: Dual
     containers: S[]
-    container_bmp: boolean[]
 }
 
 export interface Segment {
@@ -101,17 +105,16 @@ export interface Segment {
 }
 
 export type Edge = {
-    shape: S
-    i0: Point
-    i1: Point
-    t0: number
-    t1: number
+    set: S
+    node0: Point
+    node1: Point
+    theta0: number
+    theta1: number
     containers: S[]
-    containments: boolean[]
 }
 
-export type Regions  = {
-    shapes: S[]
+export type Component = {
+    sets: S[]
     points: Point[]
     edges: Edge[]
     regions: Region[]

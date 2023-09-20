@@ -6,7 +6,7 @@ import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
 
 export type Props = {
-    shapes: S[]
+    sets: S[]
     vars: Vars
     precision?: number
 }
@@ -23,7 +23,7 @@ export function VarCell({ skipped, children }: { skipped: boolean, children: Rea
     )
 }
 
-export function ShapesTable({ shapes, vars, precision = 4 }: Props) {
+export function ShapesTable({ sets, vars, precision = 4 }: Props) {
     return (
         <table className={css.shapesTable}>
             <thead>
@@ -37,8 +37,8 @@ export function ShapesTable({ shapes, vars, precision = 4 }: Props) {
             </tr>
             </thead>
             <tbody>{
-                shapes.map(({ idx, name, ...shape }, shapeIdx) => {
-                    const skippedVars = vars.skipVars[shapeIdx] || []
+                sets.map(({ idx, name, shape }) => {
+                    const skippedVars = vars.skipVars[idx] || []
                     const c = getCenter(shape)
                     const [ rx, ry ] = getRadii(shape)
                     const skipCx = skippedVars.includes("x")
@@ -51,7 +51,7 @@ export function ShapesTable({ shapes, vars, precision = 4 }: Props) {
                         },
                         e => [ skippedVars.includes("rx"), skippedVars.includes("ry") ]
                     )
-                    return <tr key={shapeIdx}>
+                    return <tr key={idx}>
                         <td style={{ textAlign: "right", }}>{name}</td>
                         <VarCell skipped={skipCx}>{c.x.toPrecision(precision)}</VarCell>
                         <VarCell skipped={skipCy}>{c.y.toPrecision(precision)}</VarCell>

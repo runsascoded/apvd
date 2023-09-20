@@ -272,7 +272,7 @@ export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, 
                     return
                 }
                 const virtualCoords = virtualMouseCoords(e)
-                console.log("Grid.wheelProps.upHandler", virtualCoords)
+                // console.log("Grid.wheelProps.upHandler", virtualCoords)
                 const interp = 1 / 1.1
                 const newCenter = {
                     x: center.x * interp + virtualCoords.x * (1 - interp),
@@ -287,7 +287,7 @@ export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, 
                     return
                 }
                 const virtualCoords = virtualMouseCoords(e)
-                console.log("Grid.wheelProps.downHandler", virtualCoords)
+                // console.log("Grid.wheelProps.downHandler", virtualCoords)
                 const interp = 1 / 1.1
                 const newCenter = {
                     x: center.x / interp - virtualCoords.x * (1 - interp) / interp,

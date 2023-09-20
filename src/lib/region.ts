@@ -18,18 +18,18 @@ export const getPointAtTheta = (shape: Shape<number>, theta: number): R2<number>
     }
 }
 
-export const getMidpoint = ({ shape, t0, t1 }: Edge, f: number = 0.5) =>
+export const getMidpoint = ({ set, theta0, theta1 }: Edge, f: number = 0.5) =>
     getPointAtTheta(
-        shape,
-        t0 * (1 - f) + f * t1,
+        set.shape,
+        theta0 * (1 - f) + f * theta1,
     )
 
-export const getEdgeLength = ({ shape, t0, t1 }: Edge) =>
+export const getEdgeLength = ({ set: { shape }, theta0, theta1 }: Edge) =>
     (
         'Circle' in shape
             ? shape.Circle.r
             : sqrt(shape.XYRR.r.x * shape.XYRR.r.y)  // TODO: this is approximate
-    ) * (t1 - t0)
+    ) * (theta1 - theta0)
 
 export const getRegionCenter = ({ segments }: Region, fs: number[]) => {
     fs = fs || [ 0.5 ]
