@@ -486,27 +486,28 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                 console.log(`Clamping advance to ${n} steps due to maxSteps ${maxSteps}`)
             }
 
-            const lastStep: Step = model.lastStep
+            const lastStep: Step = model.raw.steps[model.raw.steps.length - 1]
             const batchSeed: apvd.Model = {
                 steps: [ lastStep ],
                 repeat_idx: null,
                 min_idx: 0,
                 min_error: lastStep.error.v,
             }
-            const batch = makeModel(train(batchSeed, maxErrorRatioStepSize, batchSize))
+            const batch = train(batchSeed, maxErrorRatioStepSize, batchSize)
             const batchMinStep = batch.steps[batch.min_idx]
-            const modelMinStep = model.steps[model.min_idx]
-            const steps = model.steps.concat(batch.steps.slice(1))
+            const modelMinStep = model.raw.steps[model.min_idx]
+            const steps = model.raw.steps.concat(batch.steps.slice(1))
             const [ min_idx, min_error ] = (batchMinStep.error.v < modelMinStep.error.v) ?
-                [ batch.min_idx + model.steps.length - 1, batchMinStep.error.v ] :
-                [ model.min_idx, model.min_error ]
-            const newModel: Model = {
+                [ batch.min_idx + model.raw.steps.length - 1, batchMinStep.error.v ] :
+                [ model.min_idx, model.raw.min_error ]
+            const newRawModel: apvd.Model = {
                 steps,
-                repeat_idx: batch.repeat_idx ? batch.repeat_idx + model.steps.length - 1 : null,
+                repeat_idx: batch.repeat_idx ? batch.repeat_idx + model.raw.steps.length - 1 : null,
                 min_idx,
                 min_error,
                 lastStep: batch.lastStep,
             }
+            const newModel = makeModel(newRawModel)
             console.log("newModel:", newModel)
             setModel(newModel)
             setStepIdx(newModel.steps.length - 1)
@@ -903,21 +904,30 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     const regionPaths = useMemo(
         () =>
             curStep && <g id={"regionPaths"}>{
-                ([] as ReactNode[]).concat(...curStep.components.map((component, componentIdx) => component.regions.map(({ key, segments, area, containers }, regionIdx) => {
+                curStep.regions.map(({ key, segments, area, containers }, regionIdx) => {
                     let d = ''
-                    segments.forEach(({ edge, fwd }, idx) => {
-                        const { set, node0, node1, theta0, theta1, } = edge
-                        const [ rx, ry ] = getRadii(set.shape)
-                        const [ start, end ] = fwd ? [ node0, node1 ] : [ node1, node0 ]
+                    segments.forEach(({edge, fwd}, idx) => {
+                        const {set, node0, node1, theta0, theta1,} = edge
+                        const [rx, ry] = getRadii(set.shape)
+                        const [startNode, endNode] = fwd ? [node0, node1] : [node1, node0]
+                        const start = {x: startNode.x.v, y: startNode.y.v}
+                        const end = {x: endNode.x.v, y: endNode.y.v}
                         if (idx == 0) {
-                            d = `M ${start.x.v} ${start.y.v}`
+                            d = `M ${start.x} ${start.y}`
                         }
-                        d += ` A ${rx},${ry} 0 ${theta1 - theta0 > PI ? 1 : 0} ${fwd ? 1 : 0} ${end.x.v},${end.y.v}`
+                        // console.log("edge:", edge, "fwd:", fwd, "theta0:", theta0, "theta1:", theta1, "start:", start, "end:", end)
+                        if (segments.length == 1) {
+                            const mid = getMidpoint(edge, 0.4)
+                            d += ` A ${rx},${ry} 0 0 ${fwd ? 1 : 0} ${mid.x},${mid.y}`
+                            d += ` A ${rx},${ry} 0 1 ${fwd ? 1 : 0} ${end.x},${end.y}`
+                        } else {
+                            d += ` A ${rx},${ry} 0 ${theta1 - theta0 > PI ? 1 : 0} ${fwd ? 1 : 0} ${end.x},${end.y}`
+                        }
                     })
                     const isHovered = hoveredRegion == key
                     return (
                         <path
-                            key={`${componentIdx}-${regionIdx}-${key}`}
+                            key={`${regionIdx}-${key}`}
                             id={key}
                             d={d}
                             stroke={"black"}
@@ -929,7 +939,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                             onMouseOut={() => setHoveredRegion(null)}
                         />
                     )
-                })))
+                })
             }</g>,
         [ curStep, scale, hoveredRegion, ],
     )

@@ -28,15 +28,18 @@ export type Model = {
     min_idx: number
     min_error: number
     lastStep: Step
+    raw: apvd.Model
 }
 
 export function makeModel(model: apvd.Model): Model {
     // console.log("makeModel:", model)
     const { steps, ...rest } = model
-    const lastStep = model.steps[model.steps.length - 1]
+    const newSteps = steps.map((step: Step) => makeStep(step))
+    const lastStep = newSteps[newSteps.length - 1]
     return {
-        steps: steps.map((step: Step) => makeStep(step)),
+        steps: newSteps,
         lastStep,
+        raw: model,
         ...rest,
     }
 }
@@ -45,16 +48,17 @@ export function makeStep(step: apvd.Step): Step {
     // console.log("makeStep:", step)
     const { components, errors, ...rest } = step
     const sets = components.flatMap(c => c.sets)
+    const newComponents = components.map(c => makeComponent(c, sets))
     // console.log("initial sets:", sets)
-    const points = components.flatMap(c => c.points)
-    const edges = components.flatMap(c => c.edges)
-    const regions = components.flatMap(c => c.regions)
+    const points = newComponents.flatMap(c => c.points)
+    const edges = newComponents.flatMap(c => c.edges)
+    const regions = newComponents.flatMap(c => c.regions)
     return {
         sets,
         points,
         edges,
         regions,
-        components: components.map(c => makeComponent(c, sets)),
+        components: newComponents,
         // tsify `#[declare]` erroneously emits Record<K, V> instead of Map<K, V>: https://github.com/madonoharu/tsify/issues/26
         errors: errors as any as Errors,
         ...rest
@@ -85,7 +89,7 @@ export function makeComponent(component: apvd.Component, allSets: S[]): Componen
             fwd,
         })),
         area,
-        containers: container_idxs.map(cidx => allSets[cidx]),
+        containers: container_idxs.map((cidx: number) => allSets[cidx]),
     }))
     return { sets: component.sets, points, edges, regions, }
 }
