@@ -17,7 +17,6 @@ export function Body() {
         showGrid: true,
     })
     const e: XYRR<number> = {
-        idx: 0,
         c: { x: -0.6708203932499369, y: 0.34164078649987384, },
         r: { x: 0.5, y: 2, },
     }

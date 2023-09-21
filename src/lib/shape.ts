@@ -1,7 +1,13 @@
 import * as apvd from "apvd"
 import {Circle, R2, Shape, XYRR} from "apvd"
 
-export type S = apvd.S<number> & { idx: number, name: string, color: string }
+export type InitialShape = {
+    idx: number
+    name: string
+    color: string
+    shape: Shape<number>
+}
+export type S = InitialShape
 
 export const getRadii = <D>(s: Shape<D>): [D, D] =>
     'Circle' in s

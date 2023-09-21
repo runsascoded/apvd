@@ -15,7 +15,7 @@ import {getSliderValue} from "../src/components/inputs";
 import {deg, max, min, degStr, PI, round, sq3, sqrt} from "../src/lib/math";
 import Apvd, {LogLevel} from "../src/components/apvd";
 import {getMidpoint, getRegionCenter} from "../src/lib/region";
-import {BoundingBox, getCenter, getRadii, mapShape, S, shapeBox, shapeType} from "../src/lib/shape";
+import {BoundingBox, getCenter, getRadii, InitialShape, mapShape, S, shapeBox, shapeType} from "../src/lib/shape";
 import {Target, TargetsTable} from "../src/components/tables/targets";
 import {InitialLayout, toShape} from "../src/lib/layout";
 import {VarsTable} from "../src/components/tables/vars";
@@ -331,12 +331,12 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
         [ curStep, runningState, boundingBox, ]
     )
 
-    const initialShapes: S[] = useMemo(
+    const initialShapes: InitialShape[] = useMemo(
         () =>
             initialLayout
                 .slice(0, numShapes)
                 .map((s, idx) => {
-                    const shape = toShape(s, idx)
+                    const shape = toShape(s)
                     return {
                         idx,
                         name: String.fromCharCode('A'.charCodeAt(0) + idx),
@@ -350,14 +350,9 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     const sets: S[] = useMemo(
         () =>
             curStep
-                ? ([] as S[]).concat(...curStep
-                    .components
-                    .map(component =>
-                        component
-                            .sets
-                            .map((set: S) => (
-                                { ...initialShapes[set.idx], ...set, }
-                            ))
+                ? curStep.sets
+                    .map((set: apvd.Set<number>) => (
+                        { ...initialShapes[set.idx], ...set, }
                     ))
                 : initialShapes.slice(0, numShapes),
         [ curStep, initialShapes, numShapes ],
@@ -392,8 +387,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
             })
             function getVal(step: Step, varIdx: number): number {
                 const [ setIdx, coord ] = coords[varIdx]
-                const [ set ] = ([] as S[]).concat(...step.components.map(component => component.sets.filter(s => s.idx == setIdx)))
-                const shape = set.shape
+                const { shape } = step.sets[setIdx]
                 if ('Circle' in shape) {
                     const c = shape.Circle
                     const getter = CircleFloatGetters[coord as CircleCoord]
@@ -486,28 +480,34 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                 console.log(`Clamping advance to ${n} steps due to maxSteps ${maxSteps}`)
             }
 
-            const lastStep: Step = model.raw.steps[model.raw.steps.length - 1]
+            const lastStep: apvd.Step = model.raw.steps[model.raw.steps.length - 1]
             const batchSeed: apvd.Model = {
                 steps: [ lastStep ],
                 repeat_idx: null,
                 min_idx: 0,
                 min_error: lastStep.error.v,
             }
-            const batch = train(batchSeed, maxErrorRatioStepSize, batchSize)
+            const batch: Model = makeModel(train(batchSeed, maxErrorRatioStepSize, batchSize))
             const batchMinStep = batch.steps[batch.min_idx]
             const modelMinStep = model.raw.steps[model.min_idx]
-            const steps = model.raw.steps.concat(batch.steps.slice(1))
+            const steps = model.steps.concat(batch.steps.slice(1))
             const [ min_idx, min_error ] = (batchMinStep.error.v < modelMinStep.error.v) ?
                 [ batch.min_idx + model.raw.steps.length - 1, batchMinStep.error.v ] :
                 [ model.min_idx, model.raw.min_error ]
             const newRawModel: apvd.Model = {
+                steps: model.raw.steps.concat(batch.raw.steps.slice(1)),
+                repeat_idx: batch.repeat_idx ? batch.repeat_idx + model.raw.steps.length - 1 : null,
+                min_idx,
+                min_error,
+            }
+            const newModel: Model = {
                 steps,
                 repeat_idx: batch.repeat_idx ? batch.repeat_idx + model.raw.steps.length - 1 : null,
                 min_idx,
                 min_error,
                 lastStep: batch.lastStep,
+                raw: newRawModel,
             }
-            const newModel = makeModel(newRawModel)
             console.log("newModel:", newModel)
             setModel(newModel)
             setStepIdx(newModel.steps.length - 1)
@@ -763,8 +763,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
 
     const circleNodes = useMemo(
         () => <g id={"shapes"}>{
-            sets.map(({ color, ...set }: S, idx: number) => {
-                const shape = set.shape
+            sets.map(({ color, shape }: S, idx: number) => {
                 const { x: cx, y: cy } = getCenter(shape)
                 const props = {
                     key: idx,
@@ -872,7 +871,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     const regionLabels = useMemo(
         () =>
             curStep && <g id={"regionLabels"}>{
-                ([] as ReactNode[]).concat(...curStep.components.map((component, componentIdx) => component.regions.map((region, regionIdx) => {
+                curStep.regions.map((region, regionIdx) => {
                     const center = getRegionCenter(region, fs)
                     const containerIdxs = region.containers.map(set => set.idx)
                     containerIdxs.sort()
@@ -883,7 +882,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                     const tooltip = `${label}: ${(area / curStep.total_area.v * curStep.targets.total_area).toPrecision(3)} ${target.toPrecision(3)}`
                     // console.log("key:", key, "hoveredRegion:", hoveredRegion)
                     return (
-                        <OverlayTrigger key={`${componentIdx}-${regionIdx}-${key}`} show={key == hoveredRegion} overlay={<Tooltip onMouseOver={() => setHoveredRegion(key)}>{tooltip}</Tooltip>}>
+                        <OverlayTrigger key={`${regionIdx}-${key}`} show={key == hoveredRegion} overlay={<Tooltip onMouseOver={() => setHoveredRegion(key)}>{tooltip}</Tooltip>}>
                             <text
                                 transform={`translate(${center.x}, ${center.y}) scale(1, -1)`}
                                 textAnchor={"middle"}
@@ -894,7 +893,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                             }</text>
                         </OverlayTrigger>
                     )
-                })))
+                })
             }</g>,
         [ curStep, scale, showRegionLabels, hoveredRegion, totalRegionAreas, ],
     )
@@ -1152,8 +1151,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                             curStep && error && sparkLineCellProps &&
                             <VarsTable
                                 vars={vars}
-                                initialShapes={initialShapes}
-                                shapes={sets}
+                                sets={sets}
                                 curStep={curStep}
                                 error={error}
                                 {...sparkLineCellProps}

@@ -11,13 +11,13 @@ export type Ellipse = {
 }
 export type Shape = Circle | Ellipse
 
-export const toShape = (s: Shape, idx: number): apvd.Shape<number> => {
+export const toShape = (s: Shape): apvd.Shape<number> => {
     if (typeof s.r === 'number') {
         const { c, r } = s
-        return { Circle: { idx, c, r, } }
+        return { Circle: { c, r, } }
     } else {
         const { c, r } = s
-        return { XYRR: { idx, c, r, } }
+        return { XYRR: { c, r, } }
     }
 }
 

@@ -34,7 +34,7 @@ export type Model = {
 export function makeModel(model: apvd.Model): Model {
     // console.log("makeModel:", model)
     const { steps, ...rest } = model
-    const newSteps = steps.map((step: Step) => makeStep(step))
+    const newSteps = steps.map(step => makeStep(step))
     const lastStep = newSteps[newSteps.length - 1]
     return {
         steps: newSteps,

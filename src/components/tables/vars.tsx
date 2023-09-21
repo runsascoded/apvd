@@ -3,16 +3,15 @@ import {Dual} from "apvd";
 import React, {useMemo} from "react";
 import css from "../../../pages/index.module.scss";
 import {SparkLineCell, SparkLineCellProps, SparkNum} from "../spark-lines";
-import {S} from "../../lib/shape";
+import {InitialShape, S} from "../../lib/shape";
 import {Vars} from "../../lib/vars";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
 
 export function VarsTable(
-    { vars, initialShapes, shapes, curStep, error, ...sparkLineCellProps }: {
+    { vars, sets, curStep, error, ...sparkLineCellProps }: {
         vars: Vars
-        initialShapes: S[]
-        shapes: S[]
+        sets: S[]
         curStep: Step
         error: Dual
     } & SparkLineCellProps
@@ -20,10 +19,10 @@ export function VarsTable(
     const varTableRows = useMemo(
         () => {
             // console.log(`varTableRows: ${initialCircles.length} vs ${circles.length} circles, vars:`, vars.coords.length, vars)
-            return vars.coords.map(([ circleIdx, coord ], varIdx ) =>
-                circleIdx < shapes.length &&
+            return vars.coords.map(([ setIdx, coord ], varIdx ) =>
+                setIdx < sets.length &&
                 <tr key={varIdx}>
-                    <td>{shapes[circleIdx].name}.{coord}</td>
+                    <td>{sets[setIdx].name}.{coord}</td>
                     {SparkNum(vars.getVal(curStep, varIdx))}
                     <SparkLineCell
                         color={"blue"}
@@ -39,7 +38,7 @@ export function VarsTable(
                 </tr>
             )
         },
-        [ vars, initialShapes, shapes, ]
+        [ vars, sets, ]
     )
     return (
         <table className={css.sparkLinesTable}>
