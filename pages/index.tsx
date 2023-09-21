@@ -957,8 +957,8 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
         () => curStep && curStep.inputs.map(([ shape ]) =>
             mapShape(
                 shape,
-                ({ idx, c: { x, y }, r }) => `Circle { idx: ${idx}, c: { x: ${x}, y: ${y} }, r: ${r} }`,
-                ({ idx, c: { x, y}, r: { x: rx, y: ry } }) => `XYRR { idx: ${idx}, c: { x: ${x}, y: ${y} }, r: { x: ${rx}, y: ${ry} } }`,
+                ({ c: { x, y }, r }) => `Circle { c: { x: ${x}, y: ${y} }, r: ${r} }`,
+                ({ c: { x, y}, r: { x: rx, y: ry } }) => `XYRR { c: { x: ${x}, y: ${y} }, r: { x: ${rx}, y: ${ry} } }`,
             )
         ).join(",\n"),
         [ curStep],
