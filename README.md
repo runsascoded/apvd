@@ -2,7 +2,7 @@
 Area-Proportional Venn Diagram generator (WIP)
 
 <!-- toc -->
-- [Demos](#demos)
+- [Demo](#demo)
     - [Gradient descent toward target region sizes: runsascoded.com/apvd](#demo)
     - [Draggable ellipses + intersections: runsascoded.com/apvd/ellipses](#ellipses)
 - [Status](#status)
@@ -19,40 +19,33 @@ Area-Proportional Venn Diagram generator (WIP)
     - [Scala](#scala)
 <!-- /toc -->
 
-## Demos <a id="demos"></a>
+## Demo <a id="demo"></a>
 
 ### Gradient descent toward target region sizes: [runsascoded.com/apvd](https://runsascoded.com/apvd) <a id="demo"></a>
 
-https://github.com/runsascoded/apvd/assets/465045/52733e34-1603-43c1-8fc1-99afbd008df2
+https://github.com/runsascoded/apvd/assets/465045/87b3c520-3413-41a1-9ea6-c2281c2fc68c
 
 (*uses [runsascoded/shapes] to compute intersections + areas, in terms of circle's center/radius gradients, and gradient-descend to target proportions*)
-
-### Draggable ellipses + intersections: [runsascoded.com/apvd/ellipses](https://runsascoded.com/apvd/ellipses) <a id="ellipses"></a>
-
-https://github.com/runsascoded/apvd/assets/465045/2bcaa761-1989-4d6e-8424-8b593759fb53
-
-(*+ projections where each ellipse becomes a unit circle; useful for computing / debugging intersections*)
 
 ## Status <a id="status"></a>
 - [x] Compute ellipse intersections / areas
 - Autodiff computations + gradient-descend to optimal solution (see [runsascoded/shapes])
   - [x] circles
-  - [ ] ellipses (WIP)
-    - hit numeric-stability issues with "roots" crate quartic solver ([roots#30](https://github.com/vorot/roots/issues/30))
-    - working on one [in runsascoded/shapes](https://github.com/runsascoded/shapes/blob/e2d0d1bfd3e8c25ba8bb73f2066b374347de261d/src/math/quartic.rs#L219-L238)
-  - [ ] polygons?
+  - [x] "aligned" ellipses (rx/ry parallel to x/y axes)
+  - [ ] "unaligned" ellipses (arbitrary rotations)
+  - [ ] rectangles / polygons
 
 ## Inspiration <a id="inspo"></a>
 
-### Non-area-proportional Venn Diagrams in papers <a id="papers"></a>
-
-https://www.hindawi.com/journals/bmri/2015/456479/
-
-![Venn Diagram comprised of 5 nonconvex blobs](public/img/5-blobs.png)
+### Non-area-proportional Venn Diagrams in academic papers <a id="papers"></a>
 
 https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3753564/pdf/btt375.pdf
 
 ![Venn Diagram comprised of 4 ellipses](public/img/4-ellipses.png)
+
+https://www.hindawi.com/journals/bmri/2015/456479/
+
+<img alt="Venn Diagram comprised of 5 nonconvex blobs" src="public/img/5-blobs.png" width="500" />
 
 ### Area-proportional Venn Diagrams (circles only) <a id="circles"></a>
 
@@ -89,8 +82,9 @@ https://www.combinatorics.org/files/Surveys/ds5/ds5v3-2005/VennPoly67EJC.html
 >
 > ![](public/img/polyvenn7-curves.png)
 
-## Other misc references <a id="misc"></a>
+## Other references <a id="misc"></a>
 - [venneuler R package](https://www.rforge.net/venneuler/) ([paper](https://www.cs.uic.edu/~wilkinson/Publications/venneuler.pdf))
+- [UpSet plots](https://en.wikipedia.org/wiki/UpSet_Plot)
 
 ### Rust <a id="rust"></a>
 Dual / Autodiff libraries:
