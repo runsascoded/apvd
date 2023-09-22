@@ -285,7 +285,7 @@ export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, 
                     e.stopPropagation()
                 }}
                 onResize={(e, { node, size, handle,}) => {
-                    console.log("height:", height, size.height)
+                    // console.log("height:", height, size.height)
                     setHeight(size.height)
                     if (resizeStartHeight) {
                         setScale(resizeStartHeight.scale * height / resizeStartHeight.height)

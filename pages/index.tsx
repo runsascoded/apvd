@@ -924,15 +924,14 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
         [ curStep, setLabelPoints, ]
     )
 
-    useEffect(
-        () => {
-            if (!autoCenter || !boundingBox || runningState == 'none') return
+    const panZoom = useCallback(
+        (interp: number) => {
+            if (!boundingBox) return
             const [ lo, hi ] = boundingBox
             const sceneCenter = { x: (lo.x + hi.x) / 2, y: (lo.y + hi.y) / 2, }
             const width = hi.x - lo.x
             const height = hi.y - lo.y
             const sceneScale = min(gridWidth / width, gridHeight / height) * 0.9
-            const interp = autoCenterInterpRate
             const newCenter = {
                 x: gridCenter.x + (sceneCenter.x - gridCenter.x) * interp,
                 y: gridCenter.y + (sceneCenter.y - gridCenter.y) * interp,
@@ -941,7 +940,20 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
             setScale(newScale)
             setGridCenter(newCenter)
         },
-        [ curStep, runningState, boundingBox, autoCenterInterpRate ]
+        [ boundingBox ]
+    )
+
+    useEffect(
+        () => {
+            if (stepIdx == 0) {
+                console.log("Model start, panZoom warp")
+                panZoom(1)
+                return
+            }
+            if (!autoCenter || runningState == 'none') return
+            panZoom(autoCenterInterpRate)
+        },
+        [ curStep, stepIdx, runningState, autoCenterInterpRate, panZoom ]
     )
 
     const [ showRegionLabels, setShowRegionLabels ] = useState(true)
@@ -1252,7 +1264,10 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                                     return (
                                         <li key={idx}>
                                             <OverlayTrigger overlay={overlay}>
-                                                <a href={"#"} onClick={() => { setInitialLayout([ ...layout ]) }}>{name}</a>
+                                                <a href={"#"} onClick={() => {
+                                                    setInitialLayout([ ...layout ])
+                                                    panZoom(1)
+                                                }}>{name}</a>
                                             </OverlayTrigger>
                                             {' '}
                                             <OverlayTrigger trigger="click" placement="right" overlay={overlay}>
