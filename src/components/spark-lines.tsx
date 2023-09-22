@@ -49,6 +49,7 @@ export function SparkLineCell(
 }
 
 export type SparkLineProps = {
+    showSparkLines: boolean
     sparkLineLimit: number
     sparkLineStrokeWidth: number
     sparkLineMargin: number

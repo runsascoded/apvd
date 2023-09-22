@@ -168,11 +168,12 @@ const VariantCallers: Target[] = [
 export type RunningState = "none" | "fwd" | "rev"
 
 export function Number(
-    { label, value, setValue, float, ...props }: {
+    { label, value, setValue, float, children, ...props }: {
         label: string
         value: number
         setValue: Dispatch<number>
         float?: boolean
+        children?: ReactNode
     } & React.DetailedHTMLProps<React.InputHTMLAttributes<HTMLInputElement>, HTMLInputElement>
 ) {
     const parse = float ? parseFloat : parseInt
@@ -188,6 +189,7 @@ export function Number(
                     onChange={(e) => setValue(parse(e.target.value))}
                     onKeyDown={e => { e.stopPropagation() }}
                 />
+                {children}
             </label>
         </div>
     )
@@ -266,7 +268,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     const [ settingsShown, setSettingsShown ] = useState(initialSettingsShown)
     const [ maxErrorRatioStepSize, setMaxErrorRatioStepSize ] = useState(0.5)
     const [ maxSteps, setMaxSteps ] = useState(10000)
-    const [ stepBatchSize, setStepBatchSize ] = useState(25)
+    const [ stepBatchSize, setStepBatchSize ] = useState(10)
 
     const [ model, setModel ] = useState<Model | null>(null)
     const [ modelStepIdx, setModelStepIdx ] = useState<number | null>(null)
@@ -674,12 +676,13 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
         [ model, stepIdx, plotInitialized, ],
     )
 
-    const [ sparkLineLimit, setSparkLineLimit ] = useState(20)
+    const [ showSparkLines, setShowSparkLines ] = useState(true)
+    const [ sparkLineLimit, setSparkLineLimit ] = useState(40)
     const [ sparkLineStrokeWidth, setSparkLineStrokeWidth ] = useState(1)
     const [ sparkLineMargin, setSparkLineMargin ] = useState(1)
     const [ sparkLineWidth, setSparkLineWidth ] = useState(80)
     const [ sparkLineHeight, setSparkLineHeight ] = useState(30)
-    const sparkLineProps: SparkLineProps = { sparkLineLimit, sparkLineStrokeWidth, sparkLineMargin, sparkLineWidth, sparkLineHeight, }
+    const sparkLineProps: SparkLineProps = { showSparkLines, sparkLineLimit, sparkLineStrokeWidth, sparkLineMargin, sparkLineWidth, sparkLineHeight, }
     const sparkLineCellProps = model && (typeof stepIdx === 'number') && { model, stepIdx, ...sparkLineProps }
 
     const col5 = "col"
@@ -1133,12 +1136,21 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                                 min={0} max={1.2} step={0.1}
                             />
                             <Number label={"Max steps"} value={maxSteps} setValue={setMaxSteps} />
-                            <Number label={"Step batch size"} value={stepBatchSize} setValue={setStepBatchSize} />
+                            <Number label={"Step batch size"} className={css.shortNumberInput} value={stepBatchSize} setValue={setStepBatchSize} />
                             <Checkbox label={"Region labels"} checked={showRegionLabels} setChecked={setShowRegionLabels} />
-                            <Checkbox label={"Intersection points"} checked={showIntersectionPoints} setChecked={setShowIntersectionPoints} />
+                            <Checkbox label={"Intersections"} checked={showIntersectionPoints} setChecked={setShowIntersectionPoints} />
                             <Checkbox label={"Grid"} checked={showGrid} setChecked={setShowGrid} />
                             {/*<Checkbox label={"Edge points"} checked={showEdgePoints} setChecked={setShowEdgePoints} />*/}
                             <Checkbox label={"Auto-center"} checked={autoCenter} setChecked={setAutoCenter} />
+                            {/*<Checkbox label={"Sparklines"} checked={showSparkLines} setChecked={setShowSparkLines} />*/}
+                            <Number label={"Sparklines"} className={css.shortNumberInput} value={sparkLineLimit} setValue={setSparkLineLimit}>
+                                <input
+                                    type={"checkbox"}
+                                    checked={showSparkLines}
+                                    onChange={e => setShowSparkLines(e.target.checked)}
+                                    onKeyDown={e => { e.stopPropagation() }}
+                                />
+                            </Number>
                             <div className={css.input}>
                                 <label>
                                     Log level:

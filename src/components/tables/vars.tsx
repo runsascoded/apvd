@@ -16,6 +16,7 @@ export function VarsTable(
         error: Dual
     } & SparkLineCellProps
 ) {
+    const { showSparkLines} = sparkLineCellProps
     const varTableRows = useMemo(
         () => {
             // console.log(`varTableRows: ${initialCircles.length} vs ${circles.length} circles, vars:`, vars.coords.length, vars)
@@ -24,29 +25,29 @@ export function VarsTable(
                 <tr key={varIdx}>
                     <td>{sets[setIdx].name}.{coord}</td>
                     {SparkNum(vars.getVal(curStep, varIdx))}
-                    <SparkLineCell
+                    {showSparkLines && <SparkLineCell
                         color={"blue"}
                         fn={step => vars.getVal(step, varIdx)}
                         {...sparkLineCellProps}
-                    />
+                    />}
                     {SparkNum(-error.d[varIdx])}
-                    <SparkLineCell
+                    {showSparkLines && <SparkLineCell
                         color={"green"}
                         fn={step => step.error.d[varIdx]}
                         {...sparkLineCellProps}
-                    />
+                    />}
                 </tr>
             )
         },
-        [ vars, sets, ]
+        [ vars, sets, showSparkLines, ]
     )
     return (
         <table className={css.sparkLinesTable}>
             <thead>
             <tr>
                 <th>Var</th>
-                <th colSpan={2} style={{ textAlign: "center", }}>Value</th>
-                <th colSpan={2} style={{ textAlign: "center", }}>
+                <th colSpan={showSparkLines ? 2 : 1} style={{ textAlign: "center", }}>Value</th>
+                <th colSpan={showSparkLines ? 2 : 1} style={{ textAlign: "center", }}>
                     <OverlayTrigger overlay={<Tooltip>Gradient of decreasing error (-∂e/∂v)</Tooltip>}>
                         <span>Δ</span>
                     </OverlayTrigger>

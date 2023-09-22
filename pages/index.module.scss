@@ -90,6 +90,9 @@
         }
       }
       .input {
+        .shortNumberInput {
+          max-width: 3.5em;
+        }
         input, option, select {
           text-align: right;
           max-width: 5em;
