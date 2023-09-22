@@ -71,12 +71,13 @@ export function makeComponent(component: apvd.Component, allSets: S[]): Componen
         x, y,
         edges: []
     }))
-    const edges: Edge[] = component.edges.map(({ set_idx, node0_idx, node1_idx, theta0, theta1, container_idxs, }) => ({
+    const edges: Edge[] = component.edges.map(({ set_idx, node0_idx, node1_idx, theta0, theta1, container_idxs, is_component_boundary, }) => ({
         set: allSets[set_idx],
         node0: points[node0_idx],
         node1: points[node1_idx],
         theta0, theta1,
         containers: container_idxs.map(setIdx => allSets[setIdx]),
+        isComponentBoundary: is_component_boundary,
     }))
     component.points.forEach(({ edge_idxs }, pointIdx) => {
         const point = points[pointIdx]
@@ -115,6 +116,7 @@ export type Edge = {
     theta0: number
     theta1: number
     containers: S[]
+    isComponentBoundary: boolean
 }
 
 export type Component = {

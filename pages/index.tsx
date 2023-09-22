@@ -2,19 +2,20 @@ import ReactScrollWheelHandler from "react-scroll-wheel-handler";
 import Grid, {GridState} from "../src/components/grid"
 import React, {Dispatch, Fragment, ReactNode, useCallback, useEffect, useMemo, useState} from "react"
 import * as apvd from "apvd"
-import {Shape, train} from "apvd"
-import {makeModel, Model, Step} from "../src/lib/regions"
+import {train} from "apvd"
+import {Edge, makeModel, Model, Region, Step} from "../src/lib/regions"
+import {Point} from "../src/components/point"
 import css from "./index.module.scss"
 import A from "next-utils/a"
 import dynamic from "next/dynamic"
 import Button from 'react-bootstrap/Button'
 import OverlayTrigger from 'react-bootstrap/OverlayTrigger'
 import Tooltip from 'react-bootstrap/Tooltip'
-import {fromEntries} from "next-utils/objs";
+import {entries, fromEntries, values} from "next-utils/objs";
 import {getSliderValue} from "../src/components/inputs";
-import {deg, max, min, degStr, PI, round, sq3, sqrt} from "../src/lib/math";
+import {deg, max, min, degStr, PI, round, sq3, sqrt, pi2, cos, sin} from "../src/lib/math";
 import Apvd, {LogLevel} from "../src/components/apvd";
-import {getMidpoint, getRegionCenter} from "../src/lib/region";
+import {getMidpoint, getPointAndDirectionAtTheta, getPointAtTheta, getRegionCenter} from "../src/lib/region";
 import {BoundingBox, getCenter, getRadii, InitialShape, mapShape, S, shapeBox, shapeType} from "../src/lib/shape";
 import {Target, TargetsTable} from "../src/components/tables/targets";
 import {InitialLayout, toShape} from "../src/lib/layout";
@@ -273,6 +274,8 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     const [ runningState, setRunningState ] = useState<RunningState>("none")
     const [ frameLen, setFrameLen ] = useState(0)
     const [ autoCenter, setAutoCenter ] = useState(true)
+    const [ autoCenterInterpRate, setAutoCenterInterpRate ] = useState(0.08)
+    const [ setLabelDistance, setSetLabelDistance ] = useState(0.15)
 
     const [ stepIdx, setStepIdx ] = useMemo(
         () => {
@@ -290,45 +293,6 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     const curStep: Step | null = useMemo(
         () => (!model || stepIdx === null) ? null : model.steps[stepIdx],
         [ model, stepIdx ],
-    )
-
-    const boundingBox = useMemo(
-        () =>
-            curStep && curStep.inputs.reduce<BoundingBox<number> | null>(
-                (cur, [shape]) => {
-                    const box = shapeBox(shape)
-                    if (!cur) return box
-                    return [{
-                        x: min(cur[0].x, box[0].x),
-                        y: min(cur[0].y, box[0].y),
-                    }, {
-                        x: max(cur[1].x, box[1].x),
-                        y: max(cur[1].y, box[1].y),
-                    }]
-                },
-                null
-            ),
-        [ curStep, ]
-    )
-
-    useEffect(
-        () => {
-            if (!autoCenter || !boundingBox || runningState == 'none') return
-            const [ lo, hi ] = boundingBox
-            const sceneCenter = { x: (lo.x + hi.x) / 2, y: (lo.y + hi.y) / 2, }
-            const width = hi.x - lo.x
-            const height = hi.y - lo.y
-            const sceneScale = min(gridWidth / width, gridHeight / height) * 0.9
-            const interp = 0.08
-            const newCenter = {
-                x: gridCenter.x + (sceneCenter.x - gridCenter.x) * interp,
-                y: gridCenter.y + (sceneCenter.y - gridCenter.y) * interp,
-            }
-            const newScale = scale + (sceneScale - scale) * interp
-            setScale(newScale)
-            setGridCenter(newCenter)
-        },
-        [ curStep, runningState, boundingBox, ]
     )
 
     const initialShapes: InitialShape[] = useMemo(
@@ -625,7 +589,6 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     )
 
     const error = useMemo(() => curStep?.error, [ curStep ])
-
     const bestStep = useMemo(
         () => {
             if (!model) return null
@@ -633,11 +596,6 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
         },
         [ model ],
     )
-    // console.log("errors:", errors)
-    // console.log(`render: ${model?.steps?.length} steps, idx ${stepIdx}`)
-
-    // const basePath = getBasePath();
-
     const repeatSteps = useMemo(
         () => {
             if (!model || !model.repeat_idx || stepIdx === null) return null
@@ -867,38 +825,148 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
         [ curStep ]
     )
 
+    const exteriorRegions = useMemo(
+        () => {
+            const exteriorRegions: { [name: string]: Region } = {}
+            curStep?.regions.forEach(region => {
+                const { key, area } = region;
+                const idxChars = key.replaceAll('-', '').split('')
+                if (idxChars.length == 1) {
+                    const [ idxChar ] = idxChars
+                    const name = sets[parseInt(idxChar)].name
+                    if (!(name in exteriorRegions) || exteriorRegions[name].area < area) {
+                        exteriorRegions[name] = region
+                    }
+                }
+            })
+            return exteriorRegions
+        },
+        [ curStep, sets, ]
+    )
+    const setLabelPoints = useMemo(
+        () => {
+            if (!exteriorRegions) return
+            const setLabelPoints: { [name: string]: Point } = {}
+            entries(exteriorRegions)
+                .forEach(([ name, { segments } ]) => {
+                    const boundarySegments = segments.filter(({edge}) => edge.isComponentBoundary)
+                    if (boundarySegments.length != 1) {
+                        console.error(`expected 1 boundary segment for exterior region ${name}, got ${boundarySegments.length}:`, boundarySegments)
+                        return
+                    }
+                    const [{edge}] = boundarySegments
+                    const {theta0, theta1,} = edge
+                    const theta = (theta0 + theta1) / 2
+                    const [ point, direction] = getPointAndDirectionAtTheta(edge.set.shape, theta)
+                    const normal = direction - pi2
+                    const r = setLabelDistance
+                    const x = point.x + r * cos(normal)
+                    const y = point.y + r * sin(normal)
+                    // console.log(name, edge, point, degStr(direction), degStr(normal))
+                    setLabelPoints[name] = { x, y }
+                })
+            return setLabelPoints
+        },
+        [ exteriorRegions, setLabelDistance, ]
+    )
+    const setLabels = useMemo(
+        () => setLabelPoints && <g id={"setLabels"}>{
+            entries(setLabelPoints).map(([ label, { x, y } ]) => {
+                const r = setLabelDistance
+                return (
+                    <text
+                        key={label}
+                        transform={`translate(${x}, ${y}) scale(1, -1)`}
+                        textAnchor={"middle"}
+                        dominantBaseline={"middle"}
+                        fontSize={20 / scale}
+                    >{label}</text>
+                )
+            })
+        }</g>,
+        [ setLabelPoints, setLabelDistance, ]
+    )
+    const boundingBox = useMemo(
+        () => {
+            if (!curStep) return
+            const shapesBox =
+                curStep
+                    .inputs
+                    .map(([ shape ]) => shapeBox(shape))
+                    .reduce(
+                        (cur, box) => [
+                            {
+                                x: min(cur[0].x, box[0].x),
+                                y: min(cur[0].y, box[0].y),
+                            }, {
+                                x: max(cur[1].x, box[1].x),
+                                y: max(cur[1].y, box[1].y),
+                            }
+                        ]
+                    )
+            return setLabelPoints ? values(setLabelPoints).reduce<BoundingBox<number>>(
+                (box, { x, y }) => [{
+                    x: min(x, box[0].x),
+                    y: min(y, box[0].y),
+                }, {
+                    x: max(x, box[1].x),
+                    y: max(y, box[1].y),
+                }],
+                shapesBox
+            ) : shapesBox
+        },
+        [ curStep, setLabelPoints, ]
+    )
+
+    useEffect(
+        () => {
+            if (!autoCenter || !boundingBox || runningState == 'none') return
+            const [ lo, hi ] = boundingBox
+            const sceneCenter = { x: (lo.x + hi.x) / 2, y: (lo.y + hi.y) / 2, }
+            const width = hi.x - lo.x
+            const height = hi.y - lo.y
+            const sceneScale = min(gridWidth / width, gridHeight / height) * 0.9
+            const interp = autoCenterInterpRate
+            const newCenter = {
+                x: gridCenter.x + (sceneCenter.x - gridCenter.x) * interp,
+                y: gridCenter.y + (sceneCenter.y - gridCenter.y) * interp,
+            }
+            const newScale = scale + (sceneScale - scale) * interp
+            setScale(newScale)
+            setGridCenter(newCenter)
+        },
+        [ curStep, runningState, boundingBox, autoCenterInterpRate ]
+    )
+
     const [ showRegionLabels, setShowRegionLabels ] = useState(true)
     const regionLabels = useMemo(
         () =>
             curStep && <g id={"regionLabels"}>{
                 curStep.regions.map((region, regionIdx) => {
+                    const { key, containers } = region
                     const center = getRegionCenter(region, fs)
-                    const containerIdxs = region.containers.map(set => set.idx)
+                    const containerIdxs = containers.map(set => set.idx)
                     containerIdxs.sort()
                     const label = containerIdxs.map(idx => sets[idx].name).join('')
-                    const { key } = region
                     const area = totalRegionAreas && totalRegionAreas[key] || 0
                     const target = expandedTargetsMap ? expandedTargetsMap[key] : 0
                     const tooltip = `${label}: ${(area / curStep.total_area.v * curStep.targets.total_area).toPrecision(3)} ${target.toPrecision(3)}`
                     // console.log("key:", key, "hoveredRegion:", hoveredRegion)
                     return (
-                        <OverlayTrigger key={`${regionIdx}-${key}`} show={key == hoveredRegion} overlay={<Tooltip onMouseOver={() => setHoveredRegion(key)}>{tooltip}</Tooltip>}>
+                        <OverlayTrigger key={`${regionIdx}-${key}`} show={key == hoveredRegion} overlay={<Tooltip
+                            onMouseOver={() => setHoveredRegion(key)}>{tooltip}</Tooltip>}>
                             <text
                                 transform={`translate(${center.x}, ${center.y}) scale(1, -1)`}
                                 textAnchor={"middle"}
                                 dominantBaseline={"middle"}
                                 fontSize={16 / scale}
-                            >{
-                                showRegionLabels && label
-                            }</text>
+                            />
                         </OverlayTrigger>
                     )
                 })
             }</g>,
         [ curStep, scale, showRegionLabels, hoveredRegion, totalRegionAreas, ],
     )
-
-    // console.log("expandedTargets:", expandedTargets)
 
     const regionPaths = useMemo(
         () =>
@@ -985,6 +1053,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                         {circleNodes}
                         {edgePoints}
                         {regionLabels}
+                        {setLabels}
                         {regionPaths}
                         {intersectionNodes}
                         {/*{centerDot}*/}

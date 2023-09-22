@@ -1,6 +1,6 @@
 import React from 'react';
 import {pc, pp,} from './utils';
-import {degStr, pi, tpi} from './math';
+import {degStr, pi, tau} from './math';
 import Ellipse, {XY} from "./ellipse";
 import Intersection from "./intersection";
 import {deg} from "./math";
@@ -58,14 +58,14 @@ export default class Edge {
         this.n = 0
         this.ps = [ this.p1, this.p2 ]
 
-        this.mt = (this.t1 + this.t2 + (this.t2 < this.t1 ? tpi : 0)) / 2
+        this.mt = (this.t1 + this.t2 + (this.t2 < this.t1 ? tau : 0)) / 2
         this.mp = this.e.getPoint(this.mt)
 
         this.dt = this.t2 - this.t1;
         if (this.p1 === this.p2) {
-            this.dt = tpi;
+            this.dt = tau;
         } else if (this.dt < 0) {
-            this.dt += tpi;
+            this.dt += tau;
         }
 
         this.sector = this.rx * this.ry * this.dt / 2;
