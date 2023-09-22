@@ -219,10 +219,10 @@ export default function Page() {
 
 export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLevel: Dispatch<LogLevel>, }) {
     const [ initialLayout, setInitialLayout] = useState<InitialLayout>(
-        // Ellipses4
-        // Disjoint
-        // TwoOverOne
         SymmetricCircleDiamond,
+        // Disjoint
+        // Ellipses4
+        // TwoOverOne
         // FBBQBug,
         // Lattice_0_1
         // Repro,
@@ -236,12 +236,12 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     ]
 
     const [ targets, setTargets ] = useState<Target[]>(
+        FizzBuzzBazz
+        // VariantCallers
         // ThreeEqualCircles
         // FizzBuzz
-        FizzBuzzBazz
         // FizzBuzzBazzQux
         // CentroidRepel
-        // VariantCallers
     )
 
     const gridState = GridState({
@@ -832,15 +832,16 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
 
     const exteriorRegions = useMemo(
         () => {
-            const exteriorRegions: { [name: string]: Region } = {}
+            const exteriorRegions: { [name: string]: { idx: number, region: Region } } = {}
             curStep?.regions.forEach(region => {
                 const { key, area } = region;
                 const idxChars = key.replaceAll('-', '').split('')
                 if (idxChars.length == 1) {
                     const [ idxChar ] = idxChars
-                    const name = sets[parseInt(idxChar)].name
-                    if (!(name in exteriorRegions) || exteriorRegions[name].area < area) {
-                        exteriorRegions[name] = region
+                    const setIdx = parseInt(idxChar)
+                    const name = sets[setIdx].name
+                    if (!(name in exteriorRegions) || exteriorRegions[name].region.area.v < area.v) {
+                        exteriorRegions[name] = {idx: setIdx, region}
                     }
                 }
             })
@@ -853,13 +854,15 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
             if (!exteriorRegions) return
             const setLabelPoints: { [name: string]: Point } = {}
             entries(exteriorRegions)
-                .forEach(([ name, { segments } ]) => {
-                    const boundarySegments = segments.filter(({edge}) => edge.isComponentBoundary)
-                    if (boundarySegments.length != 1) {
-                        console.error(`expected 1 boundary segment for exterior region ${name}, got ${boundarySegments.length}:`, boundarySegments)
+                .forEach(([ name, { idx, region: { segments, } } ]) => {
+                    const boundarySegments = segments.filter(({edge}) => edge.isComponentBoundary && edge.set.idx == idx)
+                    if (boundarySegments.length == 0) {
+                        console.log(`skipping region ${name} with no boundary segments`)
                         return
                     }
-                    const [{edge}] = boundarySegments
+                    const edge= boundarySegments.map(({ edge }) => edge).reduce((cur, nxt) =>
+                        (nxt.theta1 - nxt.theta0 > cur.theta1 - cur.theta0) ? nxt : cur
+                    )
                     const {theta0, theta1,} = edge
                     const theta = (theta0 + theta1) / 2
                     const [ point, direction] = getPointAndDirectionAtTheta(edge.set.shape, theta)

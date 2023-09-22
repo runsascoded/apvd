@@ -47,7 +47,8 @@ export function makeModel(model: apvd.Model): Model {
 export function makeStep(step: apvd.Step): Step {
     // console.log("makeStep:", step)
     const { components, errors, ...rest } = step
-    const sets = components.flatMap(c => c.sets)
+    const sets: S[] = []
+    components.forEach(c => c.sets.forEach(s => sets[s.idx] = s))
     const newComponents = components.map(c => makeComponent(c, sets))
     // console.log("initial sets:", sets)
     const points = newComponents.flatMap(c => c.points)
