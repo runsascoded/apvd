@@ -25,7 +25,7 @@ export function Body() {
 
     return <div className={css.body}>
         <div className={`${css.row} ${css.content}`}>
-            <Grid className={css.svg} state={gridState}>
+            <Grid className={css.grid} state={gridState}>
                 <circle cx={0} cy={0} r={1} fill={"green"} fillOpacity={0.3} />
                 <ellipse cx={e.c.x} cy={e.c.y} rx={e.r.x} ry={e.r.y} fill={"orange"} fillOpacity={0.3} />
                 {/*{*/}

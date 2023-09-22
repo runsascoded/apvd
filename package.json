@@ -15,6 +15,7 @@
     "react-bootstrap": "^2.8.0",
     "react-dom": "^18.0.0",
     "react-plotly.js": "^2.6.0",
+    "react-resizable": "^3.0.5",
     "react-scroll-wheel-handler": "^2.2.0",
     "react-sparklines": "^1.7.0",
     "sass": "^1.66.1"
@@ -28,6 +29,7 @@
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
     "@types/react-plotly.js": "^2.6.0",
+    "@types/react-resizable": "^3.0.4",
     "@types/react-sparklines": "^1.7.2",
     "eslint": "^8.46.0",
     "eslint-config-next": "^13.4.13",

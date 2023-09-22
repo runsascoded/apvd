@@ -76,7 +76,7 @@ export function Body() {
 
     return <div className={css.body}>
         <div className={`${css.row} ${css.content}`}>
-            <Grid className={css.svg} state={gridState}>
+            <Grid className={css.grid} state={gridState}>
                 {
                     (CentroidRepel as XYRR<number>[]).map(({ c, r }, shapeIdx) =>
                         <ellipse

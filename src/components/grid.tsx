@@ -1,4 +1,5 @@
 import React, {MouseEvent, ReactNode, useCallback, useEffect, useMemo, useRef, useState} from "react";
+import { Resizable } from 'react-resizable';
 import {Point} from "./point";
 import {State} from "../lib/utils";
 import css from "./grid.module.scss"
@@ -44,6 +45,7 @@ export type Props = {
     handleMouseMove?: (e: MouseEvent, offset: Point, vOffset: Point) => void
     handleMouseDown?: (e: MouseEvent, rect?: DOMRect) => void
     handleMouseUp?: () => void
+    resizableBottom?: boolean
     state: GridState
     children: ReactNode
     outerChildren?: ReactNode
@@ -60,7 +62,7 @@ export type OffsetEvent = {
     offsetY: number
 }
 
-export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, state, children, outerChildren, className, }: Props) {
+export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, resizableBottom, state, children, outerChildren, className, }: Props) {
     const svg = useRef<SVGSVGElement>(null)
     const {
         center: [ center, setCenter ],
@@ -70,6 +72,8 @@ export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, 
         gridSize: [ gridSize, setGridSize ],
         showGrid: [ showGrid, setShowGrid ],
     } = state
+
+    const [ resizeStartHeight, setResizeStartHeight ] = useState<null | { height: number, scale: number }>(null)
 
     const virtualBox = useMemo(
         () => [
@@ -118,13 +122,13 @@ export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, 
         (e: MouseEvent) => {
             const [offset, rect] = getOffset(e)
             const vOffset = virtual(offset);
-            console.log("Grid.onMouseDown:", offset)
+            // console.log("Grid.onMouseDown:", offset)
             if (handleMouseDown) {
                 handleMouseDown(e, rect)
             }
             setDragState([vOffset, center])
         },
-        [ getOffset, handleMouseDown, center, ]
+        [ getOffset, handleMouseDown, virtual, center, ]
     )
 
     const onMouseUp = useCallback(
@@ -240,29 +244,63 @@ export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, 
         [ center, scale, width, height ]
     )
 
-    const svgNode = <svg
-        ref={svg}
-        viewBox={`0 0 ${width} ${height}`}
-        className={`${css.svg} ${className || ''}`}
-        onMouseDown={onMouseDown}
-        onMouseMove={onMouseMove}
-        onMouseUp={onMouseUp}
-    >
-        <g
-            className={`${css.projection}`}
-            transform={transforms.map(([ type, x, y ]) => `${type}(${x},${y})`).join(" ")}
+    // console.log("Grid:", width, height, scale, center)
+    const svgNode = (
+        <svg
+            ref={svg}
+            viewBox={`0 0 ${width} ${height}`}
+            className={`${css.svg} ${className || ''}`}
+            onMouseDown={onMouseDown}
+            onMouseMove={onMouseMove}
+            onMouseUp={onMouseUp}
         >
-            {gridLines}
-            <g id={"axes"}>
-                {xAxis}
-                {yAxis}
+            <g
+                className={`${css.projection}`}
+                transform={transforms.map(([type, x, y]) => `${type}(${x},${y})`).join(" ")}
+            >
+                {gridLines}
+                <g id={"axes"}>
+                    {xAxis}
+                    {yAxis}
+                </g>
+                {children}
             </g>
-            {children}
-        </g>
-        {outerChildren}
-    </svg>;
+            {outerChildren}
+        </svg>
+    )
 
-    return (
+    const resizableNode =
+        resizableBottom ?
+            <Resizable
+                height={height}
+                axis={'y'}
+                onResizeStart={e => {
+                    console.log("resize start:", height)
+                    setResizeStartHeight({ height, scale })
+                    e.stopPropagation()
+                }}
+                onResizeStop={e => {
+                    console.log("resize stop:", height)
+                    setResizeStartHeight(null)
+                    e.stopPropagation()
+                }}
+                onResize={(e, { node, size, handle,}) => {
+                    console.log("height:", height, size.height)
+                    setHeight(size.height)
+                    if (resizeStartHeight) {
+                        setScale(resizeStartHeight.scale * height / resizeStartHeight.height)
+                    }
+                    e.stopPropagation()
+                }}
+                handle={
+                    <hr className={css.resizeHandle} />
+                }
+            >
+                <div>{svgNode}</div>
+            </Resizable>
+            : svgNode
+
+    const scrollWheelNode = (
         <ReactScrollWheelHandler
             timeout={0}
             preventScroll={true}
@@ -297,7 +335,9 @@ export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, 
                 setCenter(newCenter)
             }}
         >{
-            svgNode
+            resizableNode
         }</ReactScrollWheelHandler>
     )
+
+    return scrollWheelNode
 }

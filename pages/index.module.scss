@@ -58,11 +58,15 @@
         background-color: #eee;
     }
 
-    .svg {
-      height: 40em;
+    .grid {
       width: 100%;
       padding: 0;
       border: 0;
+      margin-bottom: 0.5em;
+
+      .setLabel {
+        user-select: none;
+      }
     }
 
     .info {

@@ -24,6 +24,7 @@ import {SparkLineProps} from "../src/components/spark-lines";
 import {CircleCoord, CircleCoords, CircleFloatGetters, Coord, VarCoord, Vars, XYRRCoord, XYRRCoords, XYRRFloatGetters} from "../src/lib/vars";
 import {ShapesTable} from "../src/components/tables/shapes";
 import {components} from "next-utils/md";
+import {Resizable} from "react-resizable";
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false })
 
@@ -245,9 +246,9 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
 
     const gridState = GridState({
         center: { x: 0, y: sq3/4, },
-        scale: 150,
+        scale: 100,
         width: 800,
-        height: 600,
+        height: 400,
         // showGrid: true,
     })
     const {
@@ -278,6 +279,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     const [ autoCenter, setAutoCenter ] = useState(true)
     const [ autoCenterInterpRate, setAutoCenterInterpRate ] = useState(0.08)
     const [ setLabelDistance, setSetLabelDistance ] = useState(0.15)
+    const [ setLabelSize, setSetLabelSize ] = useState(20)
 
     const [ stepIdx, setStepIdx ] = useMemo(
         () => {
@@ -882,7 +884,8 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                         transform={`translate(${x}, ${y}) scale(1, -1)`}
                         textAnchor={"middle"}
                         dominantBaseline={"middle"}
-                        fontSize={20 / scale}
+                        className={css.setLabel}
+                        fontSize={setLabelSize / scale}
                     >{label}</text>
                 )
             })
@@ -1049,8 +1052,9 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
         <div className={css.body}>
             <div className={`${css.row} ${css.content}`}>
                 <Grid
-                    className={css.svg}
+                    className={css.grid}
                     state={gridState}
+                    resizableBottom={true}
                 >
                     <>
                         {circleNodes}
@@ -1062,7 +1066,6 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                         {/*{centerDot}*/}
                     </>
                 </Grid>
-                <hr />
                 <div className={"row"}>
                     <div className={`${col6} ${css.controlPanel}`}>
                         <div className={`${css.controls}`}>

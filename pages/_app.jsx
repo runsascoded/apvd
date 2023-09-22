@@ -1,4 +1,5 @@
 import 'bootstrap/dist/css/bootstrap.css'
+import 'react-resizable/css/styles.css'
 import Head from "next/head";
 import {getBasePath} from "next-utils/basePath";
 
