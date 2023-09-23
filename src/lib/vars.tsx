@@ -1,4 +1,4 @@
-import {Circle, Dual, XYRR} from "apvd";
+import {Circle, Dual, XYRR, XYRRT} from "apvd";
 import {Step} from "./regions";
 
 export type CircleCoord = 'x' | 'y' | 'r'
@@ -30,7 +30,23 @@ export function XYRRGetters<T>(): XYRRGetters<T> {
 export const XYRRFloatGetters = XYRRGetters<number>()
 export const XYRRDualGetters = XYRRGetters<Dual>()
 
-export type Coord = CircleCoord | XYRRCoord
+export type XYRRTCoord = 'x' | 'y' | 'rx' | 'ry' | 't'
+export type XYRRTGetter<T> = (e: XYRRT<T>) => T
+export type XYRRTGetters<T> = { [k in XYRRTCoord]: XYRRTGetter<T> }
+export const XYRRTCoords: XYRRTCoord[] = [ 'x', 'y', 'rx', 'ry', 't', ]
+export function XYRRTGetters<T>(): XYRRTGetters<T> {
+    return {
+        'x': e => e.c.x,
+        'y': e => e.c.y,
+        'rx': e => e.r.x,
+        'ry': e => e.r.y,
+        't': e => e.t,
+    }
+}
+export const XYRRTFloatGetters = XYRRTGetters<number>()
+export const XYRRTDualGetters = XYRRTGetters<Dual>()
+
+export type Coord = CircleCoord | XYRRCoord | XYRRTCoord
 export type VarCoord = [ number, Coord ]
 export type StepVarGetter = (step: Step, varIdx: number) => number
 

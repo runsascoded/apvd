@@ -1,5 +1,6 @@
 import * as apvd from "apvd";
 import {Dual, Error, Input, Targets} from "apvd"
+import {S, Set, Shape} from "./shape";
 
 export type Point = {
     x: Dual
@@ -12,6 +13,7 @@ export type Errors = Map<string, Error>
 export type Step = {
     inputs: Input[]
     sets: S[]
+    // shapes: Shape<number>[]
     points: Point[]
     edges: Edge[]
     regions: Region[]
@@ -31,10 +33,10 @@ export type Model = {
     raw: apvd.Model
 }
 
-export function makeModel(model: apvd.Model): Model {
+export function makeModel(model: apvd.Model, initialSets: Set[]): Model {
     // console.log("makeModel:", model)
     const { steps, ...rest } = model
-    const newSteps = steps.map(step => makeStep(step))
+    const newSteps = steps.map(step => makeStep(step, initialSets))
     const lastStep = newSteps[newSteps.length - 1]
     return {
         steps: newSteps,
@@ -44,11 +46,14 @@ export function makeModel(model: apvd.Model): Model {
     }
 }
 
-export function makeStep(step: apvd.Step): Step {
+export function makeStep(step: apvd.Step, initialSets: Set[]): Step {
     // console.log("makeStep:", step)
     const { components, errors, ...rest } = step
     const sets: S[] = []
-    components.forEach(c => c.sets.forEach(s => sets[s.idx] = s))
+    components.forEach(c => c.sets.forEach(({ idx, shape }) => {
+        sets[idx] = { ...initialSets[idx], shape: makeShape(shape) }
+    }))
+    // const shapes = sets.map(({ shape }) => makeShape(shape))
     const newComponents = components.map(c => makeComponent(c, sets))
     // console.log("initial sets:", sets)
     const points = newComponents.flatMap(c => c.points)
@@ -56,6 +61,7 @@ export function makeStep(step: apvd.Step): Step {
     const regions = newComponents.flatMap(c => c.regions)
     return {
         sets,
+        // shapes,
         points,
         edges,
         regions,
@@ -63,6 +69,19 @@ export function makeStep(step: apvd.Step): Step {
         // tsify `#[declare]` erroneously emits Record<K, V> instead of Map<K, V>: https://github.com/madonoharu/tsify/issues/26
         errors: errors as any as Errors,
         ...rest
+    }
+}
+
+export function makeShape(shape: apvd.Shape<number>): Shape<number> {
+    if ('Circle' in shape) {
+        const { c, r } = shape.Circle
+        return { kind: 'Circle', c, r, }
+    } else if ('XYRR' in shape) {
+        const { c, r } = shape.XYRR
+        return { kind: 'XYRR', c, r, }
+    } else {
+        const { c, r, t } = shape.XYRRT
+        return { kind: 'XYRRT', c, r, t, }
     }
 }
 
@@ -93,10 +112,8 @@ export function makeComponent(component: apvd.Component, allSets: S[]): Componen
         area,
         containers: container_idxs.map((cidx: number) => allSets[cidx]),
     }))
-    return { sets: component.sets, points, edges, regions, }
+    return { sets: component.sets.map(({ idx }) => allSets[idx]), points, edges, regions, }
 }
-
-export type S = apvd.Set<number>
 
 export type Region = {
     key: string

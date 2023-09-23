@@ -1,9 +1,8 @@
-import ReactScrollWheelHandler from "react-scroll-wheel-handler";
 import Grid, {GridState} from "../src/components/grid"
-import React, {Dispatch, Fragment, ReactNode, useCallback, useEffect, useMemo, useState} from "react"
+import React, {Dispatch, ReactNode, useCallback, useEffect, useMemo, useState} from "react"
 import * as apvd from "apvd"
 import {train} from "apvd"
-import {Edge, makeModel, Model, Region, Step} from "../src/lib/regions"
+import {makeModel, Model, Region, Step} from "../src/lib/regions"
 import {Point} from "../src/components/point"
 import css from "./index.module.scss"
 import A from "next-utils/a"
@@ -13,18 +12,16 @@ import OverlayTrigger from 'react-bootstrap/OverlayTrigger'
 import Tooltip from 'react-bootstrap/Tooltip'
 import {entries, fromEntries, values} from "next-utils/objs";
 import {getSliderValue} from "../src/components/inputs";
-import {deg, max, min, degStr, PI, round, sq3, sqrt, pi2, cos, sin} from "../src/lib/math";
+import {cos, max, min, PI, pi2, round, sin, sq3, sqrt} from "../src/lib/math";
 import Apvd, {LogLevel} from "../src/components/apvd";
-import {getMidpoint, getPointAndDirectionAtTheta, getPointAtTheta, getRegionCenter} from "../src/lib/region";
-import {BoundingBox, getCenter, getRadii, InitialShape, mapShape, S, shapeBox, shapeType} from "../src/lib/shape";
+import {getMidpoint, getPointAndDirectionAtTheta, getRegionCenter} from "../src/lib/region";
+import {BoundingBox, getRadii, mapShape, S, Set, shapeBox} from "../src/lib/shape";
 import {Target, TargetsTable} from "../src/components/tables/targets";
 import {InitialLayout, toShape} from "../src/lib/layout";
 import {VarsTable} from "../src/components/tables/vars";
 import {SparkLineProps} from "../src/components/spark-lines";
-import {CircleCoord, CircleCoords, CircleFloatGetters, Coord, VarCoord, Vars, XYRRCoord, XYRRCoords, XYRRFloatGetters} from "../src/lib/vars";
+import {CircleCoord, CircleCoords, CircleFloatGetters, Coord, VarCoord, Vars, XYRRCoord, XYRRCoords, XYRRFloatGetters, XYRRTCoord, XYRRTCoords, XYRRTFloatGetters} from "../src/lib/vars";
 import {ShapesTable} from "../src/components/tables/shapes";
-import {components} from "next-utils/md";
-import {Resizable} from "react-resizable";
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false })
 
@@ -36,10 +33,10 @@ export const colors = [
 ]
 
 export const SymmetricCircleDiamond: InitialLayout = [
-    { c: { x: -0.5, y:      0, }, r: { x: 1, y: 1 }, },
-    { c: { x:  0  , y:  sq3/2, }, r: { x: 1, y: 1 }, },
-    { c: { x:  0.5, y:      0, }, r: { x: 1, y: 1 }, },
-    { c: { x:  0  , y: -sq3/2, }, r: { x: 1, y: 1 }, },
+    { c: { x: -0.5, y:      0, }, r: { x: 1, y: 1 }, t: 0 },
+    { c: { x:  0  , y:  sq3/2, }, r: { x: 1, y: 1 }, t: 0 },
+    { c: { x:  0.5, y:      0, }, r: { x: 1, y: 1 }, t: 0 },
+    { c: { x:  0  , y: -sq3/2, }, r: { x: 1, y: 1 }, t: 0 },
 ]
 
 export const Disjoint: InitialLayout = [
@@ -236,10 +233,10 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     ]
 
     const [ targets, setTargets ] = useState<Target[]>(
-        FizzBuzzBazz
+        // FizzBuzzBazz
         // VariantCallers
         // ThreeEqualCircles
-        // FizzBuzz
+        FizzBuzz
         // FizzBuzzBazzQux
         // CentroidRepel
     )
@@ -299,7 +296,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
         [ model, stepIdx ],
     )
 
-    const initialShapes: InitialShape[] = useMemo(
+    const initialSets: Set[] = useMemo(
         () =>
             initialLayout
                 .slice(0, numShapes)
@@ -315,20 +312,20 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
         [ numShapes, initialLayout, ]
     )
 
-    const sets: S[] = useMemo(
-        () =>
-            curStep
-                ? curStep.sets
-                    .map((set: apvd.Set<number>) => (
-                        { ...initialShapes[set.idx], ...set, }
-                    ))
-                : initialShapes.slice(0, numShapes),
-        [ curStep, initialShapes, numShapes ],
+    const sets: S[] | null = useMemo(
+        () => curStep && curStep.sets.map(set => ({ ...initialSets[set.idx], ...set, })),
+        [ curStep, initialSets, numShapes ],
     )
 
     const vars: Vars = useMemo(
         () => {
-            const allCoords: Coord[][] = initialShapes.map(s => 'Circle' in s ? CircleCoords : XYRRCoords)
+            const allCoords: Coord[][] = initialSets.map(({ shape: { kind } }) => {
+                switch (kind) {
+                    case 'Circle': return CircleCoords
+                    case 'XYRR': return XYRRCoords
+                    case 'XYRRT': return XYRRTCoords
+                }
+            })
             const numCoords = ([] as string[]).concat(...allCoords).length
             const skipVars: Coord[][] = [
                 // Fix all coords of shapes[0], it is the unit circle centered at the origin, WLOG
@@ -356,14 +353,10 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
             function getVal(step: Step, varIdx: number): number {
                 const [ setIdx, coord ] = coords[varIdx]
                 const { shape } = step.sets[setIdx]
-                if ('Circle' in shape) {
-                    const c = shape.Circle
-                    const getter = CircleFloatGetters[coord as CircleCoord]
-                    return getter(c)
-                } else {
-                    const e = shape.XYRR
-                    const getter = XYRRFloatGetters[coord as XYRRCoord]
-                    return getter(e)
+                switch (shape.kind) {
+                    case "Circle": return CircleFloatGetters[coord as CircleCoord](shape)
+                    case "XYRR": return XYRRFloatGetters[coord as XYRRCoord](shape)
+                    case "XYRRT": return XYRRTFloatGetters[coord as XYRRTCoord](shape)
                 }
             }
             return {
@@ -377,7 +370,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                 getVal,
             }
         },
-        [ initialShapes, ],
+        [ initialSets, ],
     )
 
     // Initialize model, stepIdx
@@ -389,11 +382,11 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
             // resulting in 4 fewer free variables.
             let curIdx = 0
             const { numVars, skipVars } = vars
-            const inputs = initialShapes.map((set: S, shapeIdx: number) => {
+            const inputs = initialSets.map((set: S, shapeIdx: number) => {
                 const shape = set.shape;
-                const coords: Coord[] = 'Circle' in shape ? CircleCoords : XYRRCoords
+                const coords: Coord[] = mapShape<number, Coord[]>(shape, () => CircleCoords, () => XYRRCoords, () => XYRRTCoords)
                 return [
-                    'Circle' in shape ? { Circle: shape.Circle } : { XYRR: shape.XYRR },
+                    mapShape<number, any>(shape, s => ({ Circle: s }), s => ({ XYRR: s }), s => ({ XYRRT: s })),
                     coords.map(v => {
                         const row = new Array(numVars).fill(0)
                         const skip = shapeIdx < skipVars.length && skipVars[shapeIdx].includes(v)
@@ -407,12 +400,12 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
             })
             console.log("inputs:", inputs)
             // console.log("wasmtargets:", wasmTargets)
-            const model = makeModel(apvd.make_model(inputs, wasmTargets))
+            const model = makeModel(apvd.make_model(inputs, wasmTargets), initialSets)
             console.log("new model:", model)
             setModel(model)
             setStepIdx(0)
         },
-        [ vars, initialShapes, wasmTargets, ]
+        [ vars, initialSets, wasmTargets, initialSets, ]
     )
 
     const fwdStep = useCallback(
@@ -455,7 +448,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                 min_idx: 0,
                 min_error: lastStep.error.v,
             }
-            const batch: Model = makeModel(train(batchSeed, maxErrorRatioStepSize, batchSize))
+            const batch: Model = makeModel(train(batchSeed, maxErrorRatioStepSize, batchSize), initialSets)
             const batchMinStep = batch.steps[batch.min_idx]
             const modelMinStep = model.raw.steps[model.min_idx]
             const steps = model.steps.concat(batch.steps.slice(1))
@@ -480,7 +473,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
             setModel(newModel)
             setStepIdx(newModel.steps.length - 1)
         },
-        [ model, stepIdx, stepBatchSize, maxErrorRatioStepSize, maxSteps, ]
+        [ model, stepIdx, stepBatchSize, maxErrorRatioStepSize, maxSteps, initialSets, ]
     )
 
     const revStep = useCallback(
@@ -724,10 +717,10 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     const fs = [ 0.25, 0.5, 0.75, ];
     // const fs = [ 0.5, ];
 
-    const circleNodes = useMemo(
+    const shapeNodes = useMemo(
         () => <g id={"shapes"}>{
-            sets.map(({ color, shape }: S, idx: number) => {
-                const { x: cx, y: cy } = getCenter(shape)
+            sets?.map(({ color, shape }: S, idx: number) => {
+                const { x: cx, y: cy } = shape.c
                 const props = {
                     key: idx,
                     cx, cy,
@@ -736,14 +729,15 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                     fill: color,
                     fillOpacity: 0.3,
                 }
+                const [ rx, ry ] = getRadii(shape)
                 return 'Circle' in shape
                     ? <circle
-                        r={shape.Circle.r}
+                        r={rx}
                         {...props}
                     />
                     : <ellipse
-                        rx={shape.XYRR.r.x}
-                        ry={shape.XYRR.r.y}
+                        rx={rx}
+                        ry={ry}
                         {...props}
                     />
             })
@@ -833,7 +827,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     const exteriorRegions = useMemo(
         () => {
             const exteriorRegions: { [name: string]: { idx: number, region: Region } } = {}
-            curStep?.regions.forEach(region => {
+            curStep && sets && curStep.regions.forEach(region => {
                 const { key, area } = region;
                 const idxChars = key.replaceAll('-', '').split('')
                 if (idxChars.length == 1) {
@@ -900,8 +894,8 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
             if (!curStep) return
             const shapesBox =
                 curStep
-                    .inputs
-                    .map(([ shape ]) => shapeBox(shape))
+                    .sets
+                    .map(({ shape }) => shapeBox(shape))
                     .reduce(
                         (cur, box) => [
                             {
@@ -959,10 +953,9 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
         [ curStep, stepIdx, runningState, autoCenterInterpRate, panZoom ]
     )
 
-    const [ showRegionLabels, setShowRegionLabels ] = useState(true)
-    const regionLabels = useMemo(
+    const regionTooltips = useMemo(
         () =>
-            curStep && <g id={"regionLabels"}>{
+            curStep && sets && <g id={"regionLabels"}>{
                 curStep.regions.map((region, regionIdx) => {
                     const { key, containers } = region
                     const center = getRegionCenter(region, fs)
@@ -986,7 +979,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                     )
                 })
             }</g>,
-        [ curStep, scale, showRegionLabels, hoveredRegion, totalRegionAreas, ],
+        [ curStep, scale, hoveredRegion, totalRegionAreas, ],
     )
 
     const regionPaths = useMemo(
@@ -1042,11 +1035,12 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     ]
 
     const shapeText = useMemo(
-        () => curStep && curStep.inputs.map(([ shape ]) =>
+        () => curStep && curStep.sets.map(({ shape }) =>
             mapShape(
                 shape,
-                ({ c: { x, y }, r }) => `Circle { c: { x: ${x}, y: ${y} }, r: ${r} }`,
-                ({ c: { x, y}, r: { x: rx, y: ry } }) => `XYRR { c: { x: ${x}, y: ${y} }, r: { x: ${rx}, y: ${ry} } }`,
+                ({ c: { x, y }, r }) => `Circle { c: R2 { x: ${x}, y: ${y} }, r: ${r} }`,
+                ({ c: { x, y}, r: { x: rx, y: ry } }) => `XYRR { c: R2 { x: ${x}, y: ${y} }, r: R2 { x: ${rx}, y: ${ry} } }`,
+                ({ c: { x, y}, r: { x: rx, y: ry }, t }) => `XYRRT { c: R2 { x: ${x}, y: ${y} }, r: R2 { x: ${rx}, y: ${ry} }, t: ${t} }`,
             )
         ).join(",\n"),
         [ curStep],
@@ -1072,9 +1066,9 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                     resizableBottom={true}
                 >
                     <>
-                        {circleNodes}
+                        {shapeNodes}
                         {edgePoints}
-                        {regionLabels}
+                        {regionTooltips}
                         {setLabels}
                         {regionPaths}
                         {intersectionNodes}
@@ -1155,7 +1149,6 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                             />
                             <Number label={"Max steps"} value={maxSteps} setValue={setMaxSteps} />
                             <Number label={"Step batch size"} className={css.shortNumberInput} value={stepBatchSize} setValue={setStepBatchSize} />
-                            <Checkbox label={"Region labels"} checked={showRegionLabels} setChecked={setShowRegionLabels} />
                             <Checkbox label={"Intersections"} checked={showIntersectionPoints} setChecked={setShowIntersectionPoints} />
                             <Checkbox label={"Grid"} checked={showGrid} setChecked={setShowGrid} />
                             {/*<Checkbox label={"Edge points"} checked={showEdgePoints} setChecked={setShowEdgePoints} />*/}
@@ -1197,7 +1190,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                         {
                             model && curStep && error && sparkLineCellProps &&
                             <TargetsTable
-                                initialShapes={initialShapes}
+                                initialShapes={initialSets}
                                 targets={targets}
                                 curStep={curStep}
                                 error={error}
@@ -1247,7 +1240,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                             </OverlayTrigger>
                         </h3>
                         {
-                            curStep && error && sparkLineCellProps &&
+                            curStep && sets && error && sparkLineCellProps &&
                             <VarsTable
                                 vars={vars}
                                 sets={sets}
@@ -1258,7 +1251,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                         }
                         <div className={css.tableBreak} />
                         <h3 className={css.tableTitle}>Shapes</h3>
-                        <ShapesTable sets={sets} vars={vars} />
+                        <ShapesTable sets={sets || []} vars={vars} />
                         <details>
                             <summary>Layouts</summary>
                             <ul style={{ listStyle: "none", }}>{

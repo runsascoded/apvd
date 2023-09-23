@@ -1,34 +1,73 @@
-import * as apvd from "apvd"
-import {Circle, R2, Shape, XYRR} from "apvd"
+import {R2} from "apvd";
+import {cos, sin} from "./math";
 
-export type InitialShape = {
+export interface Circle<D> {
+    kind: 'Circle'
+    c: R2<D>
+    r: D
+}
+
+export interface XYRR<D> {
+    kind: 'XYRR'
+    c: R2<D>
+    r: R2<D>
+}
+
+export interface XYRRT<D> {
+    kind: 'XYRRT'
+    c: R2<D>
+    r: R2<D>
+    t: D
+}
+
+export type Shape<D> = Circle<D> | XYRR<D> | XYRRT<D>
+
+export type Set = {
     idx: number
     name: string
     color: string
     shape: Shape<number>
 }
-export type S = InitialShape
+export type S = Set
 
-export const getRadii = <D>(s: Shape<D>): [D, D] =>
-    'Circle' in s
-        ? [ s.Circle.r, s.Circle.r ]
-        : [ s.XYRR.r.x, s.XYRR.r.y ]
+export function rotate(p: R2<number>, theta: number): R2<number> {
+    const c = cos(theta)
+    const s = sin(theta)
+    return {
+        x: p.x * c - p.y * s,
+        y: p.x * s + p.y * c,
+    }
+}
 
-export const getCenter = <D>(s: Shape<D>): R2<D> =>
-    'Circle' in s
-        ? s.Circle.c
-        : s.XYRR.c
+export function level(xyrrt: XYRRT<number>): XYRR<number> {
+    const { c, r, t } = xyrrt
+    const { x, y } = rotate(c, -t)
+    return {
+        kind: 'XYRR',
+        c: { x, y },
+        r,
+    }
+}
 
-export const shapeType = <D>(s: Shape<D>): 'Circle' | 'Ellipse' => 'Circle' in s ? 'Circle' : 'Ellipse'
+export const getRadii = <D>(s: Shape<D>): [D, D] => {
+    switch (s.kind) {
+        case 'Circle': return [s.r, s.r]
+        case 'XYRR': return [s.r.x, s.r.y]
+        case 'XYRRT': return [s.r.x, s.r.y]
+    }
+}
 
 export function mapShape<D, O>(
     s: Shape<D>,
     circleFn: (c: Circle<D>) => O,
-    ellipseFn: (e: XYRR<D>) => O,
+    xyrrFn: (e: XYRR<D>) => O,
+    xyrrtFn: (e: XYRRT<D>) => O,
 ): O {
-    return 'Circle' in s
-        ? circleFn(s.Circle)
-        : ellipseFn(s.XYRR)
+    switch (s.kind) {
+        case 'Circle': return circleFn(s)
+        case 'XYRR': return xyrrFn(s)
+        case 'XYRRT': return xyrrtFn(s)
+    }
 }
 
 export type BoundingBox<D> = [R2<D>, R2<D>]
@@ -36,5 +75,13 @@ export function shapeBox(s: Shape<number>): BoundingBox<number> {
     return mapShape(s,
         ({ c, r }) => [ { x: c.x - r, y: c.y - r }, { x: c.x + r, y: c.y + r } ],
         ({ c, r }) => [ { x: c.x - r.x, y: c.y - r.y }, { x: c.x + r.x, y: c.y + r.y } ],
+        ({ c, r, t }) => {
+            const dx = Math.cos(t) * r.x
+            const dy = Math.sin(t) * r.y
+            return [
+                {x: c.x - dx, y: c.y - dy},
+                {x: c.x + dx, y: c.y + dy},
+            ]
+        },
     )
 }

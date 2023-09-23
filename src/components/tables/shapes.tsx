@@ -1,4 +1,4 @@
-import {getCenter, getRadii, mapShape, S, shapeType} from "../../lib/shape";
+import {getRadii, mapShape, S} from "../../lib/shape";
 import React, {ReactNode} from "react";
 import {Vars} from "../../lib/vars";
 import css from "./shapes.module.scss"
@@ -39,7 +39,7 @@ export function ShapesTable({ sets, vars, precision = 4 }: Props) {
             <tbody>{
                 sets.map(({ idx, name, shape }) => {
                     const skippedVars = vars.skipVars[idx] || []
-                    const c = getCenter(shape)
+                    const c = shape.c
                     const [ rx, ry ] = getRadii(shape)
                     const skipCx = skippedVars.includes("x")
                     const skipCy = skippedVars.includes("y")
@@ -49,7 +49,8 @@ export function ShapesTable({ sets, vars, precision = 4 }: Props) {
                             const skip = skippedVars.includes("r")
                             return [skip, skip]
                         },
-                        e => [ skippedVars.includes("rx"), skippedVars.includes("ry") ]
+                        e => [ skippedVars.includes("rx"), skippedVars.includes("ry") ],
+                        e => [ skippedVars.includes("rx"), skippedVars.includes("ry") ],
                     )
                     return <tr key={idx}>
                         <td style={{ textAlign: "right", }}>{name}</td>
@@ -57,7 +58,7 @@ export function ShapesTable({ sets, vars, precision = 4 }: Props) {
                         <VarCell skipped={skipCy}>{c.y.toPrecision(precision)}</VarCell>
                         <VarCell skipped={skipRx}>{ rx.toPrecision(precision)}</VarCell>
                         <VarCell skipped={skipRy}>{ ry.toPrecision(precision)}</VarCell>
-                        <td>{shapeType(shape)}</td>
+                        <td>{shape.kind}</td>
                     </tr>
                 })
             }</tbody>

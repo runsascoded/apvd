@@ -1,47 +1,62 @@
-import {R2, Shape} from "apvd";
+import {R2} from "apvd";
 import {Edge, Region} from "./regions";
-import {atan2, cos, PI, sin, sqrt} from "./math";
+import {atan2, cos, sin, sqrt} from "./math";
+import {getRadii, level, rotate, Shape} from "./shape";
 
 export const getPointAtTheta = (shape: Shape<number>, theta: number): R2<number> => {
-    if ('Circle' in shape) {
-        const c = shape.Circle
-        return {
-            x: c.c.x + c.r * cos(theta),
-            y: c.c.y + c.r * sin(theta),
+    switch (shape.kind) {
+        case 'Circle': {
+            const { c, r } = shape
+            return {
+                x: c.x + r * cos(theta),
+                y: c.y + r * sin(theta),
+            }
         }
-    } else {
-        const e = shape.XYRR
-        return {
-            x: e.c.x + e.r.x * cos(theta),
-            y: e.c.y + e.r.y * sin(theta),
+        case 'XYRR': {
+            const { c, r } = shape
+            return {
+                x: c.x + r.x * cos(theta),
+                y: c.y + r.y * sin(theta),
+            }
+        }
+        case 'XYRRT': {
+            const xyrr = level(shape)
+            const p = getPointAtTheta(xyrr, theta)
+            return rotate(p, shape.t)
         }
     }
 }
 
 export const getPointAndDirectionAtTheta = (shape: Shape<number>, theta: number): [R2<number>, number] => {
-    if ('Circle' in shape) {
-        const c = shape.Circle
-        const dx = c.r * cos(theta)
-        const dy = c.r * sin(theta)
-        return [
-            {
-                x: c.c.x + dx,
-                y: c.c.y + dy,
-            },
-            atan2(dx, -dy),  // == atan2(dy, dx) + PI / 2
-        ]
-    } else {
-        const e = shape.XYRR
-        const { x: rx, y: ry } = e.r
-        const dx = rx * cos(theta)
-        const dy = ry * sin(theta)
-        return [
-            {
-                x: e.c.x + dx,
-                y: e.c.y + dy,
-            },
-            atan2(dx * ry * ry, -dy * rx * rx),
-        ]
+    switch (shape.kind) {
+        case 'Circle': {
+            const dx = shape.r * cos(theta)
+            const dy = shape.r * sin(theta)
+            return [
+                {
+                    x: shape.c.x + dx,
+                    y: shape.c.y + dy,
+                },
+                atan2(dx, -dy),  // == atan2(dy, dx) + PI / 2
+            ]
+        }
+        case 'XYRR': {
+            const {x: rx, y: ry} = shape.r
+            const dx = rx * cos(theta)
+            const dy = ry * sin(theta)
+            return [
+                {
+                    x: shape.c.x + dx,
+                    y: shape.c.y + dy,
+                },
+                atan2(dx * ry * ry, -dy * rx * rx),
+            ]
+        }
+        case 'XYRRT': {
+            const xyrr = level(shape)
+            const [p, d] = getPointAndDirectionAtTheta(xyrr, theta)
+            return [rotate(p, shape.t), d + shape.t]
+        }
     }
 }
 export const getMidpoint = ({ set, theta0, theta1 }: Edge, f: number = 0.5) =>
@@ -50,12 +65,10 @@ export const getMidpoint = ({ set, theta0, theta1 }: Edge, f: number = 0.5) =>
         theta0 * (1 - f) + f * theta1,
     )
 
-export const getEdgeLength = ({ set: { shape }, theta0, theta1 }: Edge) =>
-    (
-        'Circle' in shape
-            ? shape.Circle.r
-            : sqrt(shape.XYRR.r.x * shape.XYRR.r.y)  // TODO: this is approximate
-    ) * (theta1 - theta0)
+export const getEdgeLength = ({ set: { shape }, theta0, theta1 }: Edge) => {
+    const [ rx, ry ] = getRadii(shape)
+    return sqrt(rx * ry) * (theta1 - theta0)  // TODO: this is approximate
+}
 
 export const getRegionCenter = ({ segments }: Region, fs: number[]) => {
     fs = fs || [ 0.5 ]

@@ -3,7 +3,7 @@ import {Dual} from "apvd";
 import React, {useMemo} from "react";
 import css from "../../../pages/index.module.scss";
 import {SparkLineCell, SparkLineCellProps, SparkNum} from "../spark-lines";
-import {InitialShape, S} from "../../lib/shape";
+import {Set, S} from "../../lib/shape";
 import {Vars} from "../../lib/vars";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
