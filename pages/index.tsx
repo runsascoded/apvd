@@ -12,10 +12,10 @@ import OverlayTrigger from 'react-bootstrap/OverlayTrigger'
 import Tooltip from 'react-bootstrap/Tooltip'
 import {entries, fromEntries, values} from "next-utils/objs";
 import {getSliderValue} from "../src/components/inputs";
-import {cos, max, min, PI, pi2, round, sin, sq3, sqrt} from "../src/lib/math";
+import {cos, max, min, PI, pi2, pi4, round, sin, sq3, sqrt} from "../src/lib/math";
 import Apvd, {LogLevel} from "../src/components/apvd";
 import {getMidpoint, getPointAndDirectionAtTheta, getRegionCenter} from "../src/lib/region";
-import {BoundingBox, getRadii, mapShape, S, Set, shapeBox} from "../src/lib/shape";
+import {BoundingBox, getRadii, mapShape, rotate, S, Set, shapeBox} from "../src/lib/shape";
 import {Target, TargetsTable} from "../src/components/tables/targets";
 import {InitialLayout, toShape} from "../src/lib/layout";
 import {VarsTable} from "../src/components/tables/vars";
@@ -60,10 +60,10 @@ export const CircleEllipses: InitialLayout = [
 ]
 
 export const FBBQBug: InitialLayout = [
-    { c: { x: -2.0547374714862916, y: 0.7979432881804286 }, r: { x: 15.303664487498873, y: 17.53077114567813 } },
-    { c: { x: -11.526407092112622, y: 3.0882189920409058 }, r: { x: 22.75383340199038, y: 5.964648612528639 } },
-    { c: { x: 10.550418544451459, y: 0.029458342547552023 }, r: { x: 6.102407875525676, y: 11.431493472697646 } },
-    { c: { x: 4.271631577807546, y: -5.4473446956862155 }, r: { x: 2.652054463066812, y: 10.753963707585315 } },
+    { c: { x: - 2.0547374714862916, y:  0.7979432881804286   }, r: { x: 15.303664487498873, y: 17.53077114567813  } },
+    { c: { x: -11.526407092112622 , y:  3.0882189920409058   }, r: { x: 22.75383340199038 , y:  5.964648612528639 } },
+    { c: { x:  10.550418544451459 , y:  0.029458342547552023 }, r: { x:  6.102407875525676, y: 11.431493472697646 } },
+    { c: { x:   4.271631577807546 , y: -5.4473446956862155   }, r: { x:  2.652054463066812, y: 10.753963707585315 } },
 ]
 
 const r = 2
@@ -74,8 +74,22 @@ let c1 = r2 * c0
 export const Ellipses4: InitialLayout = [
     { c: { x:   c0, y:   c1, }, r: { x: 1, y: r, }, },
     { c: { x: 1+c0, y:   c1, }, r: { x: 1, y: r, }, },
-    { c: { x:   c1, y:   c0, }, r: { x: r, y: 1, }, },
     { c: { x:   c1, y: 1+c0, }, r: { x: r, y: 1, }, },
+    { c: { x:   c1, y:   c0, }, r: { x: r, y: 1, }, },
+]
+
+export const Ellipses4t: InitialLayout = [
+    { c: rotate({ x:   c0, y:   c1, }, pi4), r: { x: 1, y: r, }, t: pi4, },
+    { c: rotate({ x: 1+c0, y:   c1, }, pi4), r: { x: 1, y: r, }, t: pi4, },
+    { c: rotate({ x:   c1, y: 1+c0, }, pi4), r: { x: r, y: 1, }, t: pi4, },
+    { c: rotate({ x:   c1, y:   c0, }, pi4), r: { x: r, y: 1, }, t: pi4, },
+]
+
+export const Ellipses4t2: InitialLayout = [
+    { c: { x: 0, y: 0 }, r: { x: 2, y: 1 }, t:     0 },
+    { c: { x: 0, y: 0 }, r: { x: 2, y: 1 }, t:   pi4 },
+    { c: { x: 0, y: 0 }, r: { x: 2, y: 1 }, t:   pi2 },
+    { c: { x: 0, y: 0 }, r: { x: 2, y: 1 }, t: 3*pi4 },
 ]
 
 export const Repro: InitialLayout = [
@@ -218,6 +232,8 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     const [ initialLayout, setInitialLayout] = useState<InitialLayout>(
         SymmetricCircleDiamond,
         // Disjoint
+        // Ellipses4t
+        // Ellipses4t2
         // Ellipses4
         // TwoOverOne
         // FBBQBug,
@@ -228,16 +244,17 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     //const [ layout, setLayout ] = useState<InitialLayout>(initialLayout)
     const layouts = [
         { name: "Ellipses4", layout: Ellipses4, description: "4 ellipses intersecting to form all 15 possible regions", },
+        { name: "Ellipses4t", layout: Ellipses4t, description: "4 ellipses intersecting to form all 15 possible regions, rotated -45°", },
         { name: "CircleDiamond", layout: SymmetricCircleDiamond, description: "4 circles in a diamond shape, such that 2 different subsets (of 3) are symmetric, and 11 of 15 possible regions are represented (missing 2 4C2's and 2 4C3's).", },
         { name: "Disjoint", layout: Disjoint, description: "4 disjoint circles" }
     ]
 
     const [ targets, setTargets ] = useState<Target[]>(
-        // FizzBuzzBazz
+        // FizzBuzz
+        FizzBuzzBazz
+        // FizzBuzzBazzQux
         // VariantCallers
         // ThreeEqualCircles
-        FizzBuzz
-        // FizzBuzzBazzQux
         // CentroidRepel
     )
 
@@ -398,10 +415,10 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                     }),
                 ]
             })
-            console.log("inputs:", inputs)
+            // console.log("inputs:", inputs)
             // console.log("wasmtargets:", wasmTargets)
             const model = makeModel(apvd.make_model(inputs, wasmTargets), initialSets)
-            console.log("new model:", model)
+            // console.log("new model:", model)
             setModel(model)
             setStepIdx(0)
         },
@@ -469,7 +486,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                 lastStep: batch.lastStep,
                 raw: newRawModel,
             }
-            console.log("newModel:", newModel)
+            // console.log("newModel:", newModel)
             setModel(newModel)
             setStepIdx(newModel.steps.length - 1)
         },
@@ -568,11 +585,11 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                 step = revStep
             }
 
-            console.log(`scheduling ${runningState} step ${stepIdx}`)
+            // console.log(`scheduling ${runningState} step ${stepIdx}`)
             const timer = setTimeout(
                 () => {
                     if (runningState == expectedDirection) {
-                        console.log(`running ${expectedDirection} step from ${stepIdx}`)
+                        // console.log(`running ${expectedDirection} step from ${stepIdx}`)
                         step()
                     } else {
                         console.log(`skipping ${expectedDirection} from step ${stepIdx}, runningSteps is ${runningState}`)
@@ -722,7 +739,6 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
             sets?.map(({ color, shape }: S, idx: number) => {
                 const { x: cx, y: cy } = shape.c
                 const props = {
-                    key: idx,
                     cx, cy,
                     stroke: "black",
                     strokeWidth: 3 / scale,
@@ -730,16 +746,10 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                     fillOpacity: 0.3,
                 }
                 const [ rx, ry ] = getRadii(shape)
-                return 'Circle' in shape
-                    ? <circle
-                        r={rx}
-                        {...props}
-                    />
-                    : <ellipse
-                        rx={rx}
-                        ry={ry}
-                        {...props}
-                    />
+                const theta = shape.kind === 'XYRRT' ? shape.t : 0
+                const degrees = theta * 180 / PI
+                const ellipse = <ellipse key={idx} rx={rx}  ry={ry} {...props} />
+                return degrees ? <g key={idx} transform={`rotate(${degrees} ${cx} ${cy})`}>{ellipse}</g> : ellipse
             })
         }</g>,
         [ sets, scale ],
@@ -988,21 +998,23 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                 curStep.regions.map(({ key, segments, area, containers }, regionIdx) => {
                     let d = ''
                     segments.forEach(({edge, fwd}, idx) => {
-                        const {set, node0, node1, theta0, theta1,} = edge
-                        const [rx, ry] = getRadii(set.shape)
+                        const { set: { shape }, node0, node1, theta0, theta1, } = edge
+                        const [rx, ry] = getRadii(shape)
+                        const theta = shape.kind === 'XYRRT' ? shape.t : 0
+                        const degrees = theta * 180 / PI
                         const [startNode, endNode] = fwd ? [node0, node1] : [node1, node0]
                         const start = {x: startNode.x.v, y: startNode.y.v}
                         const end = {x: endNode.x.v, y: endNode.y.v}
                         if (idx == 0) {
                             d = `M ${start.x} ${start.y}`
                         }
-                        // console.log("edge:", edge, "fwd:", fwd, "theta0:", theta0, "theta1:", theta1, "start:", start, "end:", end)
+                        // console.log("edge:", edge, "fwd:", fwd, "theta0:", theta0, "theta1:", theta1, "start:", start, "end:", end, "shape:", shape, "degrees:", degrees)
                         if (segments.length == 1) {
                             const mid = getMidpoint(edge, 0.4)
-                            d += ` A ${rx},${ry} 0 0 ${fwd ? 1 : 0} ${mid.x},${mid.y}`
-                            d += ` A ${rx},${ry} 0 1 ${fwd ? 1 : 0} ${end.x},${end.y}`
+                            d += ` A ${rx},${ry} ${degrees} 0 ${fwd ? 1 : 0} ${mid.x},${mid.y}`
+                            d += ` A ${rx},${ry} ${degrees} 1 ${fwd ? 1 : 0} ${end.x},${end.y}`
                         } else {
-                            d += ` A ${rx},${ry} 0 ${theta1 - theta0 > PI ? 1 : 0} ${fwd ? 1 : 0} ${end.x},${end.y}`
+                            d += ` A ${rx},${ry} ${degrees} ${theta1 - theta0 > PI ? 1 : 0} ${fwd ? 1 : 0} ${end.x},${end.y}`
                         }
                     })
                     const isHovered = hoveredRegion == key
@@ -1028,7 +1040,8 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     const fizzBuzzLink = <A href={"https://en.wikipedia.org/wiki/Fizz_buzz"}>Fizz Buzz</A>
     const exampleTargets = [
         { name: "Fizz Buzz", targets: FizzBuzz, description: <>2 circles, of size 1/3 and 1/5, representing integers divisible by 3 and by 5. Inspired by {fizzBuzzLink}.</> },
-        { name: "Fizz Buzz Bazz", targets: FizzBuzzBazz, description: <>Extended version of {fizzBuzzLink} above, with 3 sets, representing integers divisible by 3, 5, or 7. This is impossible to model accurately with 3 circles, but gradient descent gets as close as it can.</> },
+        { name: "Fizz Buzz Bazz", targets: FizzBuzzBazz, description: <>Extended version of {fizzBuzzLink} above, with 3 sets, representing integers divisible by 3, 5, or 7. This is impossible to model accurately with 3 circles, but possible with ellipses.</> },
+        { name: "Fizz Buzz Bazz Qux", targets: FizzBuzzBazzQux, description: <>Extended version of {fizzBuzzLink} above, with 4 sets, representing integers divisible by 2, 3, 5, or 7. This is impossible to model accurately even with 4 ellipses, but gradient descent gets as close as it can.</> },
         { name: "3 symmetric sets", targets: ThreeEqualCircles, description: <>Simple test case, 3 circles, one starts slightly off-center from the other two, "target" ratios require the 3 circles to be in perfectly symmetric position with each other.</> },
         { name: "Variant callers", targets: VariantCallers, description: <>Values from <A href={"https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3753564/pdf/btt375.pdf"}>Roberts et al (2013)</A>, "A comparative analysis of algorithms for somatic SNV detection
                 in cancer," Fig. 3</>}

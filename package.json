@@ -7,7 +7,7 @@
     "email": "ryan@runsascoded.com"
   },
   "dependencies": {
-    "apvd": "https://gitpkg.now.sh/runsascoded/shapes?0d4d90f",
+    "apvd": "https://gitpkg.now.sh/runsascoded/shapes?f2d9c27",
     "bootstrap": "^5.3.1",
     "next": "^13.4.13",
     "next-utils": "https://gitpkg.now.sh/runsascoded/next-utils/dist?f44fed9",
