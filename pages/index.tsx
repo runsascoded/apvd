@@ -425,16 +425,13 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                 const shape = set.shape;
                 const coords: Coord[] = mapShape<number, Coord[]>(shape, () => CircleCoords, () => XYRRCoords, () => XYRRTCoords)
                 return [
-                    mapShape<number, any>(shape, s => ({ Circle: s }), s => ({ XYRR: s }), s => ({ XYRRT: s })),
-                    coords.map(v => {
-                        const row = new Array(numVars).fill(0)
-                        const skip = shapeIdx < skipVars.length && skipVars[shapeIdx].includes(v)
-                        if (!skip) {
-                            row[curIdx] = 1
-                            curIdx += 1
-                        }
-                        return row
-                    }),
+                    mapShape<number, any>(
+                        shape,
+                        s => ({ Circle: s }),
+                        s => ({ XYRR: s }),
+                        s => ({ XYRRT: s })
+                    ),
+                    coords.map(v => shapeIdx >= skipVars.length || !skipVars[shapeIdx].includes(v)),
                 ]
             })
             // console.log("inputs:", inputs)

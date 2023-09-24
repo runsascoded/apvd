@@ -1,5 +1,5 @@
 import * as apvd from "apvd";
-import {Dual, Error, Input, Targets} from "apvd"
+import {Dual, Error, Targets} from "apvd"
 import {S, Set, Shape} from "./shape";
 
 export type Point = {
@@ -11,9 +11,7 @@ export type Point = {
 export type Errors = Map<string, Error>
 
 export type Step = {
-    inputs: Input[]
     sets: S[]
-    // shapes: Shape<number>[]
     points: Point[]
     edges: Edge[]
     regions: Region[]
@@ -53,7 +51,6 @@ export function makeStep(step: apvd.Step, initialSets: Set[]): Step {
     components.forEach(c => c.sets.forEach(({ idx, shape }) => {
         sets[idx] = { ...initialSets[idx], shape: makeShape(shape) }
     }))
-    // const shapes = sets.map(({ shape }) => makeShape(shape))
     const newComponents = components.map(c => makeComponent(c, sets))
     // console.log("initial sets:", sets)
     const points = newComponents.flatMap(c => c.points)
@@ -61,7 +58,6 @@ export function makeStep(step: apvd.Step, initialSets: Set[]): Step {
     const regions = newComponents.flatMap(c => c.regions)
     return {
         sets,
-        // shapes,
         points,
         edges,
         regions,
