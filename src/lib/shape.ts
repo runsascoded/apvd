@@ -76,6 +76,7 @@ export function shapeBox(s: Shape<number>): BoundingBox<number> {
         ({ c, r }) => [ { x: c.x - r, y: c.y - r }, { x: c.x + r, y: c.y + r } ],
         ({ c, r }) => [ { x: c.x - r.x, y: c.y - r.y }, { x: c.x + r.x, y: c.y + r.y } ],
         ({ c, r: { x: rx, y: ry }, t }) => {
+            // This is smaller than the actual bounding box, worst case is a circle rotated 45°, where each dimension is sqrt(1/2) of the true bounding box size
             const cos = Math.cos(t)
             const sin = Math.sin(t)
             const dy = max(abs(rx * sin), abs(ry * cos))

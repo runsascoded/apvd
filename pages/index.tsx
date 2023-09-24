@@ -228,6 +228,8 @@ export default function Page() {
     return <Apvd logLevel={logLevel}>{() => <Body logLevel={logLevel} setLogLevel={setLogLevel} />}</Apvd>
 }
 
+declare var window: any;
+
 export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLevel: Dispatch<LogLevel>, }) {
     const [ initialLayout, setInitialLayout] = useState<InitialLayout>(
         SymmetricCircleDiamond,
@@ -388,6 +390,15 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
             }
         },
         [ initialSets, ],
+    )
+
+    useEffect(
+        () => {
+            if (typeof window !== 'undefined') {
+                window.model = model
+            }
+        },
+        [ model,]
     )
 
     // Initialize model, stepIdx
