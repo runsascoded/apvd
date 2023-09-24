@@ -40,30 +40,17 @@ export const SymmetricCircleDiamond: InitialLayout = [
 ]
 
 export const Disjoint: InitialLayout = [
-    { c: { x: 0, y: 0, }, r: { x: 1, y: 1 }, },
-    { c: { x: 3, y: 0, }, r: { x: 1, y: 1 }, },
-    { c: { x: 0, y: 3, }, r: { x: 1, y: 1 }, },
-    { c: { x: 3, y: 3, }, r: { x: 1, y: 1 }, },
+    { c: { x: 0, y: 0, }, r: { x: 1, y: 1 }, t: 0, },
+    { c: { x: 3, y: 0, }, r: { x: 1, y: 1 }, t: 0, },
+    { c: { x: 0, y: 3, }, r: { x: 1, y: 1 }, t: 0, },
+    { c: { x: 3, y: 3, }, r: { x: 1, y: 1 }, t: 0, },
 ]
 export const SymmetricCircleLattice: InitialLayout = [
-    { c: { x: 0, y: 0, }, r: { x: 1, y: 1 }, },
-    { c: { x: 1, y: 0, }, r: { x: 1, y: 1 }, },
-    { c: { x: 0, y: 1, }, r: { x: 1, y: 1 }, },
-    { c: { x: 1, y: 1, }, r: { x: 1, y: 1 }, },
+    { c: { x: 0, y: 0, }, r: { x: 1, y: 1 }, t: 0, },
+    { c: { x: 1, y: 0, }, r: { x: 1, y: 1 }, t: 0, },
+    { c: { x: 1, y: 1, }, r: { x: 1, y: 1 }, t: 0, },
+    { c: { x: 0, y: 1, }, r: { x: 1, y: 1 }, t: 0, },
     // { c: { x:   0, y: 1, }, r: { x: 2, y: 1, }, },
-]
-
-export const CircleEllipses: InitialLayout = [
-    { c: { x: 0, y: 0, }, r: 1, },
-    { c: { x: 1, y: 0, }, r: { x: 1, y: 1, }, },
-    { c: { x: 0, y: 1, }, r: { x: 1, y: 1, }, },
-]
-
-export const FBBQBug: InitialLayout = [
-    { c: { x: - 2.0547374714862916, y:  0.7979432881804286   }, r: { x: 15.303664487498873, y: 17.53077114567813  } },
-    { c: { x: -11.526407092112622 , y:  3.0882189920409058   }, r: { x: 22.75383340199038 , y:  5.964648612528639 } },
-    { c: { x:  10.550418544451459 , y:  0.029458342547552023 }, r: { x:  6.102407875525676, y: 11.431493472697646 } },
-    { c: { x:   4.271631577807546 , y: -5.4473446956862155   }, r: { x:  2.652054463066812, y: 10.753963707585315 } },
 ]
 
 const r = 2
@@ -232,23 +219,22 @@ declare var window: any;
 
 export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLevel: Dispatch<LogLevel>, }) {
     const [ initialLayout, setInitialLayout] = useState<InitialLayout>(
-        SymmetricCircleDiamond,
+        SymmetricCircleDiamond
+        // SymmetricCircleLattice,
         // Disjoint
         // Ellipses4t
         // Ellipses4t2
         // Ellipses4
         // TwoOverOne
-        // FBBQBug,
         // Lattice_0_1
-        // Repro,
-        // CircleEllipses
     )
     //const [ layout, setLayout ] = useState<InitialLayout>(initialLayout)
     const layouts = [
-        { name: "Ellipses4", layout: Ellipses4, description: "4 ellipses intersecting to form all 15 possible regions", },
-        { name: "Ellipses4t", layout: Ellipses4t, description: "4 ellipses intersecting to form all 15 possible regions, rotated -45°", },
+        { name: "4 Ellipses", layout: Ellipses4t, description: "4 ellipses intersecting to form all 15 possible regions, rotated -45°", },
+        { name: "4 Ellipses (axis-aligned)", layout: Ellipses4, description: "Same as above, but ellipse axes are horizontal/vertical (and rotation is disabled)", },
         { name: "CircleDiamond", layout: SymmetricCircleDiamond, description: "4 circles in a diamond shape, such that 2 different subsets (of 3) are symmetric, and 11 of 15 possible regions are represented (missing 2 4C2's and 2 4C3's).", },
-        { name: "Disjoint", layout: Disjoint, description: "4 disjoint circles" }
+        { name: "Disjoint", layout: Disjoint, description: "4 disjoint circles" },
+        // { name: "CircleLattice", layout: SymmetricCircleLattice, description: "4 circles centered at (0,0), (0,1), (1,0), (1,1)", },
     ]
 
     const [ targets, setTargets ] = useState<Target[]>(
@@ -369,13 +355,38 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                     coords.push([ shapeIdx, shapeVar ])
                 })
             })
-            function getVal(step: Step, varIdx: number): number {
+            function getVal(step: Step, varIdx: number): number | null {
                 const [ setIdx, coord ] = coords[varIdx]
                 const { shape } = step.sets[setIdx]
+                let shapeGetters, shapeCoord
                 switch (shape.kind) {
-                    case "Circle": return CircleFloatGetters[coord as CircleCoord](shape)
-                    case "XYRR": return XYRRFloatGetters[coord as XYRRCoord](shape)
-                    case "XYRRT": return XYRRTFloatGetters[coord as XYRRTCoord](shape)
+                    case "Circle":
+                        shapeGetters = CircleFloatGetters
+                        shapeCoord = coord as CircleCoord
+                        if (!(shapeCoord in shapeGetters)) {
+                            console.warn(`Coord ${shapeCoord} not found in`, shapeGetters)
+                            return null
+                        } else {
+                            return CircleFloatGetters[coord as CircleCoord](shape)
+                        }
+                    case "XYRR":
+                        shapeGetters = XYRRFloatGetters
+                        shapeCoord = coord as XYRRCoord
+                        if (!(shapeCoord in shapeGetters)) {
+                            console.warn(`Coord ${shapeCoord} not found in`, shapeGetters)
+                            return null
+                        } else {
+                            return XYRRFloatGetters[coord as XYRRCoord](shape)
+                        }
+                    case "XYRRT":
+                        shapeGetters = XYRRTFloatGetters
+                        shapeCoord = coord as XYRRTCoord
+                        if (!(shapeCoord in shapeGetters)) {
+                            console.warn(`Coord ${shapeCoord} not found in`, shapeGetters)
+                            return null
+                        } else {
+                            return XYRRTFloatGetters[coord as XYRRTCoord](shape)
+                        }
                 }
             }
             return {
@@ -845,18 +856,34 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
         [ curStep ]
     )
 
+    const largestRegions = useMemo(
+        () => {
+            const largestRegions: { [key: string]: Region } = {}
+            curStep && sets && curStep.regions.forEach(region => {
+                const { key, area } = region;
+                if (!(key in largestRegions) || largestRegions[key].area.v < area.v) {
+                    largestRegions[key] = region
+                }
+            })
+            return largestRegions
+        },
+        [ curStep ]
+    )
+
     const exteriorRegions = useMemo(
         () => {
-            const exteriorRegions: { [name: string]: { idx: number, region: Region } } = {}
-            curStep && sets && curStep.regions.forEach(region => {
+            const exteriorRegions: { [name: string]: { setIdx: number, region: Region } } = {}
+            curStep && sets && values(largestRegions).forEach(region => {
                 const { key, area } = region;
                 const idxChars = key.replaceAll('-', '').split('')
                 if (idxChars.length == 1) {
                     const [ idxChar ] = idxChars
                     const setIdx = parseInt(idxChar)
                     const name = sets[setIdx].name
-                    if (!(name in exteriorRegions) || exteriorRegions[name].region.area.v < area.v) {
-                        exteriorRegions[name] = {idx: setIdx, region}
+                    if (name in exteriorRegions) {
+                        console.error(`Multiple largestRegions for ${name}:`, region, largestRegions)
+                    } else {
+                        exteriorRegions[name] = { setIdx, region }
                     }
                 }
             })
@@ -869,8 +896,8 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
             if (!exteriorRegions) return
             const setLabelPoints: { [name: string]: Point } = {}
             entries(exteriorRegions)
-                .forEach(([ name, { idx, region: { segments, } } ]) => {
-                    const boundarySegments = segments.filter(({edge}) => edge.isComponentBoundary && edge.set.idx == idx)
+                .forEach(([ name, { setIdx, region: { segments, } } ]) => {
+                    const boundarySegments = segments.filter(({edge}) => edge.isComponentBoundary && edge.set.idx == setIdx)
                     if (boundarySegments.length == 0) {
                         console.log(`skipping region ${name} with no boundary segments`)
                         return
@@ -977,7 +1004,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     const regionTooltips = useMemo(
         () =>
             curStep && sets && <g id={"regionLabels"}>{
-                curStep.regions.map((region, regionIdx) => {
+                values(largestRegions).map((region, regionIdx) => {
                     const { key, containers } = region
                     const center = getRegionCenter(region, fs)
                     const containerIdxs = containers.map(set => set.idx)
@@ -1006,7 +1033,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     const regionPaths = useMemo(
         () =>
             curStep && <g id={"regionPaths"}>{
-                curStep.regions.map(({ key, segments, area, containers }, regionIdx) => {
+                curStep.regions.map(({ key, segments}, regionIdx) => {
                     let d = ''
                     segments.forEach(({edge, fwd}, idx) => {
                         const { set: { shape }, node0, node1, theta0, theta1, } = edge

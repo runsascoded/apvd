@@ -48,7 +48,7 @@ export const XYRRTDualGetters = XYRRTGetters<Dual>()
 
 export type Coord = CircleCoord | XYRRCoord | XYRRTCoord
 export type VarCoord = [ number, Coord ]
-export type StepVarGetter = (step: Step, varIdx: number) => number
+export type StepVarGetter = (step: Step, varIdx: number) => number | null
 
 export type Vars = {
     allCoords: Coord[][]

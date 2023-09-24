@@ -39,7 +39,7 @@ export function VarsTable(
                 </tr>
             )
         },
-        [ vars, sets, showSparkLines, ]
+        [ curStep, vars, sets, showSparkLines, ]
     )
     return (
         <table className={css.sparkLinesTable}>

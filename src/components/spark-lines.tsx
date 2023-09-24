@@ -12,7 +12,7 @@ export const SparkNum = (v: number | null | undefined, className: string = '') =
 export function SparkLineCell(
     { color, fn, model, stepIdx, sparkLineLimit, sparkLineStrokeWidth, sparkLineMargin, sparkLineWidth, sparkLineHeight, className = '', }: {
         color: string
-        fn: (step: Step) => number
+        fn: (step: Step) => number | null
         model: Model
         stepIdx: number
         className?: string
@@ -26,6 +26,7 @@ export function SparkLineCell(
                 stepIdx + 1
             )
             .map(fn)
+            .filter(v => v !== null) as number[]
     if (data.length < sparkLineLimit) {
         data = [ ...Array(sparkLineLimit - data.length).fill(data[0]), ...data ]
     }
