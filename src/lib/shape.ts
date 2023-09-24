@@ -1,5 +1,5 @@
 import {R2} from "apvd";
-import {cos, sin} from "./math";
+import {abs, cos, max, sin} from "./math";
 
 export interface Circle<D> {
     kind: 'Circle'
@@ -75,12 +75,14 @@ export function shapeBox(s: Shape<number>): BoundingBox<number> {
     return mapShape(s,
         ({ c, r }) => [ { x: c.x - r, y: c.y - r }, { x: c.x + r, y: c.y + r } ],
         ({ c, r }) => [ { x: c.x - r.x, y: c.y - r.y }, { x: c.x + r.x, y: c.y + r.y } ],
-        ({ c, r, t }) => {
-            const dx = Math.cos(t) * r.x
-            const dy = Math.sin(t) * r.y
+        ({ c, r: { x: rx, y: ry }, t }) => {
+            const cos = Math.cos(t)
+            const sin = Math.sin(t)
+            const dy = max(abs(rx * sin), abs(ry * cos))
+            const dx = max(abs(rx * cos), abs(ry * sin))
             return [
-                {x: c.x - dx, y: c.y - dy},
-                {x: c.x + dx, y: c.y + dy},
+                { x: c.x - dx, y: c.y - dy, },
+                { x: c.x + dx, y: c.y + dy, },
             ]
         },
     )
