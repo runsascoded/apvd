@@ -11,7 +11,7 @@ Area-Proportional Venn Diagram generator (WIP)
         - [5 symmetric triangles](#5-triangles)
         - [6 triangles](#6-triangles)
         - [Polyominoes](#polyominoes)
-    - [Other misc references](#misc)
+    - [Other references](#misc)
 - [Related libraries](#libs)
     - [Rust](#rust)
     - [JS](#js)
@@ -102,8 +102,9 @@ https://www.combinatorics.org/files/Surveys/ds5/ds5v3-2005/VennPoly67EJC.html
 - [venneuler R package](https://www.rforge.net/venneuler/) ([paper](https://www.cs.uic.edu/~wilkinson/Publications/venneuler.pdf))
 - [UpSet plots](https://en.wikipedia.org/wiki/UpSet_Plot)
 
-### Related libraries <a id="libs"></a>
-#### Rust <a id="rust"></a>
+## Related libraries <a id="libs"></a>
+
+### Rust <a id="rust"></a>
 Dual / Autodiff libraries:
 - https://github.com/itt-ustutt/num-dual ([r/rust](https://www.reddit.com/r/rust/comments/ybi9yx/automatic_differentiation_and_thermodynamics_with/))
 - https://crates.io/crates/hyperdual/
@@ -115,11 +116,11 @@ Dual / Autodiff libraries:
 - https://gist.github.com/emilk/c027311e5d0e8b69953c83a3ec283b74
 - https://docs.rs/roots/latest/roots/ real roots only
 
-#### JS <a id="js"></a>
+### JS <a id="js"></a>
 [quartic.js](https://www.npmjs.com/package/quartic) (last release 2008)
 Core code is from a [web solver](http://www.akiti.ca/Quad4Deg.html) written by [David Binner](http://www.akiti.ca/ContactPage.html)
 
-#### Scala <a id="scala"></a>
+### Scala <a id="scala"></a>
 Partial Scala.js implementation in [this repo's @scala branch](https://github.com/runsascoded/apvd/tree/scala), including [cubic](https://github.com/runsascoded/apvd/tree/scala/cubic/shared/src/main/scala/cubic) and [quartic](https://github.com/runsascoded/apvd/tree/scala/quartic/shared/src/main/scala/quartic) equation solvers.
 
 [runsascoded/shapes]: https://github.com/runsascoded/shapes
