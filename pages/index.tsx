@@ -335,6 +335,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     const [ setLabelDistance, setSetLabelDistance ] = useState(0.15)
     const [ setLabelSize, setSetLabelSize ] = useState(20)
     const [ showDisjointSets, setShowDisjointSets ] = useState(false)
+    const [ doPanZoomWarp, setDoPanZoomWarp ] = useState(false)
 
     const [ stepIdx, setStepIdx ] = useMemo(
         () => {
@@ -515,19 +516,19 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
             if (stepIdx + n < model.steps.length) {
                 // "Fast-forward" without any new computation
                 setStepIdx(stepIdx + n)
-                console.log("bumping stepIdx to", stepIdx + n)
+                console.log("fwdStep: bumping stepIdx to", stepIdx + n)
                 return
             }
             if (model.repeat_idx) {
                 // Don't advance past repeat_idx
                 setStepIdx(model.steps.length - 1)
-                console.log(`bumping stepIdx to ${model.steps.length - 1} due to repeat_idx ${model.repeat_idx}`)
+                console.log(`fwdStep: bumping stepIdx to ${model.steps.length - 1} due to repeat_idx ${model.repeat_idx}`)
                 return
             }
             if (stepIdx + n > maxSteps) {
                 n = maxSteps - stepIdx
                 batchSize = n
-                console.log(`Clamping advance to ${n} steps due to maxSteps ${maxSteps}`)
+                console.log(`fwdStep: clamping advance to ${n} steps due to maxSteps ${maxSteps}`)
             }
 
             const lastStep: apvd.Step = model.raw.steps[model.raw.steps.length - 1]
@@ -632,7 +633,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
         return () => {
             document.removeEventListener("keydown", keyDownHandler);
         };
-    }, [ fwdStep, revStep, cantAdvance, cantReverse, setRunningState, runningState, ]);
+    }, [ fwdStep, revStep, cantAdvance, cantReverse, setRunningState, runningState, setStepIdx, ]);
 
     // Run steps
     useEffect(
@@ -800,7 +801,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                 </span>
             </OverlayTrigger>
         },
-        [],
+        [ setRunningState ],
     )
 
     const fs = [ 0.25, 0.5, 0.75, ];
@@ -1031,10 +1032,14 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                 y: gridCenter.y + (sceneCenter.y - gridCenter.y) * interp,
             }
             const newScale = scale + (sceneScale - scale) * interp
-            setScale(newScale)
-            setGridCenter(newCenter)
+            if (newScale !== scale) {
+                setScale(newScale)
+            }
+            if (newCenter.x !== gridCenter.x || newCenter.y !== gridCenter.y) {
+                setGridCenter(newCenter)
+            }
         },
-        [ boundingBox ]
+        [ boundingBox, gridWidth, gridHeight, gridCenter, scale ]
     )
 
     useEffect(
@@ -1048,6 +1053,23 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
             panZoom(autoCenterInterpRate)
         },
         [ curStep, stepIdx, runningState, autoCenterInterpRate, panZoom ]
+    )
+
+    useEffect(
+        () => {
+            console.log("panZoom warp: vStepIdx", vStepIdx)
+            panZoom(1)
+        },
+        [ vStepIdx, panZoom ]
+    )
+
+    useEffect(
+        () => {
+            if (!doPanZoomWarp) return
+            setDoPanZoomWarp(false)
+            panZoom(1)
+        },
+        [ doPanZoomWarp, panZoom ]
     )
 
     const regionTooltips = useMemo(
@@ -1221,7 +1243,12 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                                 <PlaybackControl title={"Reverse one step"} hotkey={"←"} onClick={() => revStep()} disabled={cantReverse}>⬅️</PlaybackControl>
                                 <PlaybackControl title={"Advance one step"} hotkey={"→"} onClick={() => fwdStep()} disabled={cantAdvance || stepIdx == maxSteps}>➡️</PlaybackControl>
                                 <PlaybackControl title={"Fast-forward"} hotkey={"␣"} onClick={() => setRunningState(runningState == "fwd" ? "none" : "fwd")} disabled={cantAdvance} animating={true}>{runningState == "fwd" ? "⏸️" : "⏩"}</PlaybackControl>
-                                <PlaybackControl title={"Seek to last computed step"} hotkey={"⌘→"} onClick={() => model && setStepIdx(model.steps.length - 1)} disabled={!model || stepIdx === null || stepIdx + 1 == model.steps.length}>⏭️</PlaybackControl>
+                                <PlaybackControl title={"Seek to last computed step"} hotkey={"⌘→"} onClick={() => {
+                                    if (!model) return
+                                    setStepIdx(model.steps.length - 1)
+                                    console.log("panZoom warp: seek to end")
+                                    setDoPanZoomWarp(true)
+                                }} disabled={!model || stepIdx === null || stepIdx + 1 == model.steps.length}>⏭️</PlaybackControl>
                             </div>
                             <div className={css.stepStats}>
                                 <p>Step {stepIdx}{ curStep && error && <span>, error: {(error.v * curStep.targets.total_area).toPrecision(3)}</span> }</p>
