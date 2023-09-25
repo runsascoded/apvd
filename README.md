@@ -2,7 +2,9 @@
 Area-Proportional Venn Diagram generator (WIP)
 
 <!-- toc -->
-- [Demo: gradient descent toward target region sizes](#demo)
+- [Demos](#demo)
+    - [Gradient descent toward target region sizes](#demo-apvd)
+    - [Draggable ellipses](#demo-ellipses)
 - [Motivation](#motivation)
     - [Approach](#approach)
     - [Status](#status)
@@ -18,13 +20,23 @@ Area-Proportional Venn Diagram generator (WIP)
     - [Scala](#scala)
 <!-- /toc -->
 
-## Demo: gradient descent toward target region sizes <a id="demo"></a>
+## Demos <a id="demo"></a>
+
+### Gradient descent toward target region sizes <a id="demo-apvd"></a>
 
 https://github.com/runsascoded/apvd/assets/465045/87b3c520-3413-41a1-9ea6-c2281c2fc68c
 
-- Live: [runsascoded.com/apvd](https://runsascoded.com/apvd)
+- Live: [runsascoded.com/apvd]
 - Uses [runsascoded/shapes] to compute intersections + areas, in terms of circle's center/radius gradients, and gradient-descend to target proportions
 - "Targets" and initial layout can be configured via the "Examples" and "Layouts" drop-downs
+
+### Draggable ellipses <a id="demo-ellipses"></a>
+
+https://github.com/runsascoded/apvd/assets/465045/108e974d-f103-4005-9762-732c25f8cb7b
+
+- Live: [runsascoded.com/apvd/ellipses]
+- Implemented in JS, in an earlier (pre-[shapes][runsascoded/shapes]) version of this project; see [pages/ellipses.tsx]
+- Computes intersections/regions, but isn't differentiable
 
 ## Motivation <a id="motivation"></a>
 Years ago, I saw this plot in [a genomics paper](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3753564/pdf/btt375.pdf):
@@ -60,7 +72,7 @@ Several of these turn out to be nontrivial, especially:
 - propagating useful gradients through all calculations (requires an autodiff abstraction, which programming languages vary in their level of support for, and also adds to overall computation and complexity required)
 
 ### Status <a id="status"></a>
-The demo at [runsascoded.com/apvd](https://runsascoded.com/apvd) supports up to 4 ellipses (including allowing them to rotate relative to the axes), and arbitrary initial layouts and target region-sizes. It can gradient-descend for 10,000's of steps and converge, or reach negligible error levels, on a few toy examples I've tested it on.
+The demo at [runsascoded.com/apvd] supports up to 4 ellipses (including allowing them to rotate relative to the axes), and arbitrary initial layouts and target region-sizes. It can gradient-descend for 10,000's of steps and converge, or reach negligible error levels, on a few toy examples I've tested it on.
 
 Future work could involve:
 - command-line / server-based version (evolving models from multiple initial layouts in parallel)
@@ -126,3 +138,6 @@ Partial Scala.js implementation in [this repo's @scala branch](https://github.co
 [runsascoded/shapes]: https://github.com/runsascoded/shapes
 [Ben Frederickson]: https://github.com/benfred
 [benfred generator]: https://www.benfrederickson.com/venn-diagrams-with-d3.js/
+[pages/ellipses.tsx]: https://github.com/runsascoded/apvd/blob/main/pages/ellipses.tsx
+[runsascoded.com/apvd/ellipses]: https://runsascoded.com/apvd/ellipses
+[runsascoded.com/apvd]: https://runsascoded.com/apvd
