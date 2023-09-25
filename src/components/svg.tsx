@@ -167,6 +167,7 @@ export default function Svg({ ellipses, idx, onEllipseDrag, transformBy, onCurso
             console.log("ellipseDragStart:", dragAnchor, dragEllipse)
             setDragAnchor(dragAnchor);
             setDragEllipse(dragEllipse);
+            e.stopPropagation()
         },
         []
     )
@@ -263,7 +264,7 @@ export default function Svg({ ellipses, idx, onEllipseDrag, transformBy, onCurso
             [ null, null, null ];
 
     return <Grid
-        className={css.svg}
+        className={css.grid}
         handleMouseMove={handleMouseMove}
         // handleMouseUp={}
         // handleDragStart={ellipseDragStart}
