@@ -6,15 +6,25 @@ import {SparkLineCell, SparkLineProps, SparkNum} from "../spark-lines";
 import {S} from "../../lib/shape";
 import { abs } from "../../lib/math";
 
-export type Target = {
-    sets: string
-    value: number
+export type Target = [ string, number ]
+
+export const makeSortKeys = (ch: string) => ([ a ]: Target, [ b ]: Target) => {
+    let numSetsA = a.split('').filter(c => c != ch).length
+    let numSetsB = b.split('').filter(c => c != ch).length
+    if (numSetsA == numSetsB) {
+        return -a.localeCompare(b)
+    } else {
+        return numSetsA - numSetsB
+    }
 }
+export const inclusiveKeyCmp = makeSortKeys('*')
+export const exclusiveKeyCmp = makeSortKeys('-')
 
 export function TargetsTable(
-    { initialShapes, targets, model, curStep, error, stepIdx, hoveredRegion, ...sparkLineProps }: {
+    { initialShapes, targets, showDisjointSets, model, curStep, error, stepIdx, hoveredRegion, ...sparkLineProps }: {
         initialShapes: S[]
-        targets: Target[]
+        targets: Map<string, number>
+        showDisjointSets: boolean
         model: Model
         curStep: Step
         error: Dual
@@ -38,46 +48,73 @@ export function TargetsTable(
         [ initialShapes, ],
     )
 
+    const numShapes = useMemo(() => initialShapes.length, [ initialShapes, ])
+    const [ noneKey, allKey ] = useMemo(() => [ '-'.repeat(numShapes), '*'.repeat(numShapes) ], [ numShapes, ])
+    const [ exclusiveSets, inclusiveSets ] = useMemo(
+        () => {
+            const exclusiveSets: Target[] = []
+            const inclusiveSets: Target[] = []
+            // console.log("targets:", targets)
+            targets.forEach((value, key) => {
+                if (!key.includes('*') && key != noneKey) {
+                    exclusiveSets.push([ key, value ])
+                }
+                if (!key.includes('-') && key != allKey) {
+                    inclusiveSets.push([ key, value ])
+                }
+            })
+            inclusiveSets.sort(inclusiveKeyCmp)
+            exclusiveSets.sort(exclusiveKeyCmp)
+            return [ exclusiveSets, inclusiveSets ]
+        },
+        [ targets, ]
+    )
+
+    const displayTargets = useMemo(
+        () => showDisjointSets ? exclusiveSets : inclusiveSets,
+        [ showDisjointSets, exclusiveSets, inclusiveSets, ],
+    )
+
     const sum = useMemo(
-        () => targets.map(({ value }) => value).reduce((a, b) => a + b, 0),
-        [ targets, ],
+        () => displayTargets.map(([ _, value ]) => value).reduce((a, b) => a + b),
+        [ displayTargets, ],
     )
 
     const regionContains = useCallback(
-        (sets: string, region: string | null) => {
+        (key: string, region: string | null) => {
             if (region === null) {
                 return false
             }
-            if (sets.length !== region.length) {
-                console.error("regionContains: sets.length !== region.length", sets, region)
+            if (key.length !== region.length) {
+                console.error("regionContains: key.length !== region.length", key, region)
                 return false
             }
             for (let i = 0; i < region.length; i++) {
-                if (!(sets[i] == '*' || sets[i] == region[i] || region[i] != '-')) {
-                    // console.log(`${sets} doesn't contain ${region}`)
+                if (!(key[i] == '*' || key[i] == region[i] || region[i] != '-')) {
+                    // console.log(`${key} doesn't contain ${region}`)
                     return false
                 }
             }
-            // console.log(`${sets} contains ${region}`)
+            // console.log(`${key} contains ${region}`)
             return true
         },
         [],
     )
 
     const targetsMap = useMemo(
-        () => new Map(targets.map(({ sets, value }) => [ sets, value ])),
-        [ targets, ],
+        () => new Map(displayTargets.map(([ key, value ]) => [ key, value ])),
+        [ displayTargets, ],
     )
 
     const totalTargetArea = curStep.targets.total_area
     const [ showTargetCurCol, setShowTargetCurCol ] = useState(false)
     const { showSparkLines } = sparkLineProps
     const cellProps = { model, stepIdx, ...sparkLineProps, }
-    const targetTableRows = targets.map(({ sets, value}) => {
-        const name = targetName(sets)
-        const err = curStep.errors.get(sets)
-        const activeRegion = sets == hoveredRegion || (!(hoveredRegion && targetsMap.has(hoveredRegion)) && regionContains(sets, hoveredRegion))
-        return <tr className={activeRegion ? css.activeRegion : ''} key={sets}>
+    const targetTableRows = displayTargets.map(([ key, value ]) => {
+        const name = targetName(key)
+        const err = curStep.errors.get(key)
+        const activeRegion = key == hoveredRegion || (!(hoveredRegion && targetsMap.has(hoveredRegion)) && regionContains(key, hoveredRegion))
+        return <tr className={activeRegion ? css.activeRegion : ''} key={key}>
             <td className={css.val}>{name}</td>
             <td className={css.val}>{value.toPrecision(3).replace(/\.?0+$/, '')}</td>
             {
@@ -89,7 +126,7 @@ export function TargetsTable(
             {SparkNum(err && err.error.v * totalTargetArea)}
             {showSparkLines && <SparkLineCell
                 color={"red"}
-                fn={step => abs(step.errors.get(sets)?.error.v || 0)}
+                fn={step => abs(step.errors.get(key)?.error.v || 0)}
                 {...cellProps}
             />}
         </tr>

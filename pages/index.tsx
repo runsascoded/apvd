@@ -1,7 +1,7 @@
 import Grid, {GridState} from "../src/components/grid"
-import React, {Dispatch, ReactNode, useCallback, useEffect, useMemo, useState} from "react"
+import React, {DetailedHTMLProps, Dispatch, HTMLAttributes, InputHTMLAttributes, ReactNode, useCallback, useEffect, useMemo, useState} from "react"
 import * as apvd from "apvd"
-import {train} from "apvd"
+import {Shape, train} from "apvd"
 import {makeModel, Model, Region, Step} from "../src/lib/regions"
 import {Point} from "../src/components/point"
 import css from "./index.module.scss"
@@ -15,7 +15,7 @@ import {getSliderValue} from "../src/components/inputs";
 import {cos, max, min, PI, pi2, pi4, round, sin, sq3, sqrt} from "../src/lib/math";
 import Apvd, {LogLevel} from "../src/components/apvd";
 import {getMidpoint, getPointAndDirectionAtTheta, getRegionCenter} from "../src/lib/region";
-import {BoundingBox, getRadii, mapShape, rotate, S, Set, shapeBox} from "../src/lib/shape";
+import {BoundingBox, getRadii, mapShape, rotate, S, Set, shapeBox, shapeStrJS, shapeStrJSON, shapeStrRust} from "../src/lib/shape";
 import {Target, TargetsTable} from "../src/components/tables/targets";
 import {InitialLayout, toShape} from "../src/lib/layout";
 import {VarsTable} from "../src/components/tables/vars";
@@ -91,77 +91,77 @@ export const TwoOverOne: InitialLayout = [
 ]
 
 const ThreeEqualCircles: Target[] = [
-    { sets: "0**", value: PI },
-    { sets: "*1*", value: PI },
-    { sets: "**2", value: PI },
-    { sets: "01*", value: 2*PI/3 - sqrt(3)/2 },
-    { sets: "0*2", value: 2*PI/3 - sqrt(3)/2 },
-    { sets: "*12", value: 2*PI/3 - sqrt(3)/2 },
-    { sets: "012", value: PI/2 - sqrt(3)/2 },
+    [ "0**", PI ],
+    [ "*1*", PI ],
+    [ "**2", PI ],
+    [ "01*", 2*PI/3 - sqrt(3)/2 ],
+    [ "0*2", 2*PI/3 - sqrt(3)/2 ],
+    [ "*12", 2*PI/3 - sqrt(3)/2 ],
+    [ "012", PI/2 - sqrt(3)/2 ],
 ]
 
 const FizzBuzz: Target[] = [
-    { sets: "0*", value: 1/3 },
-    { sets: "*1", value: 1/5 },
-    { sets: "01", value: 1/15 },
+    [ "0*", 1/3 ],
+    [ "*1", 1/5 ],
+    [ "01", 1/15 ],
 ]
 
 const FizzBuzzBazz: Target[] = [ // Fractions scaled up by LCM
-    { sets: "0**", value: 35 },  // 1 / 3
-    { sets: "*1*", value: 21 },  // 1 / 5
-    { sets: "**2", value: 15 },  // 1 / 7
-    { sets: "01*", value:  7 },  // 1 / 15
-    { sets: "0*2", value:  5 },  // 1 / 21
-    { sets: "*12", value:  3 },  // 1 / 35
-    { sets: "012", value:  1 },  // 1 / 105
+    [ "0**", 35 ],  // 1 / 3
+    [ "*1*", 21 ],  // 1 / 5
+    [ "**2", 15 ],  // 1 / 7
+    [ "01*",  7 ],  // 1 / 15
+    [ "0*2",  5 ],  // 1 / 21
+    [ "*12",  3 ],  // 1 / 35
+    [ "012",  1 ],  // 1 / 105
 ]
 
 const FizzBuzzBazzQux: Target[] = [ // Fractions scaled up by LCM
-    { sets: "0***", value: 105 },  // 1 / 2
-    { sets: "*1**", value:  70 },  // 1 / 3
-    { sets: "**2*", value:  42 },  // 1 / 5
-    { sets: "***3", value:  30 },  // 1 / 7
-    { sets: "01**", value:  35 },  // 1 / 6
-    { sets: "0*2*", value:  21 },  // 1 / 10
-    { sets: "0**3", value:  15 },  // 1 / 14
-    { sets: "*12*", value:  14 },  // 1 / 15
-    { sets: "*1*3", value:  10 },  // 1 / 21
-    { sets: "**23", value:   6 },  // 1 / 35
-    { sets: "012*", value:   7 },  // 1 / 30
-    { sets: "01*3", value:   5 },  // 1 / 42
-    { sets: "0*23", value:   3 },  // 1 / 70
-    { sets: "*123", value:   2 },  // 1 / 105
-    { sets: "0123", value:   1 },  // 1 / 210
+    [ "0***", 105 ],  // 1 / 2
+    [ "*1**",  70 ],  // 1 / 3
+    [ "**2*",  42 ],  // 1 / 5
+    [ "***3",  30 ],  // 1 / 7
+    [ "01**",  35 ],  // 1 / 6
+    [ "0*2*",  21 ],  // 1 / 10
+    [ "0**3",  15 ],  // 1 / 14
+    [ "*12*",  14 ],  // 1 / 15
+    [ "*1*3",  10 ],  // 1 / 21
+    [ "**23",   6 ],  // 1 / 35
+    [ "012*",   7 ],  // 1 / 30
+    [ "01*3",   5 ],  // 1 / 42
+    [ "0*23",   3 ],  // 1 / 70
+    [ "*123",   2 ],  // 1 / 105
+    [ "0123",   1 ],  // 1 / 210
 ]
 
 const CentroidRepel: Target[] = [
-    { sets: "0**", value: 3.  },
-    { sets: "*1*", value: 1.  },
-    { sets: "**2", value: 1.  },
-    { sets: "01*", value: 0.3 },
-    { sets: "0*2", value: 0.3 },
-    { sets: "*12", value: 0.3 },
-    { sets: "012", value: 0.1 },
+    [ "0**", 3.  ],
+    [ "*1*", 1.  ],
+    [ "**2", 1.  ],
+    [ "01*", 0.3 ],
+    [ "0*2", 0.3 ],
+    [ "*12", 0.3 ],
+    [ "012", 0.1 ],
 ]
 
 // Cenomic variants identified by 4 variant callers: VarScan, SomaticSniper, Strelka, JSM2
 // cf. https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3753564/pdf/btt375.pdf, ../4-ellipses.png
 const VariantCallers: Target[] = [
-    { sets: "0---", value: 633 },
-    { sets: "-1--", value: 618 },
-    { sets: "--2-", value: 187 },
-    { sets: "---3", value: 319 },
-    { sets: "01--", value: 112 },
-    { sets: "0-2-", value:   0 },
-    { sets: "0--3", value:  13 },
-    { sets: "-12-", value:  14 },
-    { sets: "-1-3", value:  55 },
-    { sets: "--23", value:  21 },
-    { sets: "012-", value:   1 },
-    { sets: "01-3", value:  17 },
-    { sets: "0-23", value:   0 },
-    { sets: "-123", value:   9 },
-    { sets: "0123", value:  36 },
+    [ "0---", 633 ],
+    [ "-1--", 618 ],
+    [ "--2-", 187 ],
+    [ "---3", 319 ],
+    [ "01--", 112 ],
+    [ "0-2-",   0 ],
+    [ "0--3",  13 ],
+    [ "-12-",  14 ],
+    [ "-1-3",  55 ],
+    [ "--23",  21 ],
+    [ "012-",   1 ],
+    [ "01-3",  17 ],
+    [ "0-23",   0 ],
+    [ "-123",   9 ],
+    [ "0123",  36 ],
 ]
 
 export type RunningState = "none" | "fwd" | "rev"
@@ -173,7 +173,7 @@ export function Number(
         setValue: Dispatch<number>
         float?: boolean
         children?: ReactNode
-    } & React.DetailedHTMLProps<React.InputHTMLAttributes<HTMLInputElement>, HTMLInputElement>
+    } & DetailedHTMLProps<InputHTMLAttributes<HTMLInputElement>, HTMLInputElement>
 ) {
     const parse = float ? parseFloat : parseInt
     return (
@@ -210,6 +210,48 @@ export function Checkbox({ label, checked, setChecked, }: { label: string, check
     )
 }
 
+export function Details({ open, toggle, summary, className, children, }: {
+    open: boolean
+    toggle: (open: boolean) => void
+    summary?: ReactNode
+    className?: string
+    children: ReactNode
+}) {
+    return (
+        <details
+            className={className || ''}
+            open={open}
+            onToggle={e => toggle((e.currentTarget as HTMLDetailsElement).open)}
+        >
+            {summary && <summary>{summary}</summary>}
+            {children}
+        </details>
+    )
+}
+
+export function DetailsSection({ title, tooltip, open, toggle, className, children, ...rest }: {
+    title: string
+    tooltip?: ReactNode
+    open: boolean
+    toggle: (open: boolean) => void
+    className?: string
+    children: ReactNode
+} & DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) {
+    return (
+        <div className={css.detailsSection} {...rest}>
+            <Details open={open} toggle={toggle} className={className}>
+                <summary>
+                    <h4 className={css.tableTitle}>{
+                        tooltip
+                            ? <OverlayTrigger overlay={<Tooltip>{tooltip}</Tooltip>}><span>{title}</span></OverlayTrigger>
+                            : title
+                    }</h4>
+                </summary>
+                {children}
+            </Details>
+        </div>
+    )
+}
 export default function Page() {
     const [ logLevel, setLogLevel ] = useState<LogLevel>("info")
     return <Apvd logLevel={logLevel}>{() => <Body logLevel={logLevel} setLogLevel={setLogLevel} />}</Apvd>
@@ -261,14 +303,24 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
         showGrid: [ showGrid, setShowGrid ],
     } = gridState
 
-    const numShapes = useMemo(() => targets[0].sets.length, [ targets ])
-    const wasmTargets = useMemo(
-        () => targets.map(({ sets, value }) => [ sets, value ]),
-        [ targets ],
-    )
+    const numShapes = useMemo(() => targets[0][0].length, [ targets ])
+    const wasmTargets = targets
 
-    const initialSettingsShown = false
-    const [ settingsShown, setSettingsShown ] = useState(initialSettingsShown)
+    const expandSettingsSection = false
+    const expandTargetsSection = true
+    const expandExamplesSection = false
+    const expandErrorPlotSection = true
+    const expandVarsSection = true
+    const expandShapesSection = true
+    const expandLayoutsSection = false
+    const [ settingsShown, setSettingsShown ] = useState(expandSettingsSection)
+    const [ targetsShown, setTargetsShown ] = useState(expandTargetsSection)
+    const [ examplesShown, setExamplesShown ] = useState(expandExamplesSection)
+    const [ errorPlotShown, setErrorPlotShown ] = useState(expandErrorPlotSection)
+    const [ varsShown, setVarsShown ] = useState(expandVarsSection)
+    const [ shapesShown, setShapesShown ] = useState(expandShapesSection)
+    const [ layoutsShown, setLayoutsShown ] = useState(expandLayoutsSection)
+
     const [ maxErrorRatioStepSize, setMaxErrorRatioStepSize ] = useState(0.5)
     const [ maxSteps, setMaxSteps ] = useState(10000)
     const [ stepBatchSize, setStepBatchSize ] = useState(10)
@@ -282,6 +334,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     const [ autoCenterInterpRate, setAutoCenterInterpRate ] = useState(0.08)
     const [ setLabelDistance, setSetLabelDistance ] = useState(0.15)
     const [ setLabelSize, setSetLabelSize ] = useState(20)
+    const [ showDisjointSets, setShowDisjointSets ] = useState(false)
 
     const [ stepIdx, setStepIdx ] = useMemo(
         () => {
@@ -311,7 +364,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                         idx,
                         name: String.fromCharCode('A'.charCodeAt(0) + idx),
                         color: colors[idx],
-                        shape,
+                        shape: shape,
                     }
                 }),
         [ numShapes, initialLayout, ]
@@ -434,8 +487,8 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                     coords.map(v => shapeIdx >= skipVars.length || !skipVars[shapeIdx].includes(v)),
                 ]
             })
-            // console.log("inputs:", inputs)
-            // console.log("wasmtargets:", wasmTargets)
+            console.log("inputs:", inputs)
+            console.log("wasmtargets:", wasmTargets)
             const model = makeModel(apvd.make_model(inputs, wasmTargets), initialSets)
             // console.log("new model:", model)
             setModel(model)
@@ -809,7 +862,6 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
             showEdgePoints && curStep && ([] as ReactNode[]).concat(...curStep.components.map((component, componentIdx) => component.edges.map((edge, edgeIdx) =>
                 fs.map(f => {
                     const midpoint = getMidpoint(edge, f)
-                    const { set } = edge
                     // console.log(`edge: ${set.idx}, ${round(deg(edge.theta0))}, ${round(deg(edge.theta1))}, midpoint: ${midpoint}`)
                     return <circle
                         key={`${componentIdx}-${edgeIdx} ${f}`}
@@ -827,7 +879,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     )
 
     const expandedTargets = useMemo(
-        () => apvd.expand_targets(wasmTargets).all as [ string, number ][],
+        () => apvd.expand_targets(wasmTargets).all as Map<string, number>,
         [ wasmTargets, ]
     )
 
@@ -1082,16 +1134,29 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                 in cancer," Fig. 3</>}
     ]
 
-    const shapeText = useMemo(
-        () => curStep && curStep.sets.map(({ shape }) =>
-            mapShape(
-                shape,
-                ({ c: { x, y }, r }) => `Circle { c: R2 { x: ${x}, y: ${y} }, r: ${r} }`,
-                ({ c: { x, y}, r: { x: rx, y: ry } }) => `XYRR { c: R2 { x: ${x}, y: ${y} }, r: R2 { x: ${rx}, y: ${ry} } }`,
-                ({ c: { x, y}, r: { x: rx, y: ry }, t }) => `XYRRT { c: R2 { x: ${x}, y: ${y} }, r: R2 { x: ${rx}, y: ${ry} }, t: ${t} }`,
-            )
-        ).join(",\n"),
-        [ curStep],
+    const shapeTextRust = useMemo(
+        () => {
+            if (!curStep) return
+            const shapeStrs = curStep.sets.map(({ shape }) => shapeStrRust(shape))
+            return `[\n  ${shapeStrs.join(",\n  ")},\n]`
+        },
+        [ curStep]
+    )
+    const shapeTextJSON = useMemo(
+        () => {
+            if (!curStep) return
+            const shapeStrs = curStep.sets.map(({ shape }) => shapeStrJSON(shape))
+            return `[\n  ${shapeStrs.join(",\n  ")}\n]`
+        },
+        [ curStep ],
+    )
+    const shapeTextJS = useMemo(
+        () => {
+            if (!curStep) return
+            const shapeStrs = curStep.sets.map(({ shape }) => shapeStrJS(shape))
+            return `[\n  ${shapeStrs.join(",\n  ")},\n]`
+        },
+        [ curStep ],
     )
 
     const centerDot =
@@ -1158,10 +1223,10 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                                 <p>Step {stepIdx}{ curStep && error && <span>, error: {(error.v * curStep.targets.total_area).toPrecision(3)}</span> }</p>
                                 <p
                                     onMouseMove={() => {
-                                        if (!model) return
+                                        if (!model || runningState != 'none') return
                                         // console.log("mousemove set to min_idx", model.min_idx)
                                         setVStepIdx(model.min_idx)
-                                        setRunningState("none")
+                                        // setRunningState("none")
                                     }}
                                     onMouseOut={() => {
                                         // console.log("mousout vidx null")
@@ -1174,9 +1239,9 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                                         setRunningState("none")
                                     }}
                                 >{
-                                    model && curStep && bestStep && <>
+                                    model && curStep && bestStep && <span className={stepIdx == model.min_idx && runningState == 'none' && stepIdx > 0 ? css.bestStepActive : ''}>
                                         Best step: {model.min_idx}, error: {(bestStep.error.v * curStep.targets.total_area).toPrecision(3)} ({(bestStep.error.v * 100).toPrecision(3)}%)
-                                    </>
+                                    </span>
                                 }</p>
                                 {repeatSteps && stepIdx == repeatSteps[1] ?
                                     <p className={css.repeatSteps}>♻️ Step {repeatSteps[1]} repeats step {repeatSteps[0]}</p> :
@@ -1186,11 +1251,11 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                         </div>
                     </div>
                     <div className={`${col6} ${css.settings}`}>
-                        <details open={initialSettingsShown} onToggle={e => {
-                            console.log("toggle settings:", settingsShown)
-                            setSettingsShown((e.currentTarget as HTMLDetailsElement).open)
-                        }}>
-                            <summary>⚙️</summary>
+                        <Details
+                            open={expandSettingsSection}
+                            toggle={setSettingsShown}
+                            summary={"⚙️"}
+                        >
                             <Number
                                 label={"Max error ratio step size"} value={maxErrorRatioStepSize} setValue={setMaxErrorRatioStepSize} float={true}
                                 min={0} max={1.2} step={0.1}
@@ -1224,70 +1289,56 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                                     }</select>
                                 </label>
                             </div>
-                        </details>
+                        </Details>
                     </div>
                 </div>
                 <hr />
                 <div className={"row"}>
                     <div className={`${col7}`}>
-                        <h3 className={css.tableTitle}>
-                            <OverlayTrigger overlay={<Tooltip>Desired sizes for each subset, and current deltas/errors</Tooltip>}>
-                                <span>Targets</span>
-                            </OverlayTrigger>
-                        </h3>
-                        {
-                            model && curStep && error && sparkLineCellProps &&
-                            <TargetsTable
-                                initialShapes={initialSets}
-                                targets={targets}
-                                curStep={curStep}
-                                error={error}
-                                hoveredRegion={hoveredRegion}
-                                {...sparkLineCellProps}
-                            />
-                        }
-                        <div>
-                            <details>
-                                <summary>Examples</summary>
-                                <ul style={{ listStyle: "none", }}>{
-                                    exampleTargets.map(({ name, targets, description }, idx) => {
-                                        const overlay = <Tooltip>{description}</Tooltip>
-                                        return (
-                                            <li key={idx}>
-                                                <OverlayTrigger overlay={overlay}>
-                                                    <a href={"#"} onClick={() => { setTargets(targets) }}>{name}</a>
-                                                </OverlayTrigger>
-                                                {' '}
-                                                <OverlayTrigger trigger="click" placement="right" overlay={overlay}>
-                                                    <span className={css.info}>ℹ️</span>
-                                                </OverlayTrigger>
-                                            </li>
-                                        )
-                                    })
-                                }</ul>
-                            </details>
-                        </div>
-                        <div
-                            onMouseOut={e => {
-                                // console.log("onMouseOut:", e)
-                                setVStepIdx(null)
-                            }}
+                        <DetailsSection title={"Targets"} open={expandTargetsSection} toggle={setTargetsShown} tooltip={"Desired sizes for each subset, and current deltas/errors"} className={css.targets}>
+                            {
+                                model && curStep && expandedTargets && error && sparkLineCellProps &&
+                                <TargetsTable
+                                    initialShapes={initialSets}
+                                    targets={expandedTargets}
+                                    showDisjointSets={showDisjointSets}
+                                    curStep={curStep}
+                                    error={error}
+                                    hoveredRegion={hoveredRegion}
+                                    {...sparkLineCellProps}
+                                />
+                            }
+                            <Checkbox label={"Disjoint sets"} checked={showDisjointSets} setChecked={setShowDisjointSets} />
+                        </DetailsSection>
+                        <DetailsSection title={"Examples"} open={expandExamplesSection} toggle={setExamplesShown}>
+                            <ul style={{ listStyle: "none", }}>{
+                                exampleTargets.map(({ name, targets, description }, idx) => {
+                                    const overlay = <Tooltip>{description}</Tooltip>
+                                    return (
+                                        <li key={idx}>
+                                            <OverlayTrigger overlay={overlay}>
+                                                <a href={"#"} onClick={() => { setTargets(targets) }}>{name}</a>
+                                            </OverlayTrigger>
+                                            {' '}
+                                            <OverlayTrigger trigger="click" placement="right" overlay={overlay}>
+                                                <span className={css.info}>ℹ️</span>
+                                            </OverlayTrigger>
+                                        </li>
+                                    )
+                                })
+                            }</ul>
+                        </DetailsSection>
+                        <DetailsSection
+                            title={"Error"}
+                            open={expandErrorPlotSection}
+                            toggle={setErrorPlotShown}
+                            onMouseOut={() => setVStepIdx(null)}
                         >
-                            <h3 className={css.tableTitle}>Error</h3>
                             {plot}
-                        </div>
+                        </DetailsSection>
                     </div>
                     <div className={col5}>
-                        <h3 className={css.tableTitle}>
-                            <OverlayTrigger overlay={
-                                <Tooltip>
-                                    Shapes' coordinates: raw values, and overall error gradient with respect to each coordinate
-                                </Tooltip>
-                            }>
-                                <span>Vars</span>
-                            </OverlayTrigger>
-                        </h3>
-                        {
+                        <DetailsSection title={"Vars"} open={expandVarsSection} toggle={setVarsShown} tooltip={"Shapes' coordinates: raw values, and overall error gradient with respect to each coordinate"}>{
                             curStep && sets && error && sparkLineCellProps &&
                             <VarsTable
                                 vars={vars}
@@ -1296,12 +1347,24 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                                 error={error}
                                 {...sparkLineCellProps}
                             />
-                        }
-                        <div className={css.tableBreak} />
-                        <h3 className={css.tableTitle}>Shapes</h3>
-                        <ShapesTable sets={sets || []} vars={vars} />
-                        <details>
-                            <summary>Layouts</summary>
+                        }</DetailsSection>
+                        <DetailsSection title={"Shapes"} open={expandShapesSection} toggle={setShapesShown}>
+                            <ShapesTable sets={sets || []} vars={vars} />
+                            <div>
+                                Click to copy:{' '}
+                                <OverlayTrigger overlay={<Tooltip><pre className={css.shapeTextTooltip}>{shapeTextJS}</pre></Tooltip>}>
+                                    <span className={css.copyText} onClick={() => shapeTextJS && navigator.clipboard.writeText(shapeTextJS)
+                                    }>JS</span>
+                                </OverlayTrigger>,{' '}
+                                <OverlayTrigger overlay={<Tooltip><pre className={css.shapeTextTooltip}>{shapeTextRust}</pre></Tooltip>}>
+                                    <span className={css.copyText} onClick={() => shapeTextRust && navigator.clipboard.writeText(shapeTextRust)}>Rust</span>
+                                </OverlayTrigger>,{' '}
+                                <OverlayTrigger overlay={<Tooltip><pre className={css.shapeTextTooltip}>{shapeTextJSON}</pre></Tooltip>}>
+                                    <span className={css.copyText} onClick={() => shapeTextJSON && navigator.clipboard.writeText(shapeTextJSON)}>JSON</span>
+                                </OverlayTrigger>
+                            </div>
+                        </DetailsSection>
+                        <DetailsSection title={"Layouts"} open={expandLayoutsSection} toggle={setLayoutsShown}>
                             <ul style={{ listStyle: "none", }}>{
                                 layouts.map(({ name, layout, description }, idx) => {
                                     const overlay = <Tooltip>{description}</Tooltip>
@@ -1321,14 +1384,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                                     )
                                 })
                             }</ul>
-                        </details>
-                        <div className={css.shapesPreContainer} onClick={() => {
-                            shapeText && navigator.clipboard.writeText(shapeText)
-                        }}>
-                            <OverlayTrigger overlay={<Tooltip>Click to copy</Tooltip>}>
-                                <pre>{shapeText}</pre>
-                            </OverlayTrigger>
-                        </div>
+                        </DetailsSection>
                     </div>
                 </div>
                 <hr />

@@ -1,3 +1,7 @@
+.shapeTextTooltip {
+  text-align: left;
+}
+
 .body {
   width: 100%;
   padding: 0 0.8em;
@@ -44,10 +48,48 @@
       padding-left: 0;
 
     }
-    label {
-      padding-left: 0.2em;
+
+    .copyText {
+      cursor: pointer;
     }
 
+    .detailsSection {
+      margin-bottom: 0.3em;
+      details[open] {
+        summary {
+          margin-bottom: 0.3em;
+          &::marker {
+            content: "▼";
+          }
+        }
+      }
+      details:not([open]) {
+        summary {
+          &::marker {
+            content: "▶";
+          }
+          //opacity: 0.6;
+        }
+      }
+      summary {
+        margin-left: -1.3em;
+        &::marker {
+          //margin-right: 0.5em;
+        }
+        h3, h4 {
+          display: inline;
+          margin-left: 0.3em;
+          user-select: none;
+        }
+        //margin-left: -1em;
+      }
+      table {
+        margin-bottom: 0.2em;
+      }
+      ul {
+        margin-left: 0;
+      }
+    }
     .tableTitle {
       //margin-top: 0.3em;
     }
@@ -93,15 +135,15 @@
           opacity: 1;
         }
       }
-      .input {
-        .shortNumberInput {
-          max-width: 3.5em;
-        }
-        input, option, select {
-          text-align: right;
-          max-width: 5em;
-          margin-left: 0.3em;
-        }
+    }
+    .input {
+      .shortNumberInput {
+        max-width: 3.5em;
+      }
+      input, option, select {
+        text-align: right;
+        max-width: 5em;
+        margin-left: 0.3em;
       }
     }
     .controlPanel {
@@ -142,6 +184,9 @@
 
           p {
             margin-bottom: auto;
+          }
+          .bestStepActive {
+            font-weight: bold;
           }
         }
 
