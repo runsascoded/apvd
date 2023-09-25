@@ -124,6 +124,9 @@
         font-size: 2em;
         list-style: none;
         cursor: pointer;
+        &::-webkit-details-marker {
+          display: none;
+        }
       }
       details:not([open]) {
         summary {

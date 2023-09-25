@@ -1071,7 +1071,11 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                                 textAnchor={"middle"}
                                 dominantBaseline={"middle"}
                                 fontSize={16 / scale}
-                            />
+                                // Need non-empty text content in order for tooltips to appear correctly positioned in
+                                // Firefox (otherwise they end up off the screen somewhere).
+                                // TODO: file issue: https://github.com/react-bootstrap/react-bootstrap/issues
+                                opacity={0}
+                            >{label}</text>
                         </OverlayTrigger>
                     )
                 })
