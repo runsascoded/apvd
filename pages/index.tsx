@@ -321,6 +321,8 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     const [ shapesShown, setShapesShown ] = useState(expandShapesSection)
     const [ layoutsShown, setLayoutsShown ] = useState(expandLayoutsSection)
 
+    const [ showExampleTooltip, setShowExampleTooltip ] = useState<string | null>(null)
+
     const [ maxErrorRatioStepSize, setMaxErrorRatioStepSize ] = useState(0.5)
     const [ maxSteps, setMaxSteps ] = useState(10000)
     const [ stepBatchSize, setStepBatchSize ] = useState(10)
@@ -789,11 +791,12 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                 <span>
                     <Button
                         title={title}
-                        onClick={() => {
+                        onTouchEnd={e => {
                             onClick()
                             if (!animating) {
                                 setRunningState("none")
                             }
+                            e.stopPropagation()
                         }}
                         disabled={disabled}>
                         {children}
@@ -1057,7 +1060,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
 
     useEffect(
         () => {
-            console.log("panZoom warp: vStepIdx", vStepIdx)
+            // console.log("panZoom warp: vStepIdx", vStepIdx)
             panZoom(1)
         },
         [ vStepIdx, panZoom ]
@@ -1185,6 +1188,22 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
         [ curStep ],
     )
 
+    useEffect(
+        () => {
+            const bodyClickHandler = () => {
+                console.log("body click")
+                setShowExampleTooltip(null)
+            }
+            console.log("add bodyClickHandler")
+            document.body.addEventListener('click', bodyClickHandler)
+            return () => {
+                console.log("remove bodyClickHandler")
+                document.body.removeEventListener('click', bodyClickHandler)
+            }
+        },
+        []
+    )
+
     const centerDot =
         <circle
             cx={gridCenter.x}
@@ -1253,6 +1272,13 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                             <div className={css.stepStats}>
                                 <p>Step {stepIdx}{ curStep && error && <span>, error: {(error.v * curStep.targets.total_area).toPrecision(3)}</span> }</p>
                                 <p
+                                    onTouchStart={e => {
+                                        if (!model) return
+                                        // console.log("touchstart:", e.touches, e, "setting min_idx", model.min_idx)
+                                        setStepIdx(model.min_idx)
+                                        setRunningState("none")
+                                        e.stopPropagation()
+                                    }}
                                     onMouseMove={() => {
                                         if (!model || runningState != 'none') return
                                         // console.log("mousemove set to min_idx", model.min_idx)
@@ -1343,16 +1369,45 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                         </DetailsSection>
                         <DetailsSection title={"Examples"} open={expandExamplesSection} toggle={setExamplesShown}>
                             <ul style={{ listStyle: "none", }}>{
-                                exampleTargets.map(({ name, targets, description }, idx) => {
-                                    const overlay = <Tooltip>{description}</Tooltip>
+                                exampleTargets.map(({ name, targets: tgts, description }, idx) => {
+                                    const overlay = <Tooltip onClick={e => console.log("tooltip click:", name)}>{description}</Tooltip>
                                     return (
                                         <li key={idx}>
-                                            <OverlayTrigger overlay={overlay}>
-                                                <a href={"#"} onClick={() => { setTargets(targets) }}>{name}</a>
-                                            </OverlayTrigger>
+                                            {
+                                                targets == tgts
+                                                    ? <span>{name}</span>
+                                                    : <a href={"#"} onClick={e => {
+                                                        setTargets(tgts)
+                                                        setShowExampleTooltip(null)
+                                                        e.preventDefault()
+                                                        e.stopPropagation()
+                                                        console.log("clicked example link")
+                                                    }}>{name}</a>
+                                            }
                                             {' '}
-                                            <OverlayTrigger trigger="click" placement="right" overlay={overlay}>
-                                                <span className={css.info}>ℹ️</span>
+                                            <OverlayTrigger
+                                                trigger={["focus", "click"]}
+                                                onToggle={shown => {
+                                                    if (shown) {
+                                                        console.log("showing:", name)
+                                                        setShowExampleTooltip(name)
+                                                    } else if (name == showExampleTooltip) {
+                                                        console.log("hiding:", name)
+                                                        setShowExampleTooltip(null)
+                                                    }
+                                                }}
+                                                show={name == showExampleTooltip}
+                                                placement={"right"}
+                                                overlay={overlay}
+                                            >
+                                                <span
+                                                    className={css.info}
+                                                    style={{ opacity: name == showExampleTooltip ? 0.5 : 1 }}
+                                                    onClick={e => {
+                                                        console.log("info click:", name, name == showExampleTooltip)
+                                                        e.stopPropagation()
+                                                    }}
+                                                >ℹ️</span>
                                             </OverlayTrigger>
                                         </li>
                                     )
