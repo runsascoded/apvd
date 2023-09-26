@@ -17,7 +17,7 @@ import Apvd, {LogLevel} from "../src/components/apvd";
 import {getMidpoint, getPointAndDirectionAtTheta, getRegionCenter} from "../src/lib/region";
 import {BoundingBox, getRadii, mapShape, rotate, S, Set, shapeBox, shapeStrJS, shapeStrJSON, shapeStrRust} from "../src/lib/shape";
 import {Target, TargetsTable} from "../src/components/tables/targets";
-import {InitialLayout, toShape} from "../src/lib/layout";
+import {Disjoint, Ellipses4, Ellipses4t, InitialLayout, SymmetricCircleDiamond, toShape} from "../src/lib/layout";
 import {VarsTable} from "../src/components/tables/vars";
 import {SparkLineProps} from "../src/components/spark-lines";
 import {CircleCoord, CircleCoords, CircleFloatGetters, Coord, VarCoord, Vars, XYRRCoord, XYRRCoords, XYRRFloatGetters, XYRRTCoord, XYRRTCoords, XYRRTFloatGetters} from "../src/lib/vars";
@@ -30,64 +30,6 @@ export const colors = [
     'green',
     'orange',
     '#99f',  // blue
-]
-
-export const SymmetricCircleDiamond: InitialLayout = [
-    { c: { x: -0.5, y:      0, }, r: { x: 1, y: 1 }, t: 0 },
-    { c: { x:  0  , y:  sq3/2, }, r: { x: 1, y: 1 }, t: 0 },
-    { c: { x:  0.5, y:      0, }, r: { x: 1, y: 1 }, t: 0 },
-    { c: { x:  0  , y: -sq3/2, }, r: { x: 1, y: 1 }, t: 0 },
-]
-
-export const Disjoint: InitialLayout = [
-    { c: { x: 0, y: 0, }, r: { x: 1, y: 1 }, t: 0, },
-    { c: { x: 3, y: 0, }, r: { x: 1, y: 1 }, t: 0, },
-    { c: { x: 0, y: 3, }, r: { x: 1, y: 1 }, t: 0, },
-    { c: { x: 3, y: 3, }, r: { x: 1, y: 1 }, t: 0, },
-]
-export const SymmetricCircleLattice: InitialLayout = [
-    { c: { x: 0, y: 0, }, r: { x: 1, y: 1 }, t: 0, },
-    { c: { x: 1, y: 0, }, r: { x: 1, y: 1 }, t: 0, },
-    { c: { x: 1, y: 1, }, r: { x: 1, y: 1 }, t: 0, },
-    { c: { x: 0, y: 1, }, r: { x: 1, y: 1 }, t: 0, },
-    // { c: { x:   0, y: 1, }, r: { x: 2, y: 1, }, },
-]
-
-const r = 2
-const r2 = r * r
-const r2sq = sqrt(1 + r2)
-let c0 = 1/r2sq
-let c1 = r2 * c0
-export const Ellipses4: InitialLayout = [
-    { c: { x:   c0, y:   c1, }, r: { x: 1, y: r, }, },
-    { c: { x: 1+c0, y:   c1, }, r: { x: 1, y: r, }, },
-    { c: { x:   c1, y: 1+c0, }, r: { x: r, y: 1, }, },
-    { c: { x:   c1, y:   c0, }, r: { x: r, y: 1, }, },
-]
-
-export const Ellipses4t: InitialLayout = [
-    { c: rotate({ x:   c0, y:   c1, }, pi4), r: { x: 1, y: r, }, t: pi4, },
-    { c: rotate({ x: 1+c0, y:   c1, }, pi4), r: { x: 1, y: r, }, t: pi4, },
-    { c: rotate({ x:   c1, y: 1+c0, }, pi4), r: { x: r, y: 1, }, t: pi4, },
-    { c: rotate({ x:   c1, y:   c0, }, pi4), r: { x: r, y: 1, }, t: pi4, },
-]
-
-export const Ellipses4t2: InitialLayout = [
-    { c: { x: 0, y: 0 }, r: { x: 2, y: 1 }, t:     0 },
-    { c: { x: 0, y: 0 }, r: { x: 2, y: 1 }, t:   pi4 },
-    { c: { x: 0, y: 0 }, r: { x: 2, y: 1 }, t:   pi2 },
-    { c: { x: 0, y: 0 }, r: { x: 2, y: 1 }, t: 3*pi4 },
-]
-
-export const Repro: InitialLayout = [
-    { c: { x: -1.100285308561806, y: -1.1500279763995946e-5 }, r: { x: 1.000263820108834, y: 1.0000709021402923 } },
-    { c: { x: 0, y: 0, }, r: 1, },
-]
-
-export const TwoOverOne: InitialLayout = [
-    { c: { x:  0. , y: 0. }, r: { x: 1., y: 3. } },
-    { c: { x:  0.5, y: 1. }, r: { x: 1., y: 1. } },
-    { c: { x: -0.5, y: 1. }, r: { x: 1., y: 1. } },
 ]
 
 const ThreeEqualCircles: Target[] = [

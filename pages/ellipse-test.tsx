@@ -3,7 +3,8 @@ import React, {useEffect} from "react";
 import css from "./index.module.scss"
 import {Dual, R2, XYRR, xyrr_unit} from "apvd";
 import Apvd from "../src/components/apvd";
-import {colors, Ellipses4, SymmetricCircleDiamond} from "./index";
+import {colors} from "./index";
+import {Ellipses4, SymmetricCircleDiamond} from "../src/lib/layout";
 
 export default function Page() {
     return <Apvd logLevel={"debug"}>{() => <Body />}</Apvd>
