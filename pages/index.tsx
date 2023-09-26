@@ -792,6 +792,16 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                     <Button
                         title={title}
                         onTouchEnd={e => {
+                            // console.log("onTouchEnd")
+                            onClick()
+                            if (!animating) {
+                                setRunningState("none")
+                            }
+                            e.stopPropagation()
+                            e.preventDefault()
+                        }}
+                        onClick={e => {
+                            // console.log("onClick")
                             onClick()
                             if (!animating) {
                                 setRunningState("none")
@@ -1257,12 +1267,12 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                                 />
                             }</div>
                             <div className={`${css.buttons}`}>
-                                <PlaybackControl title={"Reset to beginning"} hotkey={"⌘←"} onClick={() => setStepIdx(0)} disabled={cantReverse}>⏮️</PlaybackControl>
+                                <PlaybackControl title={"Rewind to start"} hotkey={"⌘←"} onClick={() => setStepIdx(0)} disabled={cantReverse}>⏮️</PlaybackControl>
                                 <PlaybackControl title={"Rewind"} hotkey={"⇧␣"} onClick={() => setRunningState(runningState == "rev" ? "none" : "rev")} disabled={cantReverse} animating={true}>{runningState == "rev" ? "⏸️" : "⏪️"}</PlaybackControl>
                                 <PlaybackControl title={"Reverse one step"} hotkey={"←"} onClick={() => revStep()} disabled={cantReverse}>⬅️</PlaybackControl>
-                                <PlaybackControl title={"Advance one step"} hotkey={"→"} onClick={() => fwdStep()} disabled={cantAdvance || stepIdx == maxSteps}>➡️</PlaybackControl>
-                                <PlaybackControl title={"Fast-forward"} hotkey={"␣"} onClick={() => setRunningState(runningState == "fwd" ? "none" : "fwd")} disabled={cantAdvance} animating={true}>{runningState == "fwd" ? "⏸️" : "⏩"}</PlaybackControl>
-                                <PlaybackControl title={"Seek to last computed step"} hotkey={"⌘→"} onClick={() => {
+                                <PlaybackControl title={`Advance one ${stepIdx !== null && model && stepIdx + 1 == model.steps.length ? `batch (${stepBatchSize} steps)` : "step"}`} hotkey={"→"} onClick={() => fwdStep()} disabled={cantAdvance || stepIdx == maxSteps}>➡️</PlaybackControl>
+                                <PlaybackControl title={"Animate forward"} hotkey={"␣"} onClick={() => setRunningState(runningState == "fwd" ? "none" : "fwd")} disabled={cantAdvance} animating={true}>{runningState == "fwd" ? "⏸️" : "⏩"}</PlaybackControl>
+                                <PlaybackControl title={"Jump to last computed step"} hotkey={"⌘→"} onClick={() => {
                                     if (!model) return
                                     setStepIdx(model.steps.length - 1)
                                     console.log("panZoom warp: seek to end")
