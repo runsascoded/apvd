@@ -10,7 +10,7 @@
         "apvd": "https://gitpkg.now.sh/runsascoded/shapes?1e0bd5c",
         "bootstrap": "^5.3.1",
         "next": "^13.4.13",
-        "next-utils": "https://gitpkg.now.sh/runsascoded/next-utils/dist?b5ebc6c",
+        "next-utils": "https://gitpkg.now.sh/runsascoded/next-utils/dist?3fdb35e",
         "react": "^18.0.0",
         "react-bootstrap": "^2.8.0",
         "react-dom": "^18.0.0",
