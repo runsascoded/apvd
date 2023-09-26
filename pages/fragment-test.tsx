@@ -1,4 +1,4 @@
-import {intParam, Param, ParsedParam, parseHashParams} from "../src/lib/params";
+import {intParam, Param, ParsedParam, parseHashParams} from "next-utils/params";
 
 type Params = {
     n: Param<number>
