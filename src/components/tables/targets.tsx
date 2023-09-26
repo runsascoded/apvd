@@ -32,9 +32,15 @@ export function TargetsTable(
         hoveredRegion: string | null
     } & SparkLineProps
 ) {
+    // console.log(`TargetsTable: ${initialShapes.length} shapes`)
     const targetName = useCallback(
-        (sets: string) =>
-            sets.split('').map((ch: string, idx: number) => {
+        (key: string) =>
+            key.split('').map((ch: string, idx: number) => {
+                // console.log("initialShapes:", initialShapes, "idx:", idx)
+                if (idx >= initialShapes.length) {
+                    console.warn("targetName: idx >= initialShapes.length", idx, initialShapes.length)
+                    return
+                }
                 const name = initialShapes[idx].name
                 // console.log("targetName:", ch, idx, circle, initialCircles)
                 if (ch === '*') {

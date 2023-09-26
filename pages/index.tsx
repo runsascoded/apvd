@@ -202,16 +202,21 @@ export default function Page() {
 declare var window: any;
 
 export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLevel: Dispatch<LogLevel>, }) {
-    const [ initialLayout, setInitialLayout] = useState<InitialLayout>(
-        SymmetricCircleDiamond
-        // SymmetricCircleLattice,
-        // Disjoint
-        // Ellipses4t
-        // Ellipses4t2
-        // Ellipses4
-        // TwoOverOne
-        // Lattice_0_1
-    )
+    const getInitialLayout = () => {
+        const lastStepStr = localStorage.getItem("lastStep")
+        if (!lastStepStr) {
+            return SymmetricCircleDiamond
+            // return SymmetricCircleLattice,
+            // return Disjoint
+            // return Ellipses4t
+            // return Ellipses4t2
+            // return Ellipses4
+            // return TwoOverOne
+            // return Lattice_0_1
+        }
+        return JSON.parse(lastStepStr)
+    }
+    const [ initialLayout, setInitialLayout] = useState<InitialLayout>(getInitialLayout)
     //const [ layout, setLayout ] = useState<InitialLayout>(initialLayout)
     const layouts = [
         { name: "4 Ellipses", layout: Ellipses4t, description: "4 ellipses intersecting to form all 15 possible regions, rotated -45°", },
@@ -221,13 +226,42 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
         // { name: "CircleLattice", layout: SymmetricCircleLattice, description: "4 circles centered at (0,0), (0,1), (1,0), (1,1)", },
     ]
 
-    const [ targets, setTargets ] = useState<Target[]>(
-        // FizzBuzz
-        FizzBuzzBazz
-        // FizzBuzzBazzQux
-        // VariantCallers
-        // ThreeEqualCircles
-        // CentroidRepel
+    const getInitialTargets = () => {
+        const lastTargetsStr = localStorage.getItem("lastTargets")
+        if (!lastTargetsStr) {
+            // return FizzBuzz
+            return FizzBuzzBazz
+            // return FizzBuzzBazzQux
+            // return VariantCallers
+            // return ThreeEqualCircles
+            // return CentroidRepel
+        }
+        return JSON.parse(lastTargetsStr)
+    }
+    const [ rawTargets, setTargets ] = useState<Target[]>(getInitialTargets)
+
+    const { targets, expandedTargets, expandedTargetsMap, numShapes, initialSets } = useMemo(
+        () => {
+            const targets = rawTargets
+            const numShapes = targets[0][0].length
+            const initialSets =
+                    initialLayout
+                        .slice(0, numShapes)
+                        .map((s, idx) => {
+                            const shape = toShape(s)
+                            return {
+                                idx,
+                                name: String.fromCharCode('A'.charCodeAt(0) + idx),
+                                color: colors[idx],
+                                shape: shape,
+                            }
+                        })
+            const expandedTargets = apvd.expand_targets(targets).all as Map<string, number>
+            const expandedTargetsMap = expandedTargets ? fromEntries(expandedTargets) : null
+            // console.log("updated targets block:", targets, numShapes, initialSets)
+            return { targets, numShapes, initialSets, expandedTargets, expandedTargetsMap, }
+        },
+        [ rawTargets, initialLayout, ]
     )
 
     const gridState = GridState({
@@ -244,9 +278,6 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
         height: [ gridHeight ],
         showGrid: [ showGrid, setShowGrid ],
     } = gridState
-
-    const numShapes = useMemo(() => targets[0][0].length, [ targets ])
-    const wasmTargets = targets
 
     const expandSettingsSection = false
     const expandTargetsSection = true
@@ -295,24 +326,29 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     )
 
     const curStep: Step | null = useMemo(
-        () => (!model || stepIdx === null) ? null : model.steps[stepIdx],
-        [ model, stepIdx ],
+        () => {
+            // console.log("curStep memo:", stepIdx, model)
+            return (!model || stepIdx === null) ? null : model.steps[stepIdx]
+        },
+        [ model, stepIdx ]
     )
 
-    const initialSets: Set[] = useMemo(
-        () =>
-            initialLayout
-                .slice(0, numShapes)
-                .map((s, idx) => {
-                    const shape = toShape(s)
-                    return {
-                        idx,
-                        name: String.fromCharCode('A'.charCodeAt(0) + idx),
-                        color: colors[idx],
-                        shape: shape,
-                    }
-                }),
-        [ numShapes, initialLayout, ]
+    // Save curStep to localStorage
+    useEffect(
+        () => {
+            if (!curStep) return
+            const shapes: InitialLayout = curStep.sets.map(({ shape }) => shape)
+            localStorage.setItem("lastStep", JSON.stringify(shapes))
+        },
+        [ curStep, ]
+    )
+
+    // Save targets to localStorage
+    useEffect(
+        () => {
+            localStorage.setItem("lastTargets", JSON.stringify(targets))
+        },
+        [ targets, ]
     )
 
     const sets: S[] | null = useMemo(
@@ -413,6 +449,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     // Initialize model, stepIdx
     useEffect(
         () => {
+            // console.log("make model effect")
             // Naively, n circles have 3n degrees of freedom. However, WLOG, we can fix:
             // - c0 to be a unit circle at origin (x = y = 0, r = 1)
             // - c1.y = 0 (only x and r can move)
@@ -433,13 +470,17 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                 ]
             })
             console.log("inputs:", inputs)
-            console.log("wasmtargets:", wasmTargets)
-            const model = makeModel(apvd.make_model(inputs, wasmTargets), initialSets)
-            // console.log("new model:", model)
+            console.log("targets:", targets)
+            if (inputs.length != targets[0][0].length) {
+                console.warn("inputs.length != targets[0][0].length", inputs.length, targets[0][0].length)
+                return
+            }
+            const model = makeModel(apvd.make_model(inputs, targets), initialSets)
+            console.log("new model:", model)
             setModel(model)
             setStepIdx(0)
         },
-        [ vars, initialSets, wasmTargets, initialSets, ]
+        [ vars, initialSets, targets, ]
     )
 
     const fwdStep = useCallback(
@@ -832,16 +873,6 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                 })
             ))),
         [ showEdgePoints, curStep, scale, ]
-    )
-
-    const expandedTargets = useMemo(
-        () => apvd.expand_targets(wasmTargets).all as Map<string, number>,
-        [ wasmTargets, ]
-    )
-
-    const expandedTargetsMap = useMemo(
-        () => expandedTargets ? fromEntries(expandedTargets) : null,
-        [ expandedTargets ],
     )
 
     const [ hoveredRegion, setHoveredRegion ] = useState<string | null>(null)
@@ -1304,7 +1335,12 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                 <hr />
                 <div className={"row"}>
                     <div className={`${col7}`}>
-                        <DetailsSection title={"Targets"} open={expandTargetsSection} toggle={setTargetsShown} tooltip={"Desired sizes for each subset, and current deltas/errors"} className={css.targets}>
+                        <DetailsSection
+                            title={"Targets"}
+                            open={expandTargetsSection}
+                            toggle={setTargetsShown}
+                            tooltip={"Desired sizes for each subset, and current deltas/errors"}
+                            className={css.targets}>
                             {
                                 model && curStep && expandedTargets && error && sparkLineCellProps &&
                                 <TargetsTable
@@ -1317,7 +1353,8 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                                     {...sparkLineCellProps}
                                 />
                             }
-                            <Checkbox label={"Disjoint sets"} checked={showDisjointSets} setChecked={setShowDisjointSets} />
+                            <Checkbox label={"Disjoint sets"} checked={showDisjointSets}
+                                      setChecked={setShowDisjointSets}/>
                         </DetailsSection>
                         <DetailsSection title={"Examples"} open={expandExamplesSection} toggle={setExamplesShown}>
                             <ul style={{ listStyle: "none", }}>{
@@ -1333,7 +1370,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                                                         setShowExampleTooltip(null)
                                                         e.preventDefault()
                                                         e.stopPropagation()
-                                                        console.log("clicked example link")
+                                                        console.log(`clicked example link: ${name}`)
                                                     }}>{name}</a>
                                             }
                                             {' '}
