@@ -262,7 +262,7 @@ export function Links<Val>({ links, cur, setVal, activeVisited, }: {
 }
 
 export default function Page() {
-    const [ logLevel, setLogLevel ] = useState<LogLevel>("info")
+    const [ logLevel, setLogLevel ] = useLocalStorageState<LogLevel>("logLevel", { defaultValue: "info" })
     return <Apvd logLevel={logLevel}>{() => <Body logLevel={logLevel} setLogLevel={setLogLevel} />}</Apvd>
 }
 
@@ -422,6 +422,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     )
 
     const gridState = GridState({
+        localStorage: true,
         center: { x: 0, y: sq3/4, },
         scale: 100,
         width: 800,
@@ -444,20 +445,20 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     const [ shapesShown, setShapesShown ] = useLocalStorageState("shapesShown", { defaultValue: false, })
     const [ layoutsShown, setLayoutsShown ] = useLocalStorageState("layoutsShown", { defaultValue: false, })
 
-    const [ maxErrorRatioStepSize, setMaxErrorRatioStepSize ] = useState(0.5)
-    const [ maxSteps, setMaxSteps ] = useState(10000)
-    const [ stepBatchSize, setStepBatchSize ] = useState(10)
+    const [ maxErrorRatioStepSize, setMaxErrorRatioStepSize ] = useLocalStorageState("maxErrorRatioStepSize", { defaultValue: 0.5 })
+    const [ maxSteps, setMaxSteps ] = useLocalStorageState("maxSteps", { defaultValue: 10000 })
+    const [ stepBatchSize, setStepBatchSize ] = useLocalStorageState("stepBatchSize", { defaultValue: 10 })
 
     const [ model, setModel ] = useState<Model | null>(null)
     const [ modelStepIdx, setModelStepIdx ] = useState<number | null>(null)
     const [ vStepIdx, setVStepIdx ] = useState<number | null>(null)
     const [ runningState, setRunningState ] = useState<RunningState>("none")
     const [ frameLen, setFrameLen ] = useState(0)
-    const [ autoCenter, setAutoCenter ] = useState(true)
+    const [ autoCenter, setAutoCenter ] = useLocalStorageState("autoCenter", { defaultValue: true })
     const [ autoCenterInterpRate, setAutoCenterInterpRate ] = useState(0.08)
     const [ setLabelDistance, setSetLabelDistance ] = useState(0.15)
     const [ setLabelSize, setSetLabelSize ] = useState(20)
-    const [ showDisjointSets, setShowDisjointSets ] = useState(false)
+    const [ showDisjointSets, setShowDisjointSets ] = useLocalStorageState("showDisjointSets", { defaultValue: false })
     const [ doPanZoomWarp, setDoPanZoomWarp ] = useState(false)
 
     const [ stepIdx, setStepIdx ] = useMemo(
@@ -809,8 +810,8 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
         [ model, stepIdx, plotInitialized, ],
     )
 
-    const [ showSparkLines, setShowSparkLines ] = useState(true)
-    const [ sparkLineLimit, setSparkLineLimit ] = useState(40)
+    const [ showSparkLines, setShowSparkLines ] = useLocalStorageState("showSparkLines", { defaultValue: true })
+    const [ sparkLineLimit, setSparkLineLimit ] = useLocalStorageState("sparkLineLimit", { defaultValue: 40 })
     const [ sparkLineStrokeWidth, setSparkLineStrokeWidth ] = useState(1)
     const [ sparkLineMargin, setSparkLineMargin ] = useState(1)
     const [ sparkLineWidth, setSparkLineWidth ] = useState(80)
@@ -887,7 +888,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
         [ sets, scale ],
     )
 
-    const [ showIntersectionPoints, setShowIntersectionPoints ] = useState(false)
+    const [ showIntersectionPoints, setShowIntersectionPoints ] = useLocalStorageState("showIntersectionPoints", { defaultValue: false })
     const intersectionNodes = useMemo(
         () => showIntersectionPoints && <g id={"intersections"}>{
             curStep && ([] as ReactNode[]).concat(...curStep.components.map((component, componentIdx) => component.points.map(({ x, y, }, pointIdx) => {

@@ -1,10 +1,11 @@
 import React, {MouseEvent, ReactNode, useCallback, useEffect, useMemo, useRef, useState} from "react";
-import { Resizable } from 'react-resizable';
+import {Resizable} from 'react-resizable';
 import {Point} from "./point";
 import {State} from "../lib/utils";
 import css from "./grid.module.scss"
 import ReactScrollWheelHandler from "react-scroll-wheel-handler";
 import {ceil, floor} from "../lib/math";
+import useLocalStorageState from "use-local-storage-state";
 
 export type GridStateProps = {
     center?: Point
@@ -13,6 +14,7 @@ export type GridStateProps = {
     height: number
     gridSize?: number
     showGrid?: boolean
+    localStorage?: boolean
 }
 export type GridState = {
     center: State<Point>
@@ -22,13 +24,24 @@ export type GridState = {
     gridSize: State<number>
     showGrid: State<boolean>
 }
+
+export function useStateWrapper<V>(key: string, { defaultValue }: { defaultValue: V }): State<V> {
+    return useState(defaultValue)
+}
+
+export function useLocalStorageStateWrapper<V>(key: string, { defaultValue }: { defaultValue: V }): State<V> {
+    const [ v, setter ] = useLocalStorageState(key, { defaultValue })
+    return [ v, setter ]
+}
+
 export function GridState(init: GridStateProps): GridState {
-    const center = useState(init.center || { x: 0, y: 0 })
-    const scale = useState(init.scale)
-    const width = useState(init.width);
-    const height = useState(init.height);
-    const gridSize = useState(init.gridSize || 1)
-    const showGrid = useState(init.showGrid || false)
+    const useFn = init.localStorage ? useLocalStorageStateWrapper : useStateWrapper
+    const center = useFn("center", { defaultValue: init.center || { x: 0, y: 0 } })
+    const scale = useFn("scale", { defaultValue: init.scale })
+    const width = useFn("width", { defaultValue: init.width })
+    const height = useFn("height", { defaultValue: init.height })
+    const gridSize = useFn("gridSize", { defaultValue: init.gridSize || 1 })
+    const showGrid = useFn("showGrid", { defaultValue: init.showGrid || false })
     return {
         center,
         scale,
