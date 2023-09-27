@@ -1,7 +1,7 @@
 import Grid, {GridState} from "../src/components/grid"
 import React, {DetailedHTMLProps, Dispatch, HTMLAttributes, InputHTMLAttributes, ReactNode, useCallback, useEffect, useMemo, useState} from "react"
 import * as apvd from "apvd"
-import {Shape, train} from "apvd"
+import {train} from "apvd"
 import {makeModel, Model, Region, Step} from "../src/lib/regions"
 import {Point} from "../src/components/point"
 import css from "./index.module.scss"
@@ -15,13 +15,15 @@ import {getSliderValue} from "../src/components/inputs";
 import {cos, max, min, PI, pi2, pi4, round, sin, sq3, sqrt} from "../src/lib/math";
 import Apvd, {LogLevel} from "../src/components/apvd";
 import {getMidpoint, getPointAndDirectionAtTheta, getRegionCenter} from "../src/lib/region";
-import {BoundingBox, getRadii, mapShape, rotate, S, Set, shapeBox, shapeStrJS, shapeStrJSON, shapeStrRust} from "../src/lib/shape";
+import {BoundingBox, getRadii, mapShape, rotate, S, Set, shapeBox, shapeStrJS, shapeStrJSON, shapeStrRust, Shape} from "../src/lib/shape";
 import {Target, TargetsTable} from "../src/components/tables/targets";
 import {Disjoint, Ellipses4, Ellipses4t, InitialLayout, SymmetricCircleDiamond, toShape} from "../src/lib/layout";
 import {VarsTable} from "../src/components/tables/vars";
 import {SparkLineProps} from "../src/components/spark-lines";
 import {CircleCoord, CircleCoords, CircleFloatGetters, Coord, VarCoord, Vars, XYRRCoord, XYRRCoords, XYRRFloatGetters, XYRRTCoord, XYRRTCoords, XYRRTFloatGetters} from "../src/lib/vars";
 import {ShapesTable} from "../src/components/tables/shapes";
+import useLocalStorageState from 'use-local-storage-state'
+import _ from "lodash"
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false })
 
@@ -194,6 +196,71 @@ export function DetailsSection({ title, tooltip, open, toggle, className, childr
         </div>
     )
 }
+
+export type LinkItem<Val> = { name: string, val: Val, description: ReactNode }
+export function Links<Val>({ links, cur, setVal, activeVisited, }: {
+    links: LinkItem<Val>[]
+    cur: Val
+    setVal: Dispatch<Val>
+    activeVisited?: boolean
+}): [ () => void, ReactNode ] {
+    const [ showTooltip, setShowTooltip ] = useState<string | null>(null)
+    return [
+        () => setShowTooltip(null),
+        <ul style={{ listStyle: "none", }}>{
+            links.map(({ name, val, description }, idx) => {
+                const overlay = <Tooltip onClick={e => console.log("tooltip click:", name)}>{description}</Tooltip>
+                const isCurVal = _.isEqual(cur, val)
+                // console.log("link:", isCurVal, cur, val)
+                const a = (className?: string) => <a className={className || ''} href={window.location.hash} onClick={e => {
+                    setVal(val)
+                    setShowTooltip(null)
+                    e.preventDefault()
+                    e.stopPropagation()
+                    console.log(`clicked link: ${name}`)
+                }}>{name}</a>
+                return (
+                    <li key={idx}>
+                        {
+                            isCurVal
+                                ? (
+                                    activeVisited
+                                        ? a(css.activeLink)
+                                        : <span>{name}</span>
+                                ) : a()
+                        }
+                        {' '}
+                        <OverlayTrigger
+                            trigger={["focus", "click"]}
+                            onToggle={shown => {
+                                if (shown) {
+                                    console.log("showing:", name)
+                                    setShowTooltip(name)
+                                } else if (name == showTooltip) {
+                                    console.log("hiding:", name)
+                                    setShowTooltip(null)
+                                }
+                            }}
+                            show={name == showTooltip}
+                            placement={"right"}
+                            overlay={overlay}
+                        >
+                            <span
+                                className={css.info}
+                                style={{ opacity: name == showTooltip ? 0.5 : 1 }}
+                                onClick={e => {
+                                    console.log("info click:", name, name == showTooltip)
+                                    e.stopPropagation()
+                                }}
+                            >ℹ️</span>
+                        </OverlayTrigger>
+                    </li>
+                )
+            })
+        }</ul>
+    ]
+}
+
 export default function Page() {
     const [ logLevel, setLogLevel ] = useState<LogLevel>("info")
     return <Apvd logLevel={logLevel}>{() => <Body logLevel={logLevel} setLogLevel={setLogLevel} />}</Apvd>
@@ -201,67 +268,157 @@ export default function Page() {
 
 declare var window: any;
 
-export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLevel: Dispatch<LogLevel>, }) {
-    const getInitialLayout = () => {
-        const lastStepStr = localStorage.getItem("lastStep")
-        if (!lastStepStr) {
-            return SymmetricCircleDiamond
-            // return SymmetricCircleLattice,
-            // return Disjoint
-            // return Ellipses4t
-            // return Ellipses4t2
-            // return Ellipses4
-            // return TwoOverOne
-            // return Lattice_0_1
+export const initialLayoutKey = "initialLayout"
+export const lastShapesKey = "lastStep"
+export const targetsKey = "targets"
+
+const layouts: LinkItem<InitialLayout>[] = [
+    { name: "Ellipses", val: Ellipses4t, description: "4 ellipses intersecting to form all 15 possible regions, rotated -45°", },
+    { name: "Ellipses (axis-aligned)", val: Ellipses4, description: "Same as above, but ellipse axes are horizontal/vertical (and rotation is disabled)", },
+    { name: "CircleDiamond", val: SymmetricCircleDiamond, description: "4 circles in a diamond shape, such that 2 different subsets (of 3) are symmetric, and 11 of 15 possible regions are represented (missing 2 4C2's and 2 4C3's).", },
+    { name: "Disjoint", val: Disjoint, description: "4 disjoint circles" },
+    // { name: "CircleLattice", layout: SymmetricCircleLattice, description: "4 circles centered at (0,0), (0,1), (1,0), (1,1)", },
+]
+const layoutsMap = new Map(layouts.map(({ name, val }) => [ name, val ]))
+
+function makeVars(initialSets: S[]) {
+    // Create Vars
+    const allCoords: Coord[][] = initialSets.map(({shape: {kind}}) => {
+        switch (kind) {
+            case 'Circle':
+                return CircleCoords
+            case 'XYRR':
+                return XYRRCoords
+            case 'XYRRT':
+                return XYRRTCoords
         }
-        return JSON.parse(lastStepStr)
-    }
-    const [ initialLayout, setInitialLayout] = useState<InitialLayout>(getInitialLayout)
-    //const [ layout, setLayout ] = useState<InitialLayout>(initialLayout)
-    const layouts = [
-        { name: "4 Ellipses", layout: Ellipses4t, description: "4 ellipses intersecting to form all 15 possible regions, rotated -45°", },
-        { name: "4 Ellipses (axis-aligned)", layout: Ellipses4, description: "Same as above, but ellipse axes are horizontal/vertical (and rotation is disabled)", },
-        { name: "CircleDiamond", layout: SymmetricCircleDiamond, description: "4 circles in a diamond shape, such that 2 different subsets (of 3) are symmetric, and 11 of 15 possible regions are represented (missing 2 4C2's and 2 4C3's).", },
-        { name: "Disjoint", layout: Disjoint, description: "4 disjoint circles" },
-        // { name: "CircleLattice", layout: SymmetricCircleLattice, description: "4 circles centered at (0,0), (0,1), (1,0), (1,1)", },
+    })
+    const numCoords = ([] as string[]).concat(...allCoords).length
+    const skipVars: Coord[][] = [
+        // Fix all coords of shapes[0], it is the unit circle centered at the origin, WLOG
+        // CircleCoords,
+        // XYRRCoords,
+        // Fix shapes[1].y. This can be done WLOG if it's a Circle. Having the second shape be an XYRR (aligned
+        // ellipse, no rotation) is effectively equivalent to it being an XYRRT (ellipse with rotation allowed),
+        // but where the rotation has been factored out WLOG.
+        // ['y'],
     ]
+    const numSkipVars = ([] as string[]).concat(...skipVars).length
+    const numVars = numCoords - numSkipVars
+    const filteredCoords = allCoords.map(
+        (circleVars, idx) =>
+            circleVars.filter(v =>
+                !(skipVars[idx] || []).includes(v)
+            )
+    )
+    const coords: VarCoord[] = []
+    filteredCoords.forEach((shapeVars, shapeIdx) => {
+        shapeVars.forEach(shapeVar => {
+            coords.push([shapeIdx, shapeVar])
+        })
+    })
+    console.log(`${coords.length} coords`)
 
-    const getInitialTargets = () => {
-        const lastTargetsStr = localStorage.getItem("lastTargets")
-        if (!lastTargetsStr) {
-            // return FizzBuzz
-            return FizzBuzzBazz
-            // return FizzBuzzBazzQux
-            // return VariantCallers
-            // return ThreeEqualCircles
-            // return CentroidRepel
+    function getVal(step: Step, varIdx: number): number | null {
+        const [setIdx, coord] = coords[varIdx]
+        // console.log("getVal:", setIdx, varIdx, coord)
+        const {shape} = step.sets[setIdx]
+        let shapeGetters, shapeCoord
+        switch (shape.kind) {
+            case "Circle":
+                shapeGetters = CircleFloatGetters
+                shapeCoord = coord as CircleCoord
+                if (!(shapeCoord in shapeGetters)) {
+                    console.warn(`Circle coord ${shapeCoord} not found in`, shapeGetters)
+                    return null
+                } else {
+                    return CircleFloatGetters[coord as CircleCoord](shape)
+                }
+            case "XYRR":
+                shapeGetters = XYRRFloatGetters
+                shapeCoord = coord as XYRRCoord
+                if (!(shapeCoord in shapeGetters)) {
+                    console.warn(`XYRR coord ${shapeCoord} not found in`, shapeGetters)
+                    return null
+                } else {
+                    return XYRRFloatGetters[coord as XYRRCoord](shape)
+                }
+            case "XYRRT":
+                shapeGetters = XYRRTFloatGetters
+                shapeCoord = coord as XYRRTCoord
+                if (!(shapeCoord in shapeGetters)) {
+                    console.warn(`XYRRT coord ${shapeCoord} not found in`, shapeGetters)
+                    return null
+                } else {
+                    return XYRRTFloatGetters[coord as XYRRTCoord](shape)
+                }
         }
-        return JSON.parse(lastTargetsStr)
     }
-    const [ rawTargets, setTargets ] = useState<Target[]>(getInitialTargets)
 
-    const { targets, expandedTargets, expandedTargetsMap, numShapes, initialSets } = useMemo(
+    const vars: Vars = {
+        allCoords,
+        numCoords,
+        skipVars,
+        numSkipVars,
+        vars: filteredCoords,
+        numVars,
+        coords,
+        getVal,
+    }
+
+    return vars
+}
+
+export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLevel: Dispatch<LogLevel>, }) {
+    const [ initialLayout, setInitialLayout] = useLocalStorageState<InitialLayout>(initialLayoutKey, { defaultValue:
+        SymmetricCircleDiamond
+        // SymmetricCircleLattice
+        // Disjoint
+        // Ellipses4t
+        // Ellipses4t2
+        // Ellipses4
+        // TwoOverOne
+        // Lattice_0_1
+    })
+    const [ initialShapes, setInitialShapes ] = useState<Shape<number>[]>(() => {
+        const str = localStorage.getItem(lastShapesKey)
+        if (!str) return initialLayout.map(s => toShape(s))
+        return JSON.parse(str)
+    })
+    // console.log("initialLayout:", initialLayout)
+    // console.log("initialShapes:", initialShapes)
+    const [ rawTargets, setTargets ] = useLocalStorageState<Target[]>(targetsKey, { defaultValue:
+        // FizzBuzz
+        FizzBuzzBazz
+        // FizzBuzzBazzQux
+        // VariantCallers
+        // ThreeEqualCircles
+        // CentroidRepel
+    })
+
+    const { targets, expandedTargets, expandedTargetsMap, numShapes, initialSets  } = useMemo(
         () => {
             const targets = rawTargets
             const numShapes = targets[0][0].length
             const initialSets =
-                    initialLayout
-                        .slice(0, numShapes)
-                        .map((s, idx) => {
-                            const shape = toShape(s)
-                            return {
-                                idx,
-                                name: String.fromCharCode('A'.charCodeAt(0) + idx),
-                                color: colors[idx],
-                                shape: shape,
-                            }
-                        })
+                initialShapes
+                    .slice(0, numShapes)
+                    .map((s, idx) => {
+                        const shape = toShape(s)
+                        return {
+                            idx,
+                            name: String.fromCharCode('A'.charCodeAt(0) + idx),
+                            color: colors[idx],
+                            shape: shape,
+                        }
+                    })
             const expandedTargets = apvd.expand_targets(targets).all as Map<string, number>
             const expandedTargetsMap = expandedTargets ? fromEntries(expandedTargets) : null
-            // console.log("updated targets block:", targets, numShapes, initialSets)
+            console.log("updated targets block:", targets[0][0], numShapes, initialSets, "layout:", initialLayout.length)
+
             return { targets, numShapes, initialSets, expandedTargets, expandedTargetsMap, }
         },
-        [ rawTargets, initialLayout, ]
+        [ rawTargets, initialShapes, ]
     )
 
     const gridState = GridState({
@@ -279,22 +436,13 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
         showGrid: [ showGrid, setShowGrid ],
     } = gridState
 
-    const expandSettingsSection = false
-    const expandTargetsSection = true
-    const expandExamplesSection = false
-    const expandErrorPlotSection = true
-    const expandVarsSection = true
-    const expandShapesSection = true
-    const expandLayoutsSection = false
-    const [ settingsShown, setSettingsShown ] = useState(expandSettingsSection)
-    const [ targetsShown, setTargetsShown ] = useState(expandTargetsSection)
-    const [ examplesShown, setExamplesShown ] = useState(expandExamplesSection)
-    const [ errorPlotShown, setErrorPlotShown ] = useState(expandErrorPlotSection)
-    const [ varsShown, setVarsShown ] = useState(expandVarsSection)
-    const [ shapesShown, setShapesShown ] = useState(expandShapesSection)
-    const [ layoutsShown, setLayoutsShown ] = useState(expandLayoutsSection)
-
-    const [ showExampleTooltip, setShowExampleTooltip ] = useState<string | null>(null)
+    const [ settingsShown, setSettingsShown ] = useLocalStorageState("settingsShown", { defaultValue: false, })
+    const [ targetsShown, setTargetsShown ] = useLocalStorageState("targetsShown", { defaultValue: false, })
+    const [ examplesShown, setExamplesShown ] = useLocalStorageState("examplesShown", { defaultValue: false, })
+    const [ errorPlotShown, setErrorPlotShown ] = useLocalStorageState("errorPlotShown", { defaultValue: false, })
+    const [ varsShown, setVarsShown ] = useLocalStorageState("varsShown", { defaultValue: false, })
+    const [ shapesShown, setShapesShown ] = useLocalStorageState("shapesShown", { defaultValue: false, })
+    const [ layoutsShown, setLayoutsShown ] = useLocalStorageState("layoutsShown", { defaultValue: false, })
 
     const [ maxErrorRatioStepSize, setMaxErrorRatioStepSize ] = useState(0.5)
     const [ maxSteps, setMaxSteps ] = useState(10000)
@@ -325,118 +473,29 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
         [ modelStepIdx, setModelStepIdx, vStepIdx, setVStepIdx, ]
     )
 
-    const curStep: Step | null = useMemo(
+    const [ curStep, sets ] = useMemo(
         () => {
-            // console.log("curStep memo:", stepIdx, model)
-            return (!model || stepIdx === null) ? null : model.steps[stepIdx]
-        },
-        [ model, stepIdx ]
-    )
+            if (!model || stepIdx === null) return [ null, null ]
+            const curStep = model.steps[stepIdx]
+            // Save current shapes to localStorage
+            const shapes = curStep.sets.map(({ shape }) => shape)
+            localStorage.setItem(lastShapesKey, JSON.stringify(shapes))
+            const sets = curStep.sets.map(set => ({ ...initialSets[set.idx], ...set, }))
 
-    // Save curStep to localStorage
-    useEffect(
-        () => {
-            if (!curStep) return
-            const shapes: InitialLayout = curStep.sets.map(({ shape }) => shape)
-            localStorage.setItem("lastStep", JSON.stringify(shapes))
+            return [ curStep, sets ]
         },
-        [ curStep, ]
+        [ model, stepIdx, initialSets, ]
     )
 
     // Save targets to localStorage
     useEffect(
         () => {
-            localStorage.setItem("lastTargets", JSON.stringify(targets))
+            localStorage.setItem(targetsKey, JSON.stringify(targets))
         },
         [ targets, ]
     )
 
-    const sets: S[] | null = useMemo(
-        () => curStep && curStep.sets.map(set => ({ ...initialSets[set.idx], ...set, })),
-        [ curStep, initialSets, numShapes ],
-    )
-
-    const vars: Vars = useMemo(
-        () => {
-            const allCoords: Coord[][] = initialSets.map(({ shape: { kind } }) => {
-                switch (kind) {
-                    case 'Circle': return CircleCoords
-                    case 'XYRR': return XYRRCoords
-                    case 'XYRRT': return XYRRTCoords
-                }
-            })
-            const numCoords = ([] as string[]).concat(...allCoords).length
-            const skipVars: Coord[][] = [
-                // Fix all coords of shapes[0], it is the unit circle centered at the origin, WLOG
-                // CircleCoords,
-                // XYRRCoords,
-                // Fix shapes[1].y. This can be done WLOG if it's a Circle. Having the second shape be an XYRR (aligned
-                // ellipse, no rotation) is effectively equivalent to it being an XYRRT (ellipse with rotation allowed),
-                // but where the rotation has been factored out WLOG.
-                // ['y'],
-            ]
-            const numSkipVars = ([] as string[]).concat(...skipVars).length
-            const numVars = numCoords - numSkipVars
-            const vars = allCoords.map(
-                (circleVars, idx) =>
-                    circleVars.filter(v =>
-                        !(skipVars[idx] || []).includes(v)
-                    )
-            )
-            const coords: VarCoord[] = []
-            vars.forEach((shapeVars, shapeIdx) => {
-                shapeVars.forEach(shapeVar => {
-                    coords.push([ shapeIdx, shapeVar ])
-                })
-            })
-            function getVal(step: Step, varIdx: number): number | null {
-                const [ setIdx, coord ] = coords[varIdx]
-                const { shape } = step.sets[setIdx]
-                let shapeGetters, shapeCoord
-                switch (shape.kind) {
-                    case "Circle":
-                        shapeGetters = CircleFloatGetters
-                        shapeCoord = coord as CircleCoord
-                        if (!(shapeCoord in shapeGetters)) {
-                            console.warn(`Coord ${shapeCoord} not found in`, shapeGetters)
-                            return null
-                        } else {
-                            return CircleFloatGetters[coord as CircleCoord](shape)
-                        }
-                    case "XYRR":
-                        shapeGetters = XYRRFloatGetters
-                        shapeCoord = coord as XYRRCoord
-                        if (!(shapeCoord in shapeGetters)) {
-                            console.warn(`Coord ${shapeCoord} not found in`, shapeGetters)
-                            return null
-                        } else {
-                            return XYRRFloatGetters[coord as XYRRCoord](shape)
-                        }
-                    case "XYRRT":
-                        shapeGetters = XYRRTFloatGetters
-                        shapeCoord = coord as XYRRTCoord
-                        if (!(shapeCoord in shapeGetters)) {
-                            console.warn(`Coord ${shapeCoord} not found in`, shapeGetters)
-                            return null
-                        } else {
-                            return XYRRTFloatGetters[coord as XYRRTCoord](shape)
-                        }
-                }
-            }
-            return {
-                allCoords,
-                numCoords,
-                skipVars,
-                numSkipVars,
-                vars,
-                numVars,
-                coords,
-                getVal,
-            }
-        },
-        [ initialSets, ],
-    )
-
+    // Save latest `model` to `window`, for debugging
     useEffect(
         () => {
             if (typeof window !== 'undefined') {
@@ -445,6 +504,8 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
         },
         [ model,]
     )
+
+    const [ vars, setVars ] = useState<Vars | null>(null)
 
     // Initialize model, stepIdx
     useEffect(
@@ -455,6 +516,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
             // - c1.y = 0 (only x and r can move)
             // resulting in 4 fewer free variables.
             let curIdx = 0
+            const vars = makeVars(initialSets)
             const { numVars, skipVars } = vars
             const inputs = initialSets.map((set: S, shapeIdx: number) => {
                 const shape = set.shape;
@@ -479,8 +541,9 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
             console.log("new model:", model)
             setModel(model)
             setStepIdx(0)
+            setVars(vars)
         },
-        [ vars, initialSets, targets, ]
+        [ initialSets, targets, ]
     )
 
     const fwdStep = useCallback(
@@ -1137,12 +1200,12 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     )
 
     const fizzBuzzLink = <A href={"https://en.wikipedia.org/wiki/Fizz_buzz"}>Fizz Buzz</A>
-    const exampleTargets = [
-        { name: "Fizz Buzz", targets: FizzBuzz, description: <>2 circles, of size 1/3 and 1/5, representing integers divisible by 3 and by 5. Inspired by {fizzBuzzLink}.</> },
-        { name: "Fizz Buzz Bazz", targets: FizzBuzzBazz, description: <>Extended version of {fizzBuzzLink} above, with 3 sets, representing integers divisible by 3, 5, or 7. This is impossible to model accurately with 3 circles, but possible with ellipses.</> },
-        { name: "Fizz Buzz Bazz Qux", targets: FizzBuzzBazzQux, description: <>Extended version of {fizzBuzzLink} above, with 4 sets, representing integers divisible by 2, 3, 5, or 7. This is impossible to model accurately even with 4 ellipses, but gradient descent gets as close as it can.</> },
-        { name: "3 symmetric sets", targets: ThreeEqualCircles, description: <>Simple test case, 3 circles, one starts slightly off-center from the other two, "target" ratios require the 3 circles to be in perfectly symmetric position with each other.</> },
-        { name: "Variant callers", targets: VariantCallers, description: <>Values from <A href={"https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3753564/pdf/btt375.pdf"}>Roberts et al (2013)</A>, "A comparative analysis of algorithms for somatic SNV detection
+    const exampleTargets: LinkItem<Target[]>[] = [
+        { name: "Fizz Buzz", val: FizzBuzz, description: <>2 circles, of size 1/3 and 1/5, representing integers divisible by 3 and by 5. Inspired by {fizzBuzzLink}.</> },
+        { name: "Fizz Buzz Bazz", val: FizzBuzzBazz, description: <>Extended version of {fizzBuzzLink} above, with 3 sets, representing integers divisible by 3, 5, or 7. This is impossible to model accurately with 3 circles, but possible with ellipses.</> },
+        { name: "Fizz Buzz Bazz Qux", val: FizzBuzzBazzQux, description: <>Extended version of {fizzBuzzLink} above, with 4 sets, representing integers divisible by 2, 3, 5, or 7. Impossible to model exactly even with 4 ellipses (AFAIK!), but gradient descent gets as close as it can.</> },
+        { name: "3 symmetric sets", val: ThreeEqualCircles, description: <>Simple test case, 3 circles, one starts slightly off-center from the other two, "target" ratios require the 3 circles to be in perfectly symmetric position with each other.</> },
+        { name: "Variant callers", val: VariantCallers, description: <>Values from <A href={"https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3753564/pdf/btt375.pdf"}>Roberts et al (2013)</A>, "A comparative analysis of algorithms for somatic SNV detection
                 in cancer," Fig. 3</>}
     ]
 
@@ -1171,22 +1234,6 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
         [ curStep ],
     )
 
-    useEffect(
-        () => {
-            const bodyClickHandler = () => {
-                console.log("body click")
-                setShowExampleTooltip(null)
-            }
-            console.log("add bodyClickHandler")
-            document.body.addEventListener('click', bodyClickHandler)
-            return () => {
-                console.log("remove bodyClickHandler")
-                document.body.removeEventListener('click', bodyClickHandler)
-            }
-        },
-        []
-    )
-
     const centerDot =
         <circle
             cx={gridCenter.x}
@@ -1197,6 +1244,50 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
             fill={"black"}
             fillOpacity={0.8}
         />
+
+    const setTargetsLink = useCallback(
+        (v: Target[]) => {
+            setTargets(v)
+            setInitialShapes(initialLayout.map(s => toShape(s)))
+        },
+        [ setTargets, setInitialShapes, initialLayout, ]
+    )
+    const [ clearExampleTooltip, exampleLinks ] = Links({
+        links: exampleTargets,
+        cur: targets,
+        setVal: setTargetsLink,
+        activeVisited: true,
+    })
+    const setLayoutLink = useCallback(
+        (v: InitialLayout) => {
+            setInitialLayout(v)
+            setInitialShapes(v.map(s => toShape(s)))
+        },
+        [ setInitialLayout, setInitialShapes, ]
+    )
+    const [ clearLayoutTooltip, layoutLinks ] = Links({
+        links: layouts,
+        cur: initialLayout,
+        setVal: setLayoutLink,
+        activeVisited: true,
+    })
+
+    useEffect(
+        () => {
+            const bodyClickHandler = () => {
+                console.log("body click")
+                clearExampleTooltip()
+                clearLayoutTooltip()
+            }
+            console.log("add bodyClickHandler")
+            document.body.addEventListener('click', bodyClickHandler)
+            return () => {
+                console.log("remove bodyClickHandler")
+                document.body.removeEventListener('click', bodyClickHandler)
+            }
+        },
+        []
+    )
 
     return (
         <div className={css.body}>
@@ -1292,7 +1383,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                     </div>
                     <div className={`${col6} ${css.settings}`}>
                         <Details
-                            open={expandSettingsSection}
+                            open={settingsShown}
                             toggle={setSettingsShown}
                             summary={"⚙️"}
                         >
@@ -1337,10 +1428,11 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                     <div className={`${col7}`}>
                         <DetailsSection
                             title={"Targets"}
-                            open={expandTargetsSection}
+                            open={targetsShown}
                             toggle={setTargetsShown}
                             tooltip={"Desired sizes for each subset, and current deltas/errors"}
-                            className={css.targets}>
+                            className={css.targets}
+                        >
                             {
                                 model && curStep && expandedTargets && error && sparkLineCellProps &&
                                 <TargetsTable
@@ -1356,65 +1448,32 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                             <Checkbox label={"Disjoint sets"} checked={showDisjointSets}
                                       setChecked={setShowDisjointSets}/>
                         </DetailsSection>
-                        <DetailsSection title={"Examples"} open={expandExamplesSection} toggle={setExamplesShown}>
-                            <ul style={{ listStyle: "none", }}>{
-                                exampleTargets.map(({ name, targets: tgts, description }, idx) => {
-                                    const overlay = <Tooltip onClick={e => console.log("tooltip click:", name)}>{description}</Tooltip>
-                                    return (
-                                        <li key={idx}>
-                                            {
-                                                targets == tgts
-                                                    ? <span>{name}</span>
-                                                    : <a href={"#"} onClick={e => {
-                                                        setTargets(tgts)
-                                                        setShowExampleTooltip(null)
-                                                        e.preventDefault()
-                                                        e.stopPropagation()
-                                                        console.log(`clicked example link: ${name}`)
-                                                    }}>{name}</a>
-                                            }
-                                            {' '}
-                                            <OverlayTrigger
-                                                trigger={["focus", "click"]}
-                                                onToggle={shown => {
-                                                    if (shown) {
-                                                        console.log("showing:", name)
-                                                        setShowExampleTooltip(name)
-                                                    } else if (name == showExampleTooltip) {
-                                                        console.log("hiding:", name)
-                                                        setShowExampleTooltip(null)
-                                                    }
-                                                }}
-                                                show={name == showExampleTooltip}
-                                                placement={"right"}
-                                                overlay={overlay}
-                                            >
-                                                <span
-                                                    className={css.info}
-                                                    style={{ opacity: name == showExampleTooltip ? 0.5 : 1 }}
-                                                    onClick={e => {
-                                                        console.log("info click:", name, name == showExampleTooltip)
-                                                        e.stopPropagation()
-                                                    }}
-                                                >ℹ️</span>
-                                            </OverlayTrigger>
-                                        </li>
-                                    )
-                                })
-                            }</ul>
+                        <DetailsSection
+                            title={"Examples"}
+                            open={examplesShown}
+                            toggle={setExamplesShown}
+                            tooltip={"Sample \"target\" sets (region and overlap sizes) to gradient descend toward"}
+                        >
+                            {exampleLinks}
                         </DetailsSection>
                         <DetailsSection
-                            title={"Error"}
-                            open={expandErrorPlotSection}
+                            title={"Error Plot"}
+                            open={errorPlotShown}
                             toggle={setErrorPlotShown}
+                            tooltip={"Overall error (sum of differences between actual and target region sizes) over time"}
                             onMouseOut={() => setVStepIdx(null)}
                         >
                             {plot}
                         </DetailsSection>
                     </div>
                     <div className={col5}>
-                        <DetailsSection title={"Vars"} open={expandVarsSection} toggle={setVarsShown} tooltip={"Shapes' coordinates: raw values, and overall error gradient with respect to each coordinate"}>{
-                            curStep && sets && error && sparkLineCellProps &&
+                        <DetailsSection
+                            title={"Vars"}
+                            open={varsShown}
+                            toggle={setVarsShown}
+                            tooltip={"Shapes' coordinates: raw values, and overall error gradient with respect to each coordinate"}
+                        >{
+                            curStep && vars && sets && error && sparkLineCellProps &&
                             <VarsTable
                                 vars={vars}
                                 sets={sets}
@@ -1423,50 +1482,52 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                                 {...sparkLineCellProps}
                             />
                         }</DetailsSection>
-                        <DetailsSection title={"Shapes"} open={expandShapesSection} toggle={setShapesShown}>
-                            <ShapesTable sets={sets || []} vars={vars} />
+                        <DetailsSection
+                            title={"Shapes"}
+                            open={shapesShown}
+                            toggle={setShapesShown}
+                            tooltip={"\"Wide\" version of the \"Vars\" table above. View shapes' dimensions/coordinates, copy to clipboard"}
+                        >
+                            {vars && <ShapesTable sets={sets || []} vars={vars}/>}
                             <div>
                                 Click to copy:{' '}
-                                <OverlayTrigger overlay={<Tooltip><pre className={css.shapeTextTooltip}>{shapeTextJS}</pre></Tooltip>}>
-                                    <span className={css.copyText} onClick={() => shapeTextJS && navigator.clipboard.writeText(shapeTextJS)
-                                    }>JS</span>
+                                <OverlayTrigger overlay={<Tooltip>
+                                    <pre className={css.shapeTextTooltip}>{shapeTextJS}</pre>
+                                </Tooltip>}>
+                                    <span className={css.copyText}
+                                          onClick={() => shapeTextJS && navigator.clipboard.writeText(shapeTextJS)
+                                          }>JS</span>
                                 </OverlayTrigger>,{' '}
-                                <OverlayTrigger overlay={<Tooltip><pre className={css.shapeTextTooltip}>{shapeTextRust}</pre></Tooltip>}>
-                                    <span className={css.copyText} onClick={() => shapeTextRust && navigator.clipboard.writeText(shapeTextRust)}>Rust</span>
+                                <OverlayTrigger overlay={<Tooltip>
+                                    <pre className={css.shapeTextTooltip}>{shapeTextRust}</pre>
+                                </Tooltip>}>
+                                    <span className={css.copyText}
+                                          onClick={() => shapeTextRust && navigator.clipboard.writeText(shapeTextRust)}>Rust</span>
                                 </OverlayTrigger>,{' '}
-                                <OverlayTrigger overlay={<Tooltip><pre className={css.shapeTextTooltip}>{shapeTextJSON}</pre></Tooltip>}>
-                                    <span className={css.copyText} onClick={() => shapeTextJSON && navigator.clipboard.writeText(shapeTextJSON)}>JSON</span>
+                                <OverlayTrigger overlay={<Tooltip>
+                                    <pre className={css.shapeTextTooltip}>{shapeTextJSON}</pre>
+                                </Tooltip>}>
+                                    <span className={css.copyText}
+                                          onClick={() => shapeTextJSON && navigator.clipboard.writeText(shapeTextJSON)}>JSON</span>
                                 </OverlayTrigger>
                             </div>
                         </DetailsSection>
-                        <DetailsSection title={"Layouts"} open={expandLayoutsSection} toggle={setLayoutsShown}>
-                            <ul style={{ listStyle: "none", }}>{
-                                layouts.map(({ name, layout, description }, idx) => {
-                                    const overlay = <Tooltip>{description}</Tooltip>
-                                    return (
-                                        <li key={idx}>
-                                            <OverlayTrigger overlay={overlay}>
-                                                <a href={"#"} onClick={() => {
-                                                    setInitialLayout([ ...layout ])
-                                                    panZoom(1)
-                                                }}>{name}</a>
-                                            </OverlayTrigger>
-                                            {' '}
-                                            <OverlayTrigger trigger="click" placement="right" overlay={overlay}>
-                                                <span className={css.info}>ℹ️</span>
-                                            </OverlayTrigger>
-                                        </li>
-                                    )
-                                })
-                            }</ul>
-                        </DetailsSection>
+                        <DetailsSection
+                            title={"Layouts"}
+                            open={layoutsShown}
+                            toggle={setLayoutsShown}
+                            tooltip={"Example shape arrangements (to start gradient descent from)"}
+                        >{
+                            layoutLinks
+                        }</DetailsSection>
                     </div>
                 </div>
                 <hr />
                 <div className={`row`}>
                     <div className={col12}>
-                        <h3>Differentiable shape-intersection</h3>
-                        <p>Given "target" values:</p>
+                        <h2><span style={{fontWeight: "bold"}}>∧</span>p<span style={{fontWeight: "bold"}}>∨</span>d</h2>
+                        <p>Area-Proportional Venn-Diagrams</p>
+                        <p>Given "target" values (desired sizes for up to 4 sets, and all possible subsets):</p>
                         <ul>
                             <li>Model each set with an ellipse</li>
                             <li>Compute intersections and areas (using "<A href={"https://en.wikipedia.org/wiki/Dual_number"}>dual numbers</A>" to preserve derivatives)</li>
@@ -1474,7 +1535,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                         </ul>
                         <h4>See also</h4>
                         <ul>
-                            <li><A href={"https://github.com/runsascoded/shapes"}>runsascoded/shapes</A>: Rust implementation of differentiable shape-intersection</li>
+                            <li><A href={"https://github.com/runsascoded/shapes"}>runsascoded/shapes</A>: differentiable shape-intersections in Rust (compiled to WASM for use here)</li>
                             <li><A href={"https://github.com/runsascoded/apvd"}>runsascoded/apvd</A>: this app</li>
                             <li><A href={"/ellipses"}>Ellipse-intersection demo</A> (earlier version, draggable but non-differentiable)</li>
                         </ul>
