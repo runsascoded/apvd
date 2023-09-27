@@ -1,5 +1,5 @@
 import Grid, {GridState} from "../src/components/grid"
-import React, {DetailedHTMLProps, Dispatch, HTMLAttributes, InputHTMLAttributes, ReactNode, useCallback, useEffect, useMemo, useState} from "react"
+import React, {DetailedHTMLProps, Dispatch, HTMLAttributes, InputHTMLAttributes, ReactNode, useCallback, useEffect, useMemo, useRef, useState} from "react"
 import * as apvd from "apvd"
 import {train} from "apvd"
 import {makeModel, Model, Region, Step} from "../src/lib/regions"
@@ -455,11 +455,10 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     const [ runningState, setRunningState ] = useState<RunningState>("none")
     const [ frameLen, setFrameLen ] = useState(0)
     const [ autoCenter, setAutoCenter ] = useLocalStorageState("autoCenter", { defaultValue: true })
-    const [ autoCenterInterpRate, setAutoCenterInterpRate ] = useState(0.08)
+    const [ autoCenterInterpRate, setAutoCenterInterpRate ] = useState(1)
     const [ setLabelDistance, setSetLabelDistance ] = useState(0.15)
     const [ setLabelSize, setSetLabelSize ] = useState(20)
     const [ showDisjointSets, setShowDisjointSets ] = useLocalStorageState("showDisjointSets", { defaultValue: false })
-    const [ doPanZoomWarp, setDoPanZoomWarp ] = useState(false)
 
     const [ stepIdx, setStepIdx ] = useMemo(
         () => {
@@ -974,7 +973,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
         () => {
             const exteriorRegions: { [name: string]: { setIdx: number, region: Region } } = {}
             curStep && sets && values(largestRegions).forEach(region => {
-                const { key, area } = region;
+                const { key } = region;
                 const idxChars = key.replaceAll('-', '').split('')
                 if (idxChars.length == 1) {
                     const [ idxChar ] = idxChars
@@ -1022,7 +1021,6 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     const setLabels = useMemo(
         () => setLabelPoints && <g id={"setLabels"}>{
             entries(setLabelPoints).map(([ label, { x, y } ]) => {
-                const r = setLabelDistance
                 return (
                     <text
                         key={label}
@@ -1071,7 +1069,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
 
     const panZoom = useCallback(
         (interp: number) => {
-            if (!boundingBox) return
+            if (!boundingBox || !interp) return
             const [ lo, hi ] = boundingBox
             const sceneCenter = { x: (lo.x + hi.x) / 2, y: (lo.y + hi.y) / 2, }
             const width = hi.x - lo.x
@@ -1086,6 +1084,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                 setScale(newScale)
             }
             if (newCenter.x !== gridCenter.x || newCenter.y !== gridCenter.y) {
+                // console.log("updating gridCenter:", gridCenter, newCenter)
                 setGridCenter(newCenter)
             }
         },
@@ -1094,32 +1093,28 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
 
     useEffect(
         () => {
+            if (!autoCenter) return
             if (stepIdx == 0) {
-                console.log("Model start, panZoom warp")
+                // console.log("setDoPanZoom(1): model start, panZoom warp")
                 panZoom(1)
                 return
             }
-            if (!autoCenter || runningState == 'none') return
+            if (runningState == 'none') return
+            // console.log(`setDoPanZoom(${autoCenterInterpRate}): autoCenter`)
             panZoom(autoCenterInterpRate)
         },
-        [ curStep, stepIdx, runningState, autoCenterInterpRate, panZoom ]
+        [ curStep, stepIdx, runningState, autoCenterInterpRate, autoCenter, ]
     )
 
     useEffect(
         () => {
-            // console.log("panZoom warp: vStepIdx", vStepIdx)
+            // "Warp" to current scene bounding-box in response to a "virtual" stepIdx change (e.g. mousing over history
+            // slider or error plot)
+            if (!autoCenter) return
+            // console.log("setDoPanZoom(1): vStepIdx warp", vStepIdx)
             panZoom(1)
         },
-        [ vStepIdx, panZoom ]
-    )
-
-    useEffect(
-        () => {
-            if (!doPanZoomWarp) return
-            setDoPanZoomWarp(false)
-            panZoom(1)
-        },
-        [ doPanZoomWarp, panZoom ]
+        [ vStepIdx, autoCenter ]
     )
 
     const regionTooltips = useMemo(
@@ -1340,8 +1335,8 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
                                 <PlaybackControl title={"Jump to last computed step"} hotkey={"⌘→"} onClick={() => {
                                     if (!model) return
                                     setStepIdx(model.steps.length - 1)
-                                    console.log("panZoom warp: seek to end")
-                                    setDoPanZoomWarp(true)
+                                    // console.log("setDoPanZoom(1): warp to end")
+                                    panZoom(1)
                                 }} disabled={!model || stepIdx === null || stepIdx + 1 == model.steps.length}>⏭️</PlaybackControl>
                             </div>
                             <div className={css.stepStats}>
