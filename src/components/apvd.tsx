@@ -4,10 +4,9 @@ import init_apvd, {init_logs, update_log_level} from "apvd";
 export type LogLevel = "debug" | "info" | "warn" | "error"
 
 export type Props = {
-    logLevel: LogLevel
     children: () => ReactNode
 }
-export default function Apvd({ logLevel, children }: Props) {
+export default function Apvd({ children }: Props) {
     // Initialize wasm library
     const [ apvdInitialized, setApvdInitialized ] = useState(false)
     useEffect(
@@ -18,15 +17,6 @@ export default function Apvd({ logLevel, children }: Props) {
             })
         },
         []
-    );
-
-    // WASM log level
-    useEffect(
-        () => {
-            if (!apvdInitialized) return
-            update_log_level(logLevel)
-        },
-        [ apvdInitialized, logLevel, ]
     );
 
     return apvdInitialized ? <>{children()}</> : <div>Loading...</div>

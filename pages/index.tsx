@@ -1,7 +1,9 @@
+'use client'
+
 import Grid, {GridState} from "../src/components/grid"
 import React, {DetailedHTMLProps, Dispatch, HTMLAttributes, InputHTMLAttributes, ReactNode, useCallback, useEffect, useMemo, useRef, useState} from "react"
 import * as apvd from "apvd"
-import {train} from "apvd"
+import {train, update_log_level} from "apvd"
 import {makeModel, Model, Region, Step} from "../src/lib/regions"
 import {Point} from "../src/components/point"
 import css from "./index.module.scss"
@@ -24,6 +26,7 @@ import {CircleCoord, CircleCoords, CircleFloatGetters, Coord, VarCoord, Vars, XY
 import {ShapesTable} from "../src/components/tables/shapes";
 import useLocalStorageState from 'use-local-storage-state'
 import _ from "lodash"
+import {boolParam, intParam, Param, ParsedParam, parseHashParams} from "next-utils/params";
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false })
 
@@ -262,14 +265,13 @@ export function Links<Val>({ links, cur, setVal, activeVisited, }: {
 }
 
 export default function Page() {
-    const [ logLevel, setLogLevel ] = useLocalStorageState<LogLevel>("logLevel", { defaultValue: "info" })
-    return <Apvd logLevel={logLevel}>{() => <Body logLevel={logLevel} setLogLevel={setLogLevel} />}</Apvd>
+    return <Apvd>{() => <Body />}</Apvd>
 }
 
 declare var window: any;
 
 export const initialLayoutKey = "initialLayout"
-export const lastShapesKey = "lastStep"
+export const shapesKey = "shapes"
 export const targetsKey = "targets"
 
 const layouts: LinkItem<InitialLayout>[] = [
@@ -369,7 +371,36 @@ function makeVars(initialSets: S[]) {
     return vars
 }
 
-export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLevel: Dispatch<LogLevel>, }) {
+type Params = {
+    s: Param<Shape<number>[] | null>
+    t: Param<boolean>
+}
+
+type ParsedParams = {
+    s: ParsedParam<Shape<number>[] | null>
+    t: ParsedParam<boolean>
+}
+
+export const shapesParam: Param<Shape<number>[] | null> = {
+    encode(shapes: Shape<number>[] | null): string | undefined {
+        if (!shapes) return undefined
+        return encodeURIComponent(JSON.stringify(shapes))
+    },
+    decode(v: string | undefined): Shape<number>[] | null {
+        if (!v) return null
+        return JSON.parse(decodeURIComponent(v))
+    },
+}
+
+export function Body() {
+    const [ logLevel, setLogLevel ] = useLocalStorageState<LogLevel>("logLevel", { defaultValue: "info" })
+    useEffect(
+        () => {
+            update_log_level(logLevel)
+        },
+        [ logLevel, ]
+    );
+
     const [ initialLayout, setInitialLayout] = useLocalStorageState<InitialLayout>(initialLayoutKey, { defaultValue:
         SymmetricCircleDiamond
         // SymmetricCircleLattice
@@ -380,11 +411,44 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
         // TwoOverOne
         // Lattice_0_1
     })
+    // const [ shapesInUrlFragment, setShapesInUrlFragment ] = useState<boolean>(false)
+
+    const params: Params = {
+        s: shapesParam,
+        t: boolParam,
+    }
+
+    const {
+        s: [ urlFragmentShapes, setUrlFragmentShapes ],
+        t: [ targetsShown, setTargetsShown ],
+    }: ParsedParams = parseHashParams({ params })
+
+    // console.log("render: urlFragmentShapes", urlFragmentShapes)
+
     const [ initialShapes, setInitialShapes ] = useState<Shape<number>[]>(() => {
-        const str = localStorage.getItem(lastShapesKey)
+        console.log("initialShapes: hash", window.location.hash)
+        if (urlFragmentShapes) {
+            console.log("found urlFragmentShapes:", urlFragmentShapes)
+            return urlFragmentShapes
+        } else {
+            console.log("no urlFragmentShapes found")
+        }
+        const str = localStorage.getItem(shapesKey)
         if (!str) return initialLayout.map(s => toShape(s))
         return JSON.parse(str)
     })
+
+    // useEffect(
+    //     () => {
+    //         console.log("checking initial urlFragmentShapes:", urlFragmentShapes, "hash:", window.location.hash)
+    //         if (urlFragmentShapes) {
+    //             console.log("found urlFragmentShapes, setting initialShapes:", urlFragmentShapes)
+    //             setInitialShapes(urlFragmentShapes)
+    //         }
+    //     },
+    //     []
+    // )
+
     // console.log("initialLayout:", initialLayout)
     // console.log("initialShapes:", initialShapes)
     const [ rawTargets, setTargets ] = useLocalStorageState<Target[]>(targetsKey, { defaultValue:
@@ -438,7 +502,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
     } = gridState
 
     const [ settingsShown, setSettingsShown ] = useLocalStorageState("settingsShown", { defaultValue: false, })
-    const [ targetsShown, setTargetsShown ] = useLocalStorageState("targetsShown", { defaultValue: false, })
+    // const [ targetsShown, setTargetsShown ] = useLocalStorageState("targetsShown", { defaultValue: false, })
     const [ examplesShown, setExamplesShown ] = useLocalStorageState("examplesShown", { defaultValue: false, })
     const [ errorPlotShown, setErrorPlotShown ] = useLocalStorageState("errorPlotShown", { defaultValue: false, })
     const [ varsShown, setVarsShown ] = useLocalStorageState("varsShown", { defaultValue: false, })
@@ -479,7 +543,7 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
             const curStep = model.steps[stepIdx]
             // Save current shapes to localStorage
             const shapes = curStep.sets.map(({ shape }) => shape)
-            localStorage.setItem(lastShapesKey, JSON.stringify(shapes))
+            localStorage.setItem(shapesKey, JSON.stringify(shapes))
             const sets = curStep.sets.map(set => ({ ...initialSets[set.idx], ...set, }))
 
             return [ curStep, sets ]
@@ -503,6 +567,16 @@ export function Body({ logLevel, setLogLevel, }: { logLevel: LogLevel, setLogLev
             }
         },
         [ model,]
+    )
+
+    useEffect(
+        () => {
+            if (!sets) return
+            const shapes = sets.map(({ shape }) => shape)
+            console.log("setting UrlFragmentShapes:", shapes, "current hash:", window.location.hash)
+            setUrlFragmentShapes(shapes)
+        },
+        [ sets ]
     )
 
     const [ vars, setVars ] = useState<Vars | null>(null)
