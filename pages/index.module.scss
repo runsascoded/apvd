@@ -1,5 +1,13 @@
 .shapeTextTooltip {
   text-align: left;
+  &.wrap {
+    text-wrap: unset;
+  }
+}
+.copyTextTooltip {
+  div:has(.shapeTextTooltip) {
+    max-width: 80em;
+  }
 }
 
 .body {
@@ -21,6 +29,10 @@
 
   .activeLink {
     font-weight: bold;
+  }
+  .link {
+    font-size: 0.9em;
+    margin-right: 0.2em;
   }
   .content {
     max-width: 50em;
@@ -133,12 +145,16 @@
       }
       details:not([open]) {
         summary {
-          opacity: 0.7;
+          .settingsIcon {
+            opacity: 0.7;
+          }
         }
       }
       details[open] {
         summary {
-          opacity: 1;
+          .settingsIcon {
+            opacity: 1;
+          }
         }
       }
     }

@@ -26,7 +26,8 @@ import {CircleCoord, CircleCoords, CircleFloatGetters, Coord, VarCoord, Vars, XY
 import {ShapesTable} from "../src/components/tables/shapes";
 import useLocalStorageState from 'use-local-storage-state'
 import _ from "lodash"
-import {boolParam, intParam, Param, ParsedParam, parseHashParams} from "next-utils/params";
+import {boolParam, getHashMap, intParam, Param, ParsedParam, parseHashParams, updatedHash, updateHashParams} from "next-utils/params";
+import CopyLayout from "../src/components/copy-layout"
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false })
 
@@ -373,12 +374,10 @@ function makeVars(initialSets: S[]) {
 
 type Params = {
     s: Param<Shape<number>[] | null>
-    t: Param<boolean>
 }
 
 type ParsedParams = {
     s: ParsedParam<Shape<number>[] | null>
-    t: ParsedParam<boolean>
 }
 
 export const shapesParam: Param<Shape<number>[] | null> = {
@@ -415,20 +414,21 @@ export function Body() {
 
     const params: Params = {
         s: shapesParam,
-        t: boolParam,
     }
+
+    const [ shapesInUrlFragment, setShapesInUrlFragment ] = useLocalStorageState<boolean>("shapesInUrlFragment", { defaultValue: false })
 
     const {
         s: [ urlFragmentShapes, setUrlFragmentShapes ],
-        t: [ targetsShown, setTargetsShown ],
     }: ParsedParams = parseHashParams({ params })
 
     // console.log("render: urlFragmentShapes", urlFragmentShapes)
 
     const [ initialShapes, setInitialShapes ] = useState<Shape<number>[]>(() => {
-        console.log("initialShapes: hash", window.location.hash)
+        // console.log("initialShapes: hash", window.location.hash)
         if (urlFragmentShapes) {
             console.log("found urlFragmentShapes:", urlFragmentShapes)
+            setUrlFragmentShapes(null)
             return urlFragmentShapes
         } else {
             console.log("no urlFragmentShapes found")
@@ -437,17 +437,6 @@ export function Body() {
         if (!str) return initialLayout.map(s => toShape(s))
         return JSON.parse(str)
     })
-
-    // useEffect(
-    //     () => {
-    //         console.log("checking initial urlFragmentShapes:", urlFragmentShapes, "hash:", window.location.hash)
-    //         if (urlFragmentShapes) {
-    //             console.log("found urlFragmentShapes, setting initialShapes:", urlFragmentShapes)
-    //             setInitialShapes(urlFragmentShapes)
-    //         }
-    //     },
-    //     []
-    // )
 
     // console.log("initialLayout:", initialLayout)
     // console.log("initialShapes:", initialShapes)
@@ -502,7 +491,7 @@ export function Body() {
     } = gridState
 
     const [ settingsShown, setSettingsShown ] = useLocalStorageState("settingsShown", { defaultValue: false, })
-    // const [ targetsShown, setTargetsShown ] = useLocalStorageState("targetsShown", { defaultValue: false, })
+    const [ targetsShown, setTargetsShown ] = useLocalStorageState("targetsShown", { defaultValue: false, })
     const [ examplesShown, setExamplesShown ] = useLocalStorageState("examplesShown", { defaultValue: false, })
     const [ errorPlotShown, setErrorPlotShown ] = useLocalStorageState("errorPlotShown", { defaultValue: false, })
     const [ varsShown, setVarsShown ] = useLocalStorageState("varsShown", { defaultValue: false, })
@@ -537,7 +526,7 @@ export function Body() {
         [ modelStepIdx, setModelStepIdx, vStepIdx, setVStepIdx, ]
     )
 
-    const [ curStep, sets ] = useMemo(
+    const [ curStep, sets, shapes, ] = useMemo(
         () => {
             if (!model || stepIdx === null) return [ null, null ]
             const curStep = model.steps[stepIdx]
@@ -545,8 +534,7 @@ export function Body() {
             const shapes = curStep.sets.map(({ shape }) => shape)
             localStorage.setItem(shapesKey, JSON.stringify(shapes))
             const sets = curStep.sets.map(set => ({ ...initialSets[set.idx], ...set, }))
-
-            return [ curStep, sets ]
+            return [ curStep, sets, shapes ]
         },
         [ model, stepIdx, initialSets, ]
     )
@@ -567,16 +555,6 @@ export function Body() {
             }
         },
         [ model,]
-    )
-
-    useEffect(
-        () => {
-            if (!sets) return
-            const shapes = sets.map(({ shape }) => shape)
-            console.log("setting UrlFragmentShapes:", shapes, "current hash:", window.location.hash)
-            setUrlFragmentShapes(shapes)
-        },
-        [ sets ]
     )
 
     const [ vars, setVars ] = useState<Vars | null>(null)
@@ -1113,9 +1091,8 @@ export function Body() {
         () => {
             if (!curStep) return
             const shapesBox =
-                curStep
-                    .sets
-                    .map(({ shape }) => shapeBox(shape))
+                shapes
+                    .map(s => shapeBox(s))
                     .reduce(
                         (cur, box) => [
                             {
@@ -1279,41 +1256,32 @@ export function Body() {
                 in cancer," Fig. 3</>}
     ]
 
-    const shapeTextRust = useMemo(
-        () => {
-            if (!curStep) return
-            const shapeStrs = curStep.sets.map(({ shape }) => shapeStrRust(shape))
+    const shapesStr = useCallback(
+        (fn: (shape: Shape<number>) => string) => {
+            if (!shapes) return
+            const shapeStrs = shapes.map(shape => fn(shape))
             return `[\n  ${shapeStrs.join(",\n  ")},\n]`
         },
-        [ curStep]
-    )
-    const shapeTextJSON = useMemo(
-        () => {
-            if (!curStep) return
-            const shapeStrs = curStep.sets.map(({ shape }) => shapeStrJSON(shape))
-            return `[\n  ${shapeStrs.join(",\n  ")}\n]`
-        },
-        [ curStep ],
-    )
-    const shapeTextJS = useMemo(
-        () => {
-            if (!curStep) return
-            const shapeStrs = curStep.sets.map(({ shape }) => shapeStrJS(shape))
-            return `[\n  ${shapeStrs.join(",\n  ")},\n]`
-        },
-        [ curStep ],
+        [ shapes ]
     )
 
-    const centerDot =
-        <circle
-            cx={gridCenter.x}
-            cy={gridCenter.y}
-            r={0.05}
-            stroke={"black"}
-            strokeWidth={1 / scale}
-            fill={"black"}
-            fillOpacity={0.8}
-        />
+    const shapesTextRust = useMemo(() => shapesStr(shapeStrRust), [ shapesStr, ])
+    const shapesTextJSON = useMemo(
+        () => {
+            if (!shapes) return
+            const shapeStrs = shapes.map(shape => shapeStrJSON(shape))
+            return `[\n  ${shapeStrs.join(",\n  ")}\n]`
+        },
+        [ shapes ],
+    )
+    const shapesTextJS = useMemo(
+        () => {
+            if (!shapes) return
+            const shapeStrs = shapes.map(shape => shapeStrJS(shape))
+            return `[\n  ${shapeStrs.join(",\n  ")},\n]`
+        },
+        [ shapes ],
+    )
 
     const setTargetsLink = useCallback(
         (v: Target[]) => {
@@ -1341,6 +1309,20 @@ export function Body() {
         setVal: setLayoutLink,
         activeVisited: true,
     })
+
+    useEffect(
+        () => {
+            if (!shapes) return
+            if (!shapesInUrlFragment) {
+                // console.log("clearing UrlFragmentShapes")
+                setUrlFragmentShapes(null)
+                return
+            }
+            // console.log("setting UrlFragmentShapes:", shapes, "current hash:", window.location.hash)
+            setUrlFragmentShapes(shapes)
+        },
+        [ shapes, shapesInUrlFragment, ]
+    )
 
     useEffect(
         () => {
@@ -1374,7 +1356,6 @@ export function Body() {
                         {setLabels}
                         {regionPaths}
                         {intersectionNodes}
-                        {/*{centerDot}*/}
                     </>
                 </Grid>
                 <div className={"row"}>
@@ -1455,7 +1436,24 @@ export function Body() {
                         <Details
                             open={settingsShown}
                             toggle={setSettingsShown}
-                            summary={"⚙️"}
+                            summary={<>
+                                <OverlayTrigger overlay={<Tooltip>Copy current layout to clipboard</Tooltip>}>
+                                    <span className={css.link} onClick={e => {
+                                        e.preventDefault()
+                                        e.stopPropagation()
+                                        if (!shapes) return
+                                        // Synchronously update window.location.hash
+                                        updateHashParams(params, { s: shapes })
+                                        console.log("Copying:", window.location.href)
+                                        navigator.clipboard.writeText(window.location.href)
+                                        setUrlFragmentShapes(shapes)
+                                        // console.log("setting UrlFragmentShapes:", shapes, "current hash:", window.location.hash)
+                                    }}>🔗</span>
+                                </OverlayTrigger>
+                                <OverlayTrigger overlay={<Tooltip>Click to {settingsShown ? "hide" : "show"} settings</Tooltip>}>
+                                    <span className={css.settingsIcon}>⚙️</span>
+                                </OverlayTrigger>
+                            </>}
                         >
                             <Number
                                 label={"Max error ratio step size"} value={maxErrorRatioStepSize} setValue={setMaxErrorRatioStepSize} float={true}
@@ -1467,7 +1465,7 @@ export function Body() {
                             <Checkbox label={"Grid"} checked={showGrid} setChecked={setShowGrid} />
                             {/*<Checkbox label={"Edge points"} checked={showEdgePoints} setChecked={setShowEdgePoints} />*/}
                             <Checkbox label={"Auto-center"} checked={autoCenter} setChecked={setAutoCenter} />
-                            {/*<Checkbox label={"Sparklines"} checked={showSparkLines} setChecked={setShowSparkLines} />*/}
+                            <Checkbox label={"Shapes in URL"} checked={shapesInUrlFragment} setChecked={setShapesInUrlFragment} />
                             <Number label={"Sparklines"} className={css.shortNumberInput} value={sparkLineLimit} setValue={setSparkLineLimit}>
                                 <input
                                     type={"checkbox"}
@@ -1560,26 +1558,14 @@ export function Body() {
                         >
                             {vars && <ShapesTable sets={sets || []} vars={vars}/>}
                             <div>
-                                Click to copy:{' '}
-                                <OverlayTrigger overlay={<Tooltip>
-                                    <pre className={css.shapeTextTooltip}>{shapeTextJS}</pre>
-                                </Tooltip>}>
-                                    <span className={css.copyText}
-                                          onClick={() => shapeTextJS && navigator.clipboard.writeText(shapeTextJS)
-                                          }>JS</span>
-                                </OverlayTrigger>,{' '}
-                                <OverlayTrigger overlay={<Tooltip>
-                                    <pre className={css.shapeTextTooltip}>{shapeTextRust}</pre>
-                                </Tooltip>}>
-                                    <span className={css.copyText}
-                                          onClick={() => shapeTextRust && navigator.clipboard.writeText(shapeTextRust)}>Rust</span>
-                                </OverlayTrigger>,{' '}
-                                <OverlayTrigger overlay={<Tooltip>
-                                    <pre className={css.shapeTextTooltip}>{shapeTextJSON}</pre>
-                                </Tooltip>}>
-                                    <span className={css.copyText}
-                                          onClick={() => shapeTextJSON && navigator.clipboard.writeText(shapeTextJSON)}>JSON</span>
-                                </OverlayTrigger>
+                                Copy as{' '}
+                                <CopyLayout label={"JS"} shapesTextFn={() => shapesStr(shapeStrJS)} />,{' '}
+                                <CopyLayout label={"Rust"} shapesTextFn={() => shapesStr(shapeStrRust)} />,{' '}
+                                <CopyLayout label={"JSON"} shapesTextFn={() => shapesStr(shapeStrJSON)} />,{' '}
+                                <CopyLayout label={"URL"} shapesTextFn={() => {
+                                    const hash = updatedHash(params, { s: shapes })
+                                    return `${window.location.origin}${window.location.pathname}${hash}`
+                                }} wrap={true} />
                             </div>
                         </DetailsSection>
                         <DetailsSection
