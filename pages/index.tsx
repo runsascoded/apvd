@@ -17,7 +17,7 @@ import {getSliderValue} from "../src/components/inputs";
 import {cos, max, min, PI, pi2, pi4, round, sin, sq3, sqrt} from "../src/lib/math";
 import Apvd, {LogLevel} from "../src/components/apvd";
 import {getMidpoint, getPointAndDirectionAtTheta, getRegionCenter} from "../src/lib/region";
-import {BoundingBox, getRadii, mapShape, rotate, S, Set, shapeBox, shapeStrJS, shapeStrJSON, shapeStrRust, Shape} from "../src/lib/shape";
+import {BoundingBox, getRadii, mapShape, rotate, S, Set, shapeBox, shapeStrJS, shapeStrJSON, shapeStrRust, Shape, shapesParam} from "../src/lib/shape";
 import {Target, TargetsTable} from "../src/components/tables/targets";
 import {Disjoint, Ellipses4, Ellipses4t, InitialLayout, SymmetricCircleDiamond, toShape} from "../src/lib/layout";
 import {VarsTable} from "../src/components/tables/vars";
@@ -378,17 +378,6 @@ type Params = {
 
 type ParsedParams = {
     s: ParsedParam<Shape<number>[] | null>
-}
-
-export const shapesParam: Param<Shape<number>[] | null> = {
-    encode(shapes: Shape<number>[] | null): string | undefined {
-        if (!shapes) return undefined
-        return encodeURIComponent(JSON.stringify(shapes))
-    },
-    decode(v: string | undefined): Shape<number>[] | null {
-        if (!v) return null
-        return JSON.parse(decodeURIComponent(v))
-    },
 }
 
 export function Body() {
