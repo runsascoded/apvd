@@ -220,11 +220,10 @@ export const encodeXYRRT = (xyrrt: XYRRT<number>): string => {
     const buf: number[] = []
     let bitOffset = 3;
     bitOffset = encodeFixedPoints([ c.x, c.y, r.x, r.y ], { buf, bitOffset, expBits, mantBits })
-    const tf = toFixedPoint(
-        toFloat((t + tau) % tau / tau),
-        { mantBits: floatBits, exp: 0, },
-    )
-    let mant = tf.mant
+    const tf = toFloat((t + tau) % tau / tau)
+    const tfp = toFixedPoint(tf, { mantBits: floatBits, exp: 0, })
+    // console.log("theta:", t, "tf:", tf, tf.mant.toString(16), "tfp:", tfp, tfp.mant.toString(16))
+    let mant = tfp.mant
     bitOffset = encodeInt({ buf, bitOffset }, mant, floatBits)
 
     const b64Chars = ceil(bitOffset / 6)

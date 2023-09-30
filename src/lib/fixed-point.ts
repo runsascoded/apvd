@@ -17,7 +17,12 @@ export function toFixedPoint(f: Float, { mantBits, exp }: Opts): FixedPoint {
     if (fExp > exp) {
         throw Error(`maxExp ${exp} < ${fExp}: ${js(f)}`)
     }
-    mant >>= BigInt(exp - fExp + 53 - mantBits)
+    const downshiftBy = exp - fExp + 53 - mantBits
+    const roundUp = mant & (1n << BigInt(downshiftBy - 1))
+    mant >>= BigInt(downshiftBy)
+    if (roundUp) {
+        mant += 1n
+    }
     mant |= 1n << BigInt(mantBits - 1 - (exp - fExp))
     return ({ neg, exp, mant: Number(mant) })
 }
