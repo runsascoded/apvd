@@ -402,7 +402,7 @@ export function Body() {
     // const [ shapesInUrlFragment, setShapesInUrlFragment ] = useState<boolean>(false)
 
     const params: Params = {
-        s: shapesParam({ mantBits: 37 }),
+        s: shapesParam({ precisionSchemeId: 4 }),
     }
 
     const [ shapesInUrlFragment, setShapesInUrlFragment ] = useLocalStorageState<boolean>("shapesInUrlFragment", { defaultValue: false })

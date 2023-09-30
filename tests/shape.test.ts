@@ -51,7 +51,7 @@ describe('test encoding various shapes', () => {
     }
 
     chk(
-        "4g00w0g0601004g00w0g0601w04g00w0g0603004g02w0M0e0300",
+        "0y000w02006008004g00400g00M01w00y000w0200600o004g00k00M01M03000",
         [
             { kind: 'XYRRT', c: { x: 0, y:  0.5 }, r: { x:  1, y:  1.5 }, t:     pi2 },
             { kind: 'XYRRT', c: { x: 0, y:  0.5 }, r: { x:  1, y:  1.5 }, t:   3*pi4 },
@@ -65,35 +65,36 @@ describe('test encoding various shapes', () => {
         { kind:   'XYRR', c: { x: 0.1, y:  0   }, r: { x: 3  , y: 1   }             },
         { kind:  'XYRRT', c: { x: -10, y: -1   }, r: { x: 2.1, y: 2.1 }, t: tau / 5 },
     ]
-    chk("IPjf6qm0983d00600w05d02804cN3cPd", mixedShapes, {
+    chk("5CqpH6pGM0983cM006004005d00h004cQ8pEPcM", mixedShapes, {
+        precisionSchemeId: 0,
         decoded: [
-            { kind: 'Circle', c: { x:   3.2998046875 , y: -4.400390625 }, r:      5.5                                                  },
-            { kind:   'XYRR', c: { x:   0.10009765625, y:  0           }, r: { x: 3          , y: 1           }                        },
-            { kind:  'XYRRT', c: { x: -10            , y: -1           }, r: { x: 2.099609375, y: 2.099609375 }, t: 1.2567137604753116 },
+            { kind: 'Circle', c: { x:   3.300048828125 , y: -4.4000244140625 }, r:      5.5                                                      },
+            { kind:   'XYRR', c: { x:   0.0999755859375, y:  0               }, r: { x: 3            , y: 1             }                        },
+            { kind:  'XYRRT', c: { x: -10              , y: -1               }, r: { x: 2.10009765625, y: 2.10009765625 }, t: 1.2566178866760687 },
         ]},
     )
-    chk("IPjcT6pCm00983cP0006000w005d0028004cPh3cQPcP", mixedShapes, {
-        mantBits: 19,
+    chk("dCqpCr6pCqM00983cPg000600040005d000h0004cPc8pCoPcPg", mixedShapes, {
+        precisionSchemeId: 1,
         decoded: [
-            { kind: 'Circle', c: { x:   3.3000030517578125 , y: -4.399993896484375 }, r:      5.5                                                              },
-            { kind:   'XYRR', c: { x:   0.09999847412109375, y:  0                 }, r: { x: 3                , y: 1                 }                        },
-            { kind:  'XYRRT', c: { x: -10                  , y: -1                 }, r: { x: 2.100006103515625, y: 2.100006103515625 }, t: 1.2566358630134267 },
+            { kind: 'Circle', c: { x:   3.299999237060547  , y: -4.399999618530273 }, r:      5.5                                                                },
+            { kind:   'XYRR', c: { x:   0.10000038146972656, y:  0                 }, r: { x: 3                 , y: 1                  }                        },
+            { kind:  'XYRRT', c: { x: -10                  , y: -1                 }, r: { x: 2.0999984741210938, y: 2.0999984741210938 }, t: 1.2566373610415398 },
         ]},
     )
-    chk("IPjcPf6pCqm000983cPd000060000w0005d000280004cPcN3cPcPcPd", mixedShapes, {
-        mantBits: 25,
+    chk("lCqpCpH6pCpGM000983cPcM000060000400005d0000h00004cPcQ8pCpEPcPcM", mixedShapes, {
+        precisionSchemeId: 2,
         decoded: [
-            { kind: 'Circle', c: { x:   3.299999952316284  , y: -4.400000095367432 }, r:      5.5                                                                },
-            { kind:   'XYRR', c: { x:   0.10000002384185791, y:  0                 }, r: { x: 3                 , y: 1                  }                        },
-            { kind:  'XYRRT', c: { x: -10                  , y: -1                 }, r: { x: 2.0999999046325684, y: 2.0999999046325684 }, t: 1.2566370801612687 },
+            { kind: 'Circle', c: { x:   3.300000011920929  , y: -4.4000000059604645 }, r:      5.5                                                              },
+            { kind:   'XYRR', c: { x:   0.09999999403953552, y:  0                  }, r: { x: 3                , y: 1                 }                        },
+            { kind:  'XYRRT', c: { x: -10                  , y: -1                  }, r: { x: 2.100000023841858, y: 2.100000023841858 }, t: 1.2566370567545795 },
         ]},
     )
-    chk("IPjcPcT6pCpCm0000983cPcP00000600000w00005d00002800004cPcPh3cPcQPcPcP", mixedShapes, {
-        mantBits: 31,
+    chk("tCqpCpCr6pCpCqM0000983cPcPg000006000004000005d00000h000004cPcPc8pCpCoPcPcPg", mixedShapes, {
+        precisionSchemeId: 3,
         decoded: [
-            { kind: 'Circle', c: { x:   3.300000000745058  , y: -4.399999998509884 }, r:      5.5                                                              },
-            { kind:   'XYRR', c: { x:   0.09999999962747097, y:  0                 }, r: { x: 3                , y: 1                 }                        },
-            { kind:  'XYRRT', c: { x: -10                  , y: -1                 }, r: { x: 2.100000001490116, y: 2.100000001490116 }, t: 1.2566370611433337 },
+            { kind: 'Circle', c: { x:   3.2999999998137355 , y: -4.399999999906868 }, r:      5.5                                                              },
+            { kind:   'XYRR', c: { x:   0.10000000009313226, y:  0                 }, r: { x: 3                , y: 1                 }                        },
+            { kind:  'XYRRT', c: { x: -10                  , y: -1                 }, r: { x: 2.099999999627471, y: 2.099999999627471 }, t: 1.2566370615090632 },
         ]},
     )
 })

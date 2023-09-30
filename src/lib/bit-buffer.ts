@@ -35,9 +35,16 @@ export default class BitBuffer {
         return this
     }
     toB64(): string {
-        const b64Chars = ceil(this.totalBitOffset / 6)
+        const overhang = this.end % 6
+        if (overhang) {
+            this.encodeInt(0, 6 - overhang)
+        }
+        if (this.end % 6) {
+            throw Error(`Overhang correction failure, ${this.end} not divisible by 6`)
+        }
+        const b64Chars = this.end / 6
         this.seek(0)
-        // console.log(buf, bitOffset, b64Chars)
+        // console.log(`toB64: end ${this.end}, b64Chars ${b64Chars}`)
         return Array(b64Chars).fill(0).map(() => this.getB64Char()).join('')
     }
     getB64Char(): string {

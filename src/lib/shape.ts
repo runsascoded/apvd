@@ -127,11 +127,17 @@ export function shapesParam(opts: Opts = {}): Param<Shape<number>[] | null> {
             // console.log("decode shapes:", v)
             if (!v) return null
             const buf = ShapesBuffer.fromB64(v, opts)
-            const totalBits = buf.end
+            const end = buf.end
             buf.seek(0)
-            // console.log("totalBits:", totalBits)
+            // console.log("end:", end)
             const shapes: Shape<number>[] = []
-            while (buf.totalBitOffset < totalBits) {
+            while (true) {
+                let totalBitOffset = buf.totalBitOffset
+                const overhang = totalBitOffset % 6
+                if (overhang) {
+                    totalBitOffset += 6 - overhang
+                }
+                if (totalBitOffset >= end) break
                 shapes.push(buf.decodeShape())
             }
             return shapes

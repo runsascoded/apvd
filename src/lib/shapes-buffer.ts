@@ -5,14 +5,30 @@ import {FixedPoint, fromFixedPoint, toFixedPoint} from "./fixed-point";
 import {Circle, Shape, XYRR, XYRRT} from "./shape";
 
 export type Opts = {
+    precisionScheme?: PrecisionScheme,
+    precisionSchemeId?: number
     expBits?: number
     mantBits?: number
 }
 
+export type PrecisionScheme = {
+    id?: number
+    expBits: number
+    mantBits: number
+}
+export const precisionSchemes = [
+    { id: 0, expBits: 5, mantBits: 16 },
+    { id: 1, expBits: 5, mantBits: 22 },
+    { id: 2, expBits: 5, mantBits: 28 },
+    { id: 3, expBits: 5, mantBits: 34 },
+    { id: 4, expBits: 5, mantBits: 40 },
+    { id: 5, expBits: 5, mantBits: 46 },
+    { id: 6, expBits: 5, mantBits: 52 },
+]
+
 export default class ShapesBuffer {
     buf: BitBuffer
-    expBits: number = 5
-    mantBits: number = 13
+    precisionScheme: PrecisionScheme
 
     ID = {
         XYRRT: 0,
@@ -21,10 +37,17 @@ export default class ShapesBuffer {
     }
     ShapeBits = 3
 
-    constructor({ buf, expBits, mantBits }: Opts & { buf?: BitBuffer } = {}) {
+    constructor({ buf, precisionScheme, precisionSchemeId, expBits, mantBits, }: Opts & { buf?: BitBuffer, } = {}) {
         this.buf = buf || new BitBuffer()
-        if (expBits) this.expBits = expBits
-        if (mantBits) this.mantBits = mantBits
+        if (precisionScheme) this.precisionScheme = precisionScheme
+        else if (precisionSchemeId) this.precisionScheme = precisionSchemes[precisionSchemeId]
+        else if (expBits && mantBits) {
+            const precisionScheme = precisionSchemes.find(ps => ps.expBits === expBits && ps.mantBits === mantBits)
+            if (!precisionScheme) throw Error(`no precisionScheme for expBits ${expBits} mantBits ${mantBits}`)
+            this.precisionScheme = precisionScheme
+        } else {
+            this.precisionScheme = { expBits: 5, mantBits: 13 }
+        }
     }
 
     static fromB64(s: string, opts: Opts = {}): ShapesBuffer {
@@ -33,7 +56,7 @@ export default class ShapesBuffer {
 
     static fromShapes(shapes: Shape<number>[], opts: Opts = {}): ShapesBuffer {
         const buf = new ShapesBuffer(opts)
-        buf.encodeShape(...shapes)
+        buf.encodeShapes(shapes)
         return buf
     }
 
@@ -41,6 +64,8 @@ export default class ShapesBuffer {
     get totalBitOffset(): number { return this.buf.totalBitOffset }
     seek(totalBitOffset: number): ShapesBuffer { this.buf.seek(totalBitOffset); return this }
     get end(): number { return this.buf.end }
+    get mantBits(): number { return this.precisionScheme.mantBits }
+    get expBits(): number { return this.precisionScheme.expBits }
 
     encodeXYRRT(xyrrt: XYRRT<number>): ShapesBuffer {
         const { buf, mantBits, expBits, ID, ShapeBits } = this
@@ -108,30 +133,19 @@ export default class ShapesBuffer {
         const c = { x: cx, y: cy }
         return { kind: 'Circle', c, r, }
     }
-    encodeShape(...shapes: Shape<number>[]): ShapesBuffer {
-        if (shapes.length > 1) {
-            shapes.forEach(s => this.encodeShape(s))
-            return this
-        }
-        const [ s ] = shapes
+    encodeShape(s: Shape<number>): ShapesBuffer {
         switch (s.kind) {
-            // Shape ID bits:
-            //   - 0: XYRRT
-            //   - 100: XYRR
-            //   - 101: Circle
-            //
-            case 'Circle':
-                // 3 + 5 + 3*14 = 50 bits, 9xb64
-                return this.encodeCircle(s)
-            case 'XYRR':
-                // 3 + 5 + 4*14 = 64 bits, 11xb64
-                return this.encodeXYRR(s)
-            case 'XYRRT':
-                return this.encodeXYRRT(s)
+            case 'Circle': return this.encodeCircle(s)
+            case   'XYRR': return this.encodeXYRR(s)
+            case  'XYRRT': return this.encodeXYRRT(s)
         }
     }
     decodeShape(): Shape<number> {
         const shapeId = this.buf.decodeInt(3)
+        // Shape ID bits:
+        //   - 0: XYRRT
+        //   - 100: XYRR
+        //   - 101: Circle
         switch (shapeId) {
             case 0: return this.decodeXYRRT()
             case 4: return this.decodeXYRR()
@@ -139,7 +153,23 @@ export default class ShapesBuffer {
             default: throw Error(`unknown shapeId ${shapeId}`)
         }
     }
+    encodeShapes(shapes: Shape<number>[]): ShapesBuffer {
+        let precisionSchemeId = this.precisionScheme.id || 0
+        if (precisionSchemeId < 0 || precisionSchemeId >= precisionSchemes.length) {
+            throw Error(`precisionSchemeId ${precisionSchemeId} out of range`)
+        }
+        this.precisionScheme = precisionSchemes[precisionSchemeId]
+        this.buf.encodeInt(precisionSchemeId, 3)
+        shapes.forEach(s => this.encodeShape(s))
+        return this
+    }
     decodeShapes(num: number): Shape<number>[] {
+        const precisionSchemeId = this.buf.decodeInt(3)
+        if (precisionSchemeId < 0 || precisionSchemeId >= precisionSchemes.length) {
+            throw Error(`precisionSchemeId ${precisionSchemeId} out of range`)
+        }
+        this.precisionScheme = precisionSchemes[precisionSchemeId]
+        console.log("decoding shapes with precisionScheme:", this.precisionScheme)
         const shapes: Shape<number>[] = []
         for (let i = 0; i < num; i++) {
             shapes.push(this.decodeShape())
