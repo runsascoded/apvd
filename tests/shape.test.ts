@@ -34,3 +34,41 @@ describe('test encoding XYRRTs', () => {
         t: 2.094267270660872,
     })
 })
+
+describe('test encoding various shapes', () => {
+    function check(shapes0: Shape<number>[], expected: string, decoded?: Shape<number>[]) {
+        const encoded = ShapesBuffer.fromShapes(...shapes0).toB64()
+        expect(encoded).toEqual(expected)
+        const shapes1 = ShapesBuffer.fromB64(encoded).decodeShapes(shapes0.length)
+        decoded = decoded || shapes0
+        expect(shapes1).toEqual(decoded)
+
+    }
+    function chk(expected: string, shapes0: Shape<number>[], decoded?: Shape<number>[]) {
+        test(expected, () => check(shapes0, expected, decoded))
+    }
+
+    chk(
+        "4g00w0g0601004g00w0g0601w04g00w0g0603004g02w0M0e0300",
+        [
+            { kind: 'XYRRT', c: { x: 0, y:  0.5 }, r: { x:  1, y:  1.5 }, t:     pi2 },
+            { kind: 'XYRRT', c: { x: 0, y:  0.5 }, r: { x:  1, y:  1.5 }, t:   3*pi4 },
+            { kind: 'XYRRT', c: { x: 0, y:  0.5 }, r: { x:  1, y:  1.5 }, t: tau-pi2 },
+            { kind: 'XYRRT', c: { x: 0, y: -0.5 }, r: { x: -1, y: -1.5 }, t: tau-pi2 },
+        ],
+    )
+
+    chk(
+        "IPjf6qm0983d00600w05d02804cN3cPd",
+        [
+            { kind: 'Circle', c: { x: 3.3, y: -4.4 }, r:      5.5                       },
+            { kind:   'XYRR', c: { x: 0.1, y:  0   }, r: { x: 3  , y: 1   }             },
+            { kind:  'XYRRT', c: { x: -10, y: -1   }, r: { x: 2.1, y: 2.1 }, t: tau / 5 },
+        ],
+        [
+            { kind: 'Circle', c: { x:   3.2998046875 , y: -4.400390625 }, r:      5.5                                                  },
+            { kind:   'XYRR', c: { x:   0.10009765625, y:  0           }, r: { x: 3          , y: 1           }                        },
+            { kind:  'XYRRT', c: { x: -10            , y: -1           }, r: { x: 2.099609375, y: 2.099609375 }, t: 1.2567137604753116 },
+        ],
+    )
+})

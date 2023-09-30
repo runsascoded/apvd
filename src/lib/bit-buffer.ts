@@ -7,10 +7,12 @@ export default class BitBuffer {
     buf: number[]
     byteOffset: number
     bitOffset: number
+    end: number
     constructor(numBytes?: number) {
         this.buf = Array(numBytes || 0).fill(0);
         this.byteOffset = 0;
         this.bitOffset = 0;
+        this.end = 0;
     }
 
     static b64ToBuf(s: string): BitBuffer {
@@ -42,7 +44,7 @@ export default class BitBuffer {
         return b64i2c[this.decodeInt(6)]
     }
 
-    encodeInt(n: number, numBits: number) {
+    encodeInt(n: number, numBits: number): BitBuffer {
         let { buf, byteOffset, bitOffset } = this
         while (numBits > 0) {
             if (byteOffset >= buf.length) {
@@ -67,6 +69,8 @@ export default class BitBuffer {
         }
         this.byteOffset = byteOffset
         this.bitOffset = bitOffset
+        if (this.totalBitOffset > this.end) this.end = this.totalBitOffset
+        return this
     }
 
     decodeInt(numBits: number): number {
@@ -90,6 +94,9 @@ export default class BitBuffer {
         }
         this.byteOffset = byteOffset
         this.bitOffset = bitOffset
+        if (this.totalBitOffset > this.end) {
+            throw Error(`Overflow: totalBitOffset ${this.totalBitOffset} > end ${this.end}`)
+        }
         // console.log("read:", n)
         return n
     }

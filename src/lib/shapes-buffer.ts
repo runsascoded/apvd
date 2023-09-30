@@ -4,6 +4,11 @@ import {tau} from "./math";
 import {FixedPoint, fromFixedPoint, toFixedPoint} from "./fixed-point";
 import {Circle, Shape, XYRR, XYRRT} from "./shape";
 
+export type Opts = {
+    expBits?: number
+    mantBits?: number
+}
+
 export default class ShapesBuffer {
     buf: BitBuffer
     expBits: number = 5
@@ -16,7 +21,7 @@ export default class ShapesBuffer {
     }
     ShapeBits = 3
 
-    constructor(buf?: BitBuffer, { expBits, mantBits }: { expBits?: number, mantBits?: number } = {}) {
+    constructor(buf?: BitBuffer, { expBits, mantBits }: Opts = {}) {
         this.buf = buf || new BitBuffer()
         if (expBits) this.expBits = expBits
         if (mantBits) this.mantBits = mantBits
@@ -24,6 +29,12 @@ export default class ShapesBuffer {
 
     static fromB64(s: string): ShapesBuffer {
         return new ShapesBuffer(BitBuffer.b64ToBuf(s))
+    }
+
+    static fromShapes(...shapes: Shape<number>[]): ShapesBuffer {
+        const buf = new ShapesBuffer()
+        buf.encodeShape(...shapes)
+        return buf
     }
 
     toB64(): string { return this.buf.toB64() }
@@ -96,7 +107,12 @@ export default class ShapesBuffer {
         const c = { x: cx, y: cy }
         return { kind: 'Circle', c, r, }
     }
-    encodeShape(s: Shape<number>): ShapesBuffer {
+    encodeShape(...shapes: Shape<number>[]): ShapesBuffer {
+        if (shapes.length > 1) {
+            shapes.forEach(s => this.encodeShape(s))
+            return this
+        }
+        const [ s ] = shapes
         switch (s.kind) {
             // Shape ID bits:
             //   - 0: XYRRT
@@ -122,5 +138,11 @@ export default class ShapesBuffer {
             default: throw Error(`unknown shapeId ${shapeId}`)
         }
     }
-
+    decodeShapes(num: number): Shape<number>[] {
+        const shapes: Shape<number>[] = []
+        for (let i = 0; i < num; i++) {
+            shapes.push(this.decodeShape())
+        }
+        return shapes
+    }
 }
