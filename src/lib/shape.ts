@@ -117,7 +117,11 @@ export function shapeStrJSON(s: Shape<number>): string {
     }
 }
 
-const b64i2c = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_'
+const b64i2c =
+    '01234567' + '89abcdef' +
+    'ghijklmn' + 'opqrstuv' +
+    'wxyzABCD' + 'EFGHIJKL' +
+    'MNOPQRST' + 'UVWXYZ-_'
 const b64c2i: { [c: string]: number } = {}
 b64i2c.split('').forEach((c, i) => {
     b64c2i[c] = i
@@ -141,6 +145,20 @@ export const getB64Char = (buf: number[], bitIdx: number): string => {
     return b64i2c[i]
 }
 
+// export const setB64Char = (buf: number[], bitIdx: number, c: string): void => {
+//     const byteIdx = bitIdx >> 3
+//     const bitOffset = bitIdx & 0x7
+//     const i = b64c2i[c]
+//     const numBitsFirstByte = min(6, 8 - bitOffset)
+//     const numBitsSecondByte = 6 - numBitsFirstByte
+//     let newBits = (i >> numBitsSecondByte) << (8 - bitOffset)
+//     buf[byteIdx] |= newBits
+//     if (numBitsSecondByte) {
+//         newBits = (i & ((1 << numBitsSecondByte) - 1)) << (8 - numBitsSecondByte)
+//         buf[byteIdx + 1] |= newBits
+//     }
+// }
+
 export function encodeInt({ buf, bitOffset, }: { buf: number[], bitOffset: number, }, n: number, numBits: number): number {
     let curByteOffset = bitOffset >> 3
     let curBitOffset = bitOffset & 0x7
@@ -156,6 +174,7 @@ export function encodeInt({ buf, bitOffset, }: { buf: number[], bitOffset: numbe
         const mask = ((1 << bitsToWrite) - 1) << bitsLeftToWrite
         const shiftedBitsToWrite = (n & mask) >> bitsLeftToWrite
         buf[curByteOffset] |= shiftedBitsToWrite << bitsLeftInByte
+        // console.log(`wrote ${bitsToWrite} bits (${shiftedBitsToWrite}) at ${curByteOffset}:${curBitOffset} (${bitsLeftInByte} bits left in byte). Byte: ${buf[curByteOffset]}`)
         n &= (1 << bitsLeftToWrite) - 1
         numBits -= bitsToWrite
         curBitOffset += bitsToWrite
@@ -170,6 +189,7 @@ export function encodeInt({ buf, bitOffset, }: { buf: number[], bitOffset: numbe
 export function decodeInt({ buf, bitOffset, numBits }: { buf: number[], bitOffset: number, numBits: number }): number {
     let curByteOffset = bitOffset >> 3
     let curBitOffset = bitOffset & 0x7
+    // console.log("decodeInt:", buf, bitOffset, numBits, "curByteOffset:", curByteOffset, "curBitOffset:", curBitOffset)
     let n = 0
     while (numBits > 0) {
         const remainingBitsInByte = 8 - curBitOffset
@@ -186,6 +206,7 @@ export function decodeInt({ buf, bitOffset, numBits }: { buf: number[], bitOffse
             curByteOffset++
         }
     }
+    // console.log("read:", n)
     return n
 }
 
@@ -212,8 +233,15 @@ export const encodeXYRRT = (xyrrt: XYRRT<number>): string => {
 }
 
 export const decodeXYRRT = (s: string): XYRRT<number> => {
-    const buf = s.split('').map(c => b64c2i[c])
+    const totalBits = s.length * 6
+    const numBytes = ceil(totalBits / 8)
+    const b64Chars = s.split('').map(c => b64c2i[c])
+    const buf = Array(numBytes).fill(0)
     let bitOffset = 3  // TODO: verify shapes portion
+    b64Chars.forEach((i, idx) => {
+        encodeInt({ buf, bitOffset: idx * 6, }, i, 6)
+    })
+    // console.log("decode buf:", buf)
     const expBits = 5
     const mantBits = 13
     const floatBits = mantBits + 1
@@ -222,7 +250,8 @@ export const decodeXYRRT = (s: string): XYRRT<number> => {
     bitOffset = fps.bitOffset
     const c = { x: cx, y: cy }
     const r = { x: rx, y: ry }
-    const tsf: FixedPoint = { neg: false, exp, mant: decodeInt({ buf, bitOffset, numBits: floatBits }) }
+    // console.log("decode theta, bitOffset:", bitOffset)
+    const tsf: FixedPoint = { neg: false, exp: 0, mant: decodeInt({ buf, bitOffset, numBits: floatBits }) }
     bitOffset += floatBits
     const tf = fromFixedPoint(tsf, floatBits)
     const t = fromFloat(tf) * tau

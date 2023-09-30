@@ -56,12 +56,11 @@ export function encodeFixedPoints(
     if (maxExp >= (1 << (expBits - 1))) {
         throw Error(`maxExp ${maxExp} >= ${1 << expBits}`)
     }
-    // buf[0] |= (maxExp + (1 << (expBits - 1))) & ((1 << expBits) - 1)
+    const expToWrite = (maxExp + (1 << (expBits - 1))) & ((1 << expBits) - 1)
+    // console.log(`expToWrite: ${expToWrite} at ${bitOffset}`)
+    bitOffset = encodeInt({ buf, bitOffset, }, expToWrite, expBits)
     const fixedPoints = floats.map(f => toFixedPoint(f, { mantBits, exp: maxExp }))
     // console.log("fixedPoints:", fixedPoints)
-    const expToWrite = (maxExp + (1 << (expBits - 1))) & ((1 << expBits) - 1)
-    // console.log("expToWrite:", expToWrite)
-    bitOffset = encodeInt({ buf, bitOffset, }, expToWrite, expBits)
     fixedPoints.forEach(({ neg, mant }, idx) => {
         // console.log(`writing float ${idx} at bit offset ${bitOffset}`)
         bitOffset = encodeInt({ buf, bitOffset, }, neg ? 1 : 0, 1)
@@ -82,6 +81,7 @@ export function decodeFixedPoints(
     const writtenExp = decodeInt({ buf, bitOffset, numBits: expBits })
     bitOffset += expBits
     const exp = writtenExp - (1 << (expBits - 1))
+    // console.log(`decodeFixedPoints: writtenExp ${writtenExp}, exp ${exp}`)
     const floats: number[] = []
     for (let i = 0; i < numFloats; i++) {
         const neg = !!decodeInt({ buf, bitOffset, numBits: 1 })
