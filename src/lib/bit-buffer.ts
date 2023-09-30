@@ -101,13 +101,70 @@ export default class BitBuffer {
         return n
     }
 
+    encodeBigInt(n: bigint, numBits: number): BitBuffer {
+        let { buf, byteOffset, bitOffset } = this
+        while (numBits > 0) {
+            if (byteOffset >= buf.length) {
+                // console.log(`${byteOffset}:${BitOffset} >= ${buf.length}, pushing 0 (${numBits} bits left)`)
+                buf.push(0)
+            }
+            const remainingBitsInByte = 8 - bitOffset
+            const bitsToWrite = min(numBits, remainingBitsInByte)
+            const bitsLeftInByte = remainingBitsInByte - bitsToWrite
+            const bitsLeftToWrite = numBits - bitsToWrite
+            const mask = ((1n << BigInt(bitsToWrite)) - 1n) << BigInt(bitsLeftToWrite)
+            const shiftedBitsToWrite = Number((n & mask) >> BigInt(bitsLeftToWrite))
+            buf[byteOffset] |= shiftedBitsToWrite << bitsLeftInByte
+            // console.log(`wrote ${bitsToWrite} bits (${shiftedBitsToWrite}) at ${byteOffset}:${bitOffset} (${bitsLeftInByte} bits left in byte). Byte: ${buf[byteOffset]}`)
+            n &= (1n << BigInt(bitsLeftToWrite)) - 1n
+            numBits -= bitsToWrite
+            bitOffset += bitsToWrite
+            if (bitOffset == 8) {
+                bitOffset = 0
+                byteOffset++
+            }
+        }
+        this.byteOffset = byteOffset
+        this.bitOffset = bitOffset
+        if (this.totalBitOffset > this.end) this.end = this.totalBitOffset
+        return this
+    }
+
+    decodeBigInt(numBits: number): bigint {
+        let { buf, byteOffset, bitOffset } = this
+        // console.log("decodeInt:", buf, bitOffset, numBits, "byteOffset:", byteOffset, "bitOffset:", bitOffset)
+        let n = 0n
+        while (numBits > 0) {
+            const remainingBitsInByte = 8 - bitOffset
+            const bitsToRead = min(numBits, remainingBitsInByte)
+            const bitsLeftInByte = remainingBitsInByte - bitsToRead
+            const bitsLeftToRead = numBits - bitsToRead
+            const mask = ((1 << bitsToRead) - 1) << bitsLeftInByte
+            const shiftedBitsToRead = (buf[byteOffset] & mask) >> bitsLeftInByte
+            n |= BigInt(shiftedBitsToRead) << BigInt(bitsLeftToRead)
+            numBits -= bitsToRead
+            bitOffset += bitsToRead
+            if (bitOffset == 8) {
+                bitOffset = 0
+                byteOffset++
+            }
+        }
+        this.byteOffset = byteOffset
+        this.bitOffset = bitOffset
+        if (this.totalBitOffset > this.end) {
+            throw Error(`Overflow: totalBitOffset ${this.totalBitOffset} > end ${this.end}`)
+        }
+        // console.log("read:", n)
+        return n
+    }
+
     encodeFixedPoints(
         vals: number[],
         { expBits, mantBits }: { expBits: number, mantBits: number }
     ) {
         const floats = vals.map(toFloat)
         // console.log("floats:", floats)
-        const maxExp = max(...floats.map(({ exp, mant }) => exp + 1))
+        const maxExp = max(...floats.map(({ exp }) => exp + 1))
         // console.log("maxExp:", maxExp)
         if (maxExp >= (1 << (expBits - 1))) {
             throw Error(`maxExp ${maxExp} >= ${1 << expBits}`)
@@ -123,7 +180,7 @@ export default class BitBuffer {
         fixedPoints.forEach(({ neg, mant }) => {
             // console.log(`writing float ${idx} at bit offset ${bitOffset}`)
             this.encodeInt(neg ? 1 : 0, 1)
-            this.encodeInt(mant, mantBits)
+            this.encodeBigInt(mant, mantBits)
         })
     }
     decodeFixedPoints(
@@ -139,7 +196,7 @@ export default class BitBuffer {
         const floats: number[] = []
         for (let i = 0; i < numFloats; i++) {
             const neg = !!this.decodeInt(1)
-            const mant = this.decodeInt(mantBits)
+            const mant = this.decodeBigInt(mantBits)
             const f = fromFixedPoint({ neg, exp, mant }, mantBits)
             floats.push(fromFloat(f))
         }

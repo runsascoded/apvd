@@ -1,10 +1,9 @@
-import {floor, log2} from "./math";
 import {Float} from "./float";
 
 export type FixedPoint = {
     neg: boolean
     exp: number
-    mant: number
+    mant: bigint
 }
 
 export type Opts = { mantBits: number, exp?: number }
@@ -22,12 +21,12 @@ export function toFixedPoint(f: Float, { mantBits, exp }: Opts): FixedPoint {
         mant += 1n
     }
     mant |= 1n << BigInt(mantBits - 1 - (exp - fExp))
-    return ({ neg, exp, mant: Number(mant) })
+    return ({ neg, exp, mant: mant })
 }
 
 export function fromFixedPoint(f: FixedPoint, mantBits: number): Float {
     let { neg } = f
-    const nonZeroBits = f.mant ? floor(log2(f.mant)) + 1 : 0
+    const nonZeroBits = f.mant ? f.mant.toString(2).length : 0
     const exp = f.exp - (mantBits - nonZeroBits) - 1
     if (!f.mant) {
         return ({ neg, exp: -1023, mant: 0n })

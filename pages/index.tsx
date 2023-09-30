@@ -402,7 +402,7 @@ export function Body() {
     // const [ shapesInUrlFragment, setShapesInUrlFragment ] = useState<boolean>(false)
 
     const params: Params = {
-        s: shapesParam,
+        s: shapesParam({ mantBits: 37 }),
     }
 
     const [ shapesInUrlFragment, setShapesInUrlFragment ] = useLocalStorageState<boolean>("shapesInUrlFragment", { defaultValue: false })
@@ -1553,7 +1553,6 @@ export function Body() {
                                 <CopyLayout label={"JSON"} shapesTextFn={() => shapesStr(shapeStrJSON)} />,{' '}
                                 <CopyLayout label={"URL"} shapesTextFn={() => {
                                     if (!shapes) return undefined
-                                    console.log("computing hash for shapes:", shapes)
                                     const hash = updatedHash(params, { s: shapes })
                                     return `${window.location.origin}${window.location.pathname}${hash}`
                                 }} wrap={true} />

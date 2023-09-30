@@ -12,7 +12,7 @@ export type Opts = {
 export default class ShapesBuffer {
     buf: BitBuffer
     expBits: number = 5
-    mantBits: number = 31
+    mantBits: number = 13
 
     ID = {
         XYRRT: 0,
@@ -21,18 +21,18 @@ export default class ShapesBuffer {
     }
     ShapeBits = 3
 
-    constructor(buf?: BitBuffer, { expBits, mantBits }: Opts = {}) {
+    constructor({ buf, expBits, mantBits }: Opts & { buf?: BitBuffer } = {}) {
         this.buf = buf || new BitBuffer()
         if (expBits) this.expBits = expBits
         if (mantBits) this.mantBits = mantBits
     }
 
-    static fromB64(s: string): ShapesBuffer {
-        return new ShapesBuffer(BitBuffer.b64ToBuf(s))
+    static fromB64(s: string, opts: Opts = {}): ShapesBuffer {
+        return new ShapesBuffer({ buf: BitBuffer.b64ToBuf(s), ...opts })
     }
 
-    static fromShapes(...shapes: Shape<number>[]): ShapesBuffer {
-        const buf = new ShapesBuffer()
+    static fromShapes(shapes: Shape<number>[], opts: Opts = {}): ShapesBuffer {
+        const buf = new ShapesBuffer(opts)
         buf.encodeShape(...shapes)
         return buf
     }
@@ -53,7 +53,7 @@ export default class ShapesBuffer {
         const tfp = toFixedPoint(tf, { mantBits: floatBits, exp: 0, })
         // console.log("theta:", t, "tf:", tf, tf.mant.toString(16), "tfp:", tfp, tfp.mant.toString(16))
         let mant = tfp.mant
-        buf.encodeInt(mant, floatBits)
+        buf.encodeBigInt(mant, floatBits)
         return this
     }
 
@@ -66,7 +66,7 @@ export default class ShapesBuffer {
         const c = { x: cx, y: cy }
         const r = { x: rx, y: ry }
         // console.log("decode theta, bitOffset:", bitOffset)
-        const tsf: FixedPoint = { neg: false, exp: 0, mant: buf.decodeInt(floatBits) }
+        const tsf: FixedPoint = { neg: false, exp: 0, mant: buf.decodeBigInt(floatBits) }
         const tf = fromFixedPoint(tsf, floatBits)
         const t = fromFloat(tf) * tau
         return { kind: 'XYRRT', c, r, t, }

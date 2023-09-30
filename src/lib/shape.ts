@@ -1,7 +1,7 @@
 import {R2} from "apvd";
 import {abs, cos, max, sin} from "./math";
 import {Param} from "next-utils/params";
-import ShapesBuffer from "./shapes-buffer";
+import ShapesBuffer, {Opts} from "./shapes-buffer";
 
 export interface Circle<D> {
     kind: 'Circle'
@@ -115,24 +115,26 @@ export function shapeStrJSON(s: Shape<number>): string {
     }
 }
 
-export const shapesParam: Param<Shape<number>[] | null> = {
-    encode(shapes: Shape<number>[] | null): string | undefined {
-        if (!shapes) return undefined
-        const buf = new ShapesBuffer()
-        shapes.forEach(shape => buf.encodeShape(shape))
-        return buf.toB64()
-    },
-    decode(v: string | undefined): Shape<number>[] | null {
-        console.log("decode shapes:", v)
-        if (!v) return null
-        const buf = ShapesBuffer.fromB64(v)
-        const totalBits = buf.end
-        buf.seek(0)
-        console.log("totalBits:", totalBits)
-        const shapes: Shape<number>[] = []
-        while (buf.totalBitOffset < totalBits) {
-            shapes.push(buf.decodeShape())
-        }
-        return shapes
-    },
+export function shapesParam(opts: Opts = {}): Param<Shape<number>[] | null> {
+    return {
+        encode(shapes: Shape<number>[] | null): string | undefined {
+            if (!shapes) return undefined
+            const buf = new ShapesBuffer(opts)
+            shapes.forEach(shape => buf.encodeShape(shape))
+            return buf.toB64()
+        },
+        decode(v: string | undefined): Shape<number>[] | null {
+            // console.log("decode shapes:", v)
+            if (!v) return null
+            const buf = ShapesBuffer.fromB64(v, opts)
+            const totalBits = buf.end
+            buf.seek(0)
+            // console.log("totalBits:", totalBits)
+            const shapes: Shape<number>[] = []
+            while (buf.totalBitOffset < totalBits) {
+                shapes.push(buf.decodeShape())
+            }
+            return shapes
+        },
+    }
 }

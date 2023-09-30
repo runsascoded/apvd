@@ -30,6 +30,7 @@ describe("test FixedPoint round-trips", () => {
         chk(i, { mantBits: 4, })
         chk(i, { mantBits: 6, exp: 3 })
     }
+    // check(0, { mantBits: 4, })
 })
 
 describe('test FixedPoint', () => {

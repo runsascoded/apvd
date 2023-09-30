@@ -1,7 +1,7 @@
 import {pi2, pi4, tau} from "../src/lib/math";
 import {Shape} from "../src/lib/shape";
 import {Point} from "../src/components/point";
-import ShapesBuffer from "../src/lib/shapes-buffer";
+import ShapesBuffer, {Opts} from "../src/lib/shapes-buffer";
 
 describe('test encoding XYRRTs', () => {
     function check(c: Point, r: Point, t: number, expected: string, decoded?: Shape<number>) {
@@ -35,17 +35,19 @@ describe('test encoding XYRRTs', () => {
     })
 })
 
+type Extra = { decoded?: Shape<number>[] } & Opts
+
 describe('test encoding various shapes', () => {
-    function check(shapes0: Shape<number>[], expected: string, decoded?: Shape<number>[]) {
-        const encoded = ShapesBuffer.fromShapes(...shapes0).toB64()
+    function check(shapes0: Shape<number>[], expected: string, { decoded, ...opts }: Extra) {
+        const encoded = ShapesBuffer.fromShapes(shapes0, opts).toB64()
         expect(encoded).toEqual(expected)
-        const shapes1 = ShapesBuffer.fromB64(encoded).decodeShapes(shapes0.length)
+        const shapes1 = ShapesBuffer.fromB64(encoded, opts).decodeShapes(shapes0.length)
         decoded = decoded || shapes0
         expect(shapes1).toEqual(decoded)
 
     }
-    function chk(expected: string, shapes0: Shape<number>[], decoded?: Shape<number>[]) {
-        test(expected, () => check(shapes0, expected, decoded))
+    function chk(expected: string, shapes0: Shape<number>[], extra: Extra = {}) {
+        test(expected, () => check(shapes0, expected, extra))
     }
 
     chk(
@@ -58,17 +60,40 @@ describe('test encoding various shapes', () => {
         ],
     )
 
-    chk(
-        "IPjf6qm0983d00600w05d02804cN3cPd",
-        [
-            { kind: 'Circle', c: { x: 3.3, y: -4.4 }, r:      5.5                       },
-            { kind:   'XYRR', c: { x: 0.1, y:  0   }, r: { x: 3  , y: 1   }             },
-            { kind:  'XYRRT', c: { x: -10, y: -1   }, r: { x: 2.1, y: 2.1 }, t: tau / 5 },
-        ],
-        [
+    const mixedShapes: Shape<number>[] = [
+        { kind: 'Circle', c: { x: 3.3, y: -4.4 }, r:      5.5                       },
+        { kind:   'XYRR', c: { x: 0.1, y:  0   }, r: { x: 3  , y: 1   }             },
+        { kind:  'XYRRT', c: { x: -10, y: -1   }, r: { x: 2.1, y: 2.1 }, t: tau / 5 },
+    ]
+    chk("IPjf6qm0983d00600w05d02804cN3cPd", mixedShapes, {
+        decoded: [
             { kind: 'Circle', c: { x:   3.2998046875 , y: -4.400390625 }, r:      5.5                                                  },
             { kind:   'XYRR', c: { x:   0.10009765625, y:  0           }, r: { x: 3          , y: 1           }                        },
             { kind:  'XYRRT', c: { x: -10            , y: -1           }, r: { x: 2.099609375, y: 2.099609375 }, t: 1.2567137604753116 },
-        ],
+        ]},
+    )
+    chk("IPjcT6pCm00983cP0006000w005d0028004cPh3cQPcP", mixedShapes, {
+        mantBits: 19,
+        decoded: [
+            { kind: 'Circle', c: { x:   3.3000030517578125 , y: -4.399993896484375 }, r:      5.5                                                              },
+            { kind:   'XYRR', c: { x:   0.09999847412109375, y:  0                 }, r: { x: 3                , y: 1                 }                        },
+            { kind:  'XYRRT', c: { x: -10                  , y: -1                 }, r: { x: 2.100006103515625, y: 2.100006103515625 }, t: 1.2566358630134267 },
+        ]},
+    )
+    chk("IPjcPf6pCqm000983cPd000060000w0005d000280004cPcN3cPcPcPd", mixedShapes, {
+        mantBits: 25,
+        decoded: [
+            { kind: 'Circle', c: { x:   3.299999952316284  , y: -4.400000095367432 }, r:      5.5                                                                },
+            { kind:   'XYRR', c: { x:   0.10000002384185791, y:  0                 }, r: { x: 3                 , y: 1                  }                        },
+            { kind:  'XYRRT', c: { x: -10                  , y: -1                 }, r: { x: 2.0999999046325684, y: 2.0999999046325684 }, t: 1.2566370801612687 },
+        ]},
+    )
+    chk("IPjcPcT6pCpCm0000983cPcP00000600000w00005d00002800004cPcPh3cPcQPcPcP", mixedShapes, {
+        mantBits: 31,
+        decoded: [
+            { kind: 'Circle', c: { x:   3.300000000745058  , y: -4.399999998509884 }, r:      5.5                                                              },
+            { kind:   'XYRR', c: { x:   0.09999999962747097, y:  0                 }, r: { x: 3                , y: 1                 }                        },
+            { kind:  'XYRRT', c: { x: -10                  , y: -1                 }, r: { x: 2.100000001490116, y: 2.100000001490116 }, t: 1.2566370611433337 },
+        ]},
     )
 })
