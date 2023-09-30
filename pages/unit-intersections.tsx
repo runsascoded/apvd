@@ -5,7 +5,7 @@ import {XYRR} from "apvd";
 import Apvd from "../src/components/apvd";
 
 export default function Page() {
-    return <Apvd logLevel={"debug"}>{() => <Body />}</Apvd>
+    return <Apvd>{() => <Body />}</Apvd>
 }
 
 export function Body() {
