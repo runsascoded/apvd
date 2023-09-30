@@ -1,13 +1,18 @@
 import {pi2, pi4, tau} from "../src/lib/math";
-import {decodeXYRRT, encodeXYRRT, Shape} from "../src/lib/shape";
+import {Shape} from "../src/lib/shape";
 import {Point} from "../src/components/point";
+import ShapesBuffer from "../src/lib/shapes-buffer";
 
 describe('test encoding XYRRTs', () => {
     function check(c: Point, r: Point, t: number, expected: string, decoded?: Shape<number>) {
+        // const buf = ShapesBuffer.fromB64(expected)
+        let buf = new ShapesBuffer()
         const xyrrt0: Shape<number> = { kind: 'XYRRT', c, r, t, }
-        const encoded = encodeXYRRT(xyrrt0)
-        const xyrrt1 = decodeXYRRT(encoded)
+        buf.encodeShape(xyrrt0)
+        const encoded = buf.toB64()
         expect(encoded).toEqual(expected)
+        buf = ShapesBuffer.fromB64(encoded)
+        const xyrrt1 = buf.decodeShape()
         decoded = decoded || xyrrt0
         expect(xyrrt1).toEqual(decoded)
 
