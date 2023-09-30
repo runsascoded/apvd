@@ -1,4 +1,3 @@
-import {js} from "./utils";
 import {floor, log2} from "./math";
 import {Float} from "./float";
 
@@ -14,7 +13,7 @@ export function toFixedPoint(f: Float, { mantBits, exp }: Opts): FixedPoint {
     fExp++
     exp = exp === undefined ? fExp : exp
     if (fExp > exp) {
-        throw Error(`maxExp ${exp} < ${fExp}: ${js(f)}`)
+        throw Error(`maxExp ${exp} < ${fExp}: ${neg ? '-' : ''}${mant}e${fExp-1}`)
     }
     const downshiftBy = exp - fExp + 53 - mantBits
     const roundUp = mant & (1n << BigInt(downshiftBy - 1))

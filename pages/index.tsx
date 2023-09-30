@@ -1552,6 +1552,8 @@ export function Body() {
                                 <CopyLayout label={"Rust"} shapesTextFn={() => shapesStr(shapeStrRust)} />,{' '}
                                 <CopyLayout label={"JSON"} shapesTextFn={() => shapesStr(shapeStrJSON)} />,{' '}
                                 <CopyLayout label={"URL"} shapesTextFn={() => {
+                                    if (!shapes) return undefined
+                                    console.log("computing hash for shapes:", shapes)
                                     const hash = updatedHash(params, { s: shapes })
                                     return `${window.location.origin}${window.location.pathname}${hash}`
                                 }} wrap={true} />

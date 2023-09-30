@@ -12,7 +12,7 @@ export type Opts = {
 export default class ShapesBuffer {
     buf: BitBuffer
     expBits: number = 5
-    mantBits: number = 13
+    mantBits: number = 31
 
     ID = {
         XYRRT: 0,
@@ -40,6 +40,7 @@ export default class ShapesBuffer {
     toB64(): string { return this.buf.toB64() }
     get totalBitOffset(): number { return this.buf.totalBitOffset }
     seek(totalBitOffset: number): ShapesBuffer { this.buf.seek(totalBitOffset); return this }
+    get end(): number { return this.buf.end }
 
     encodeXYRRT(xyrrt: XYRRT<number>): ShapesBuffer {
         const { buf, mantBits, expBits, ID, ShapeBits } = this

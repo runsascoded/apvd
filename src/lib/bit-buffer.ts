@@ -107,7 +107,7 @@ export default class BitBuffer {
     ) {
         const floats = vals.map(toFloat)
         // console.log("floats:", floats)
-        const maxExp = max(...floats.map(({ exp, mant }) => (mant > 0n ? exp + 1 : exp)))
+        const maxExp = max(...floats.map(({ exp, mant }) => exp + 1))
         // console.log("maxExp:", maxExp)
         if (maxExp >= (1 << (expBits - 1))) {
             throw Error(`maxExp ${maxExp} >= ${1 << expBits}`)
@@ -115,7 +115,10 @@ export default class BitBuffer {
         const expToWrite = (maxExp + (1 << (expBits - 1))) & ((1 << expBits) - 1)
         // console.log(`expToWrite: ${expToWrite} at ${bitOffset}`)
         this.encodeInt(expToWrite, expBits)
-        const fixedPoints = floats.map(f => toFixedPoint(f, { mantBits, exp: maxExp }))
+        const fixedPoints = floats.map(f => {
+            // console.log("toFixedPoint:", f, { mantBits, exp: maxExp })
+            return toFixedPoint(f, { mantBits, exp: maxExp })
+        })
         // console.log("fixedPoints:", fixedPoints)
         fixedPoints.forEach(({ neg, mant }) => {
             // console.log(`writing float ${idx} at bit offset ${bitOffset}`)

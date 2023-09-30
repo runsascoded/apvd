@@ -123,10 +123,12 @@ export const shapesParam: Param<Shape<number>[] | null> = {
         return buf.toB64()
     },
     decode(v: string | undefined): Shape<number>[] | null {
+        console.log("decode shapes:", v)
         if (!v) return null
         const buf = ShapesBuffer.fromB64(v)
-        const totalBits = buf.totalBitOffset
+        const totalBits = buf.end
         buf.seek(0)
+        console.log("totalBits:", totalBits)
         const shapes: Shape<number>[] = []
         while (buf.totalBitOffset < totalBits) {
             shapes.push(buf.decodeShape())

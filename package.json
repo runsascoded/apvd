@@ -9,6 +9,7 @@
     "dependencies": {
         "apvd": "https://gitpkg.now.sh/runsascoded/shapes?1e0bd5c",
         "bootstrap": "^5.3.1",
+        "buffer": "^6.0.3",
         "lodash": "^4.17.21",
         "next": "^13.4.13",
         "next-utils": "https://gitpkg.now.sh/runsascoded/next-utils/dist?135b346",

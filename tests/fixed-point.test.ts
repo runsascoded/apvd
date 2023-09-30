@@ -1,6 +1,7 @@
 import {fromFixedPoint, Opts, toFixedPoint} from "../src/lib/fixed-point";
 import {fromFloat, toFloat} from "../src/lib/float";
 import {js} from "../src/lib/utils";
+import BitBuffer from "../src/lib/bit-buffer";
 
 describe("test FixedPoint round-trips", () => {
     function check(f: number, opts: Opts) {
@@ -29,15 +30,15 @@ describe("test FixedPoint round-trips", () => {
         chk(i, { mantBits: 4, })
         chk(i, { mantBits: 6, exp: 3 })
     }
-    // chk(0, { mantBits: 4, })
-    // chk(0, { mantBits: 4, exp: 3 })
-    // chk(0.5, { mantBits: 4, })
-    // chk(1, { mantBits: 4, })
-    // chk(1.5, { mantBits: 4, exp: 3 })
-    // chk(2, { mantBits: 4, })
-    // chk(2.5, { mantBits: 4, })
-    // chk(3, { mantBits: 4, })
-    // chk(3.5, { mantBits: 4, })
-    // chk(4, { mantBits: 4, })
-    // chk(4.5, { mantBits: 4, })
+})
+
+describe('test FixedPoint', () => {
+  test('encodeFixedPoints', () => {
+      const buf = new BitBuffer()
+      const vals0 = [-0.5, 0, 1, 1]
+      buf.encodeFixedPoints(vals0, { expBits: 3, mantBits: 4 })
+      buf.seek(0)
+      const vals1 = buf.decodeFixedPoints({ expBits: 3, mantBits: 4, numFloats: 4 })
+      expect(vals1).toEqual(vals0)
+  })
 })
