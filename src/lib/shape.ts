@@ -1,7 +1,9 @@
 import {R2} from "apvd";
-import {abs, ceil, cos, max, min, sin, tau} from "./math";
+import {abs, ceil, cos, floor, log2, max, min, sin, tau} from "./math";
 import {Param} from "next-utils/params";
 import {js} from "./utils";
+import {fromFloat, toFloat} from "./float";
+import {decodeFixedPoints, encodeFixedPoints, fromFixedPoint, FixedPoint, toFixedPoint} from "./fixed-point";
 
 export interface Circle<D> {
     kind: 'Circle'
@@ -115,21 +117,6 @@ export function shapeStrJSON(s: Shape<number>): string {
     }
 }
 
-export type Float = {
-    neg: boolean
-    exp: number
-    mant: bigint
-}
-
-function toFloat(x: number): Float {
-    const buf = Buffer.alloc(8)
-    buf.writeDoubleBE(x, 0)
-    const neg = !!(buf[0] & 0x80)
-    const exp = ((buf.readUint16BE(0) & 0x7ff0) >> 4) - 1023
-    const mant = buf.readBigUint64BE() & BigInt('0xfffffffffffff')
-    return { neg, exp, mant, }
-}
-
 const b64i2c = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_'
 const b64c2i: { [c: string]: number } = {}
 b64i2c.split('').forEach((c, i) => {
@@ -154,23 +141,6 @@ export const getB64Char = (buf: number[], bitIdx: number): string => {
     return b64i2c[i]
 }
 
-export type ScaledFloat = {
-    neg: boolean
-    mant: number
-}
-
-function toScaledFloat(f: Float, maxExp: number, mantBits: number): ScaledFloat {
-    let { neg, exp, mant } = f
-    if (maxExp > exp) {
-        mant = (mant | (1n << 52n)) >> BigInt(maxExp - exp + 52 - mantBits)
-    } else if (maxExp == exp) {
-        mant = mant >> BigInt(52 - mantBits)
-    } else {
-        throw Error(`maxExp ${maxExp} < ${exp}: ${js(f)}`)
-    }
-    return ({ neg, mant: Number(mant) })
-}
-
 export function encodeInt({ buf, bitOffset, }: { buf: number[], bitOffset: number, }, n: number, numBits: number): number {
     let curByteOffset = bitOffset >> 3
     let curBitOffset = bitOffset & 0x7
@@ -184,8 +154,8 @@ export function encodeInt({ buf, bitOffset, }: { buf: number[], bitOffset: numbe
         const bitsLeftInByte = remainingBitsInByte - bitsToWrite
         const bitsLeftToWrite = numBits - bitsToWrite
         const mask = ((1 << bitsToWrite) - 1) << bitsLeftToWrite
-        const shiftedBitsToWrite = ((n & mask) >> bitsLeftToWrite) << bitsLeftInByte
-        buf[curByteOffset] |= shiftedBitsToWrite
+        const shiftedBitsToWrite = (n & mask) >> bitsLeftToWrite
+        buf[curByteOffset] |= shiftedBitsToWrite << bitsLeftInByte
         n &= (1 << bitsLeftToWrite) - 1
         numBits -= bitsToWrite
         curBitOffset += bitsToWrite
@@ -197,34 +167,26 @@ export function encodeInt({ buf, bitOffset, }: { buf: number[], bitOffset: numbe
     return curByteOffset * 8 + curBitOffset
 }
 
-export function encodeScaledFloats(
-    vals: number[],
-    { buf, bitOffset, expBits, mantBits }: {
-        buf: number[]
-        bitOffset: number
-        expBits: number
-        mantBits: number
+export function decodeInt({ buf, bitOffset, numBits }: { buf: number[], bitOffset: number, numBits: number }): number {
+    let curByteOffset = bitOffset >> 3
+    let curBitOffset = bitOffset & 0x7
+    let n = 0
+    while (numBits > 0) {
+        const remainingBitsInByte = 8 - curBitOffset
+        const bitsToRead = min(numBits, remainingBitsInByte)
+        const bitsLeftInByte = remainingBitsInByte - bitsToRead
+        const bitsLeftToRead = numBits - bitsToRead
+        const mask = ((1 << bitsToRead) - 1) << bitsLeftInByte
+        const shiftedBitsToRead = (buf[curByteOffset] & mask) >> bitsLeftInByte
+        n |= shiftedBitsToRead << bitsLeftToRead
+        numBits -= bitsToRead
+        curBitOffset += bitsToRead
+        if (curBitOffset == 8) {
+            curBitOffset = 0
+            curByteOffset++
+        }
     }
-): number {
-    const floats = vals.map(toFloat)
-    // console.log("floats:", floats)
-    const maxExp = max(...floats.map(({ exp, mant }) => (mant > 0n ? exp + 1 : exp)))
-    // console.log("maxExp:", maxExp)
-    if (maxExp >= (1 << (expBits - 1))) {
-        throw Error(`maxExp ${maxExp} >= ${1 << expBits}`)
-    }
-    buf[0] |= (maxExp + (1 << (expBits - 1))) & ((1 << expBits) - 1)
-    const scaledFloats = floats.map(f => toScaledFloat(f, maxExp, mantBits))
-    // console.log("scaledFloats:", scaledFloats)
-    const expToWrite = (maxExp + (1 << (expBits - 1))) & ((1 << expBits) - 1)
-    // console.log("expToWrite:", expToWrite)
-    bitOffset = encodeInt({ buf, bitOffset, }, expToWrite, expBits)
-    scaledFloats.forEach(({ neg, mant }, idx) => {
-        // console.log(`writing float ${idx} at bit offset ${bitOffset}`)
-        bitOffset = encodeInt({ buf, bitOffset, }, neg ? 1 : 0, 1)
-        bitOffset = encodeInt({ buf, bitOffset, }, mant, mantBits)
-    })
-    return bitOffset
+    return n
 }
 
 export const encodeXYRRT = (xyrrt: XYRRT<number>): string => {
@@ -236,14 +198,35 @@ export const encodeXYRRT = (xyrrt: XYRRT<number>): string => {
     const floatBits = mantBits + 1
     const buf: number[] = []
     let bitOffset = 3;
-    bitOffset = encodeScaledFloats([ c.x, c.y, r.x, r.y ], { buf, bitOffset, expBits, mantBits })
-    const tf = toScaledFloat(toFloat((t + tau) % tau / tau), 0, floatBits)
+    bitOffset = encodeFixedPoints([ c.x, c.y, r.x, r.y ], { buf, bitOffset, expBits, mantBits })
+    const tf = toFixedPoint(
+        toFloat((t + tau) % tau / tau),
+        { mantBits: floatBits, exp: 0, },
+    )
     let mant = tf.mant
     bitOffset = encodeInt({ buf, bitOffset }, mant, floatBits)
 
     const b64Chars = ceil(bitOffset / 6)
     // console.log(buf, bitOffset, b64Chars)
     return Array(b64Chars).fill(0).map((_, i) => getB64Char(buf, i * 6)).join('')
+}
+
+export const decodeXYRRT = (s: string): XYRRT<number> => {
+    const buf = s.split('').map(c => b64c2i[c])
+    let bitOffset = 3  // TODO: verify shapes portion
+    const expBits = 5
+    const mantBits = 13
+    const floatBits = mantBits + 1
+    const fps = decodeFixedPoints({ buf, bitOffset, expBits, mantBits, numFloats: 4 })
+    const { vals: [ cx, cy, rx, ry ], exp } = fps
+    bitOffset = fps.bitOffset
+    const c = { x: cx, y: cy }
+    const r = { x: rx, y: ry }
+    const tsf: FixedPoint = { neg: false, exp, mant: decodeInt({ buf, bitOffset, numBits: floatBits }) }
+    bitOffset += floatBits
+    const tf = fromFixedPoint(tsf, floatBits)
+    const t = fromFloat(tf) * tau
+    return { kind: 'XYRRT', c, r, t, }
 }
 
 export const shapeParam: Param<Shape<number>> = {
@@ -256,12 +239,12 @@ export const shapeParam: Param<Shape<number>> = {
             //   - 101: Circle
             //
             case 'Circle':
-                // 3 + 5 + 3*12 = 44 bits, 8xb64
+                // 3 + 5 + 3*14 = 50 bits, 9xb64
                 buf = Buffer.alloc(6)
                 // const { c, r } = s
                 throw Error(`TODO: Circle`)
             case 'XYRR':
-                // 3 + 5 + 4*12 = 56 bits, 10xb64
+                // 3 + 5 + 4*14 = 64 bits, 11xb64
                 buf = Buffer.alloc(7)
                 // const { c, r } = s
                 throw Error(`TODO: XYRR`)
