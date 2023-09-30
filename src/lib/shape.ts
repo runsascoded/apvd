@@ -1,9 +1,9 @@
 import {R2} from "apvd";
-import {abs, ceil, cos, floor, log2, max, min, sin, tau} from "./math";
+import {abs, ceil, cos, max, sin, tau} from "./math";
 import {Param} from "next-utils/params";
-import {js} from "./utils";
 import {fromFloat, toFloat} from "./float";
-import {decodeFixedPoints, encodeFixedPoints, fromFixedPoint, FixedPoint, toFixedPoint} from "./fixed-point";
+import {decodeFixedPoints, encodeFixedPoints, FixedPoint, fromFixedPoint, toFixedPoint} from "./fixed-point";
+import {b64c2i, decodeInt, encodeInt, getB64Char} from "./base64";
 
 export interface Circle<D> {
     kind: 'Circle'
@@ -115,99 +115,6 @@ export function shapeStrJSON(s: Shape<number>): string {
         case 'XYRR': return `{ "kind": "XYRR", "c": { "x": ${s.c.x}, "y": ${s.c.y} }, "r": { "x": ${s.r.x}, "y": ${s.r.y} } }`
         case 'XYRRT': return `{ "kind": "XYRRT", "c": { "x": ${s.c.x}, "y": ${s.c.y} }, "r": { "x": ${s.r.x}, "y": ${s.r.y} }, "t": ${s.t} }`
     }
-}
-
-const b64i2c =
-    '01234567' + '89abcdef' +
-    'ghijklmn' + 'opqrstuv' +
-    'wxyzABCD' + 'EFGHIJKL' +
-    'MNOPQRST' + 'UVWXYZ-_'
-const b64c2i: { [c: string]: number } = {}
-b64i2c.split('').forEach((c, i) => {
-    b64c2i[c] = i
-})
-
-export const getB64Char = (buf: number[], bitIdx: number): string => {
-    const byteIdx = bitIdx >> 3
-    const bitOffset = bitIdx & 0x7
-    let b = buf[byteIdx]
-    if (bitOffset <= 2) {
-        const i = (b >> (2 - bitOffset)) & 0x3f
-        return b64i2c[i]
-    }
-    const numBitsFirstByte = 8 - bitOffset
-    let i = b & ((1 << numBitsFirstByte) - 1)
-    const numBitsSecondByte = 6 - numBitsFirstByte
-    i <<= numBitsSecondByte
-    b = buf[byteIdx + 1]
-    i |= b >> (8 - numBitsSecondByte) & ((1 << numBitsSecondByte) - 1)
-    // const i = (b >> (7 - bitInByte)) & 0x1
-    return b64i2c[i]
-}
-
-// export const setB64Char = (buf: number[], bitIdx: number, c: string): void => {
-//     const byteIdx = bitIdx >> 3
-//     const bitOffset = bitIdx & 0x7
-//     const i = b64c2i[c]
-//     const numBitsFirstByte = min(6, 8 - bitOffset)
-//     const numBitsSecondByte = 6 - numBitsFirstByte
-//     let newBits = (i >> numBitsSecondByte) << (8 - bitOffset)
-//     buf[byteIdx] |= newBits
-//     if (numBitsSecondByte) {
-//         newBits = (i & ((1 << numBitsSecondByte) - 1)) << (8 - numBitsSecondByte)
-//         buf[byteIdx + 1] |= newBits
-//     }
-// }
-
-export function encodeInt({ buf, bitOffset, }: { buf: number[], bitOffset: number, }, n: number, numBits: number): number {
-    let curByteOffset = bitOffset >> 3
-    let curBitOffset = bitOffset & 0x7
-    while (numBits > 0) {
-        if (curByteOffset >= buf.length) {
-            // console.log(`${curByteOffset}:${curBitOffset} >= ${buf.length}, pushing 0 (${numBits} bits left)`)
-            buf.push(0)
-        }
-        const remainingBitsInByte = 8 - curBitOffset
-        const bitsToWrite = min(numBits, remainingBitsInByte)
-        const bitsLeftInByte = remainingBitsInByte - bitsToWrite
-        const bitsLeftToWrite = numBits - bitsToWrite
-        const mask = ((1 << bitsToWrite) - 1) << bitsLeftToWrite
-        const shiftedBitsToWrite = (n & mask) >> bitsLeftToWrite
-        buf[curByteOffset] |= shiftedBitsToWrite << bitsLeftInByte
-        // console.log(`wrote ${bitsToWrite} bits (${shiftedBitsToWrite}) at ${curByteOffset}:${curBitOffset} (${bitsLeftInByte} bits left in byte). Byte: ${buf[curByteOffset]}`)
-        n &= (1 << bitsLeftToWrite) - 1
-        numBits -= bitsToWrite
-        curBitOffset += bitsToWrite
-        if (curBitOffset == 8) {
-            curBitOffset = 0
-            curByteOffset++
-        }
-    }
-    return curByteOffset * 8 + curBitOffset
-}
-
-export function decodeInt({ buf, bitOffset, numBits }: { buf: number[], bitOffset: number, numBits: number }): number {
-    let curByteOffset = bitOffset >> 3
-    let curBitOffset = bitOffset & 0x7
-    // console.log("decodeInt:", buf, bitOffset, numBits, "curByteOffset:", curByteOffset, "curBitOffset:", curBitOffset)
-    let n = 0
-    while (numBits > 0) {
-        const remainingBitsInByte = 8 - curBitOffset
-        const bitsToRead = min(numBits, remainingBitsInByte)
-        const bitsLeftInByte = remainingBitsInByte - bitsToRead
-        const bitsLeftToRead = numBits - bitsToRead
-        const mask = ((1 << bitsToRead) - 1) << bitsLeftInByte
-        const shiftedBitsToRead = (buf[curByteOffset] & mask) >> bitsLeftInByte
-        n |= shiftedBitsToRead << bitsLeftToRead
-        numBits -= bitsToRead
-        curBitOffset += bitsToRead
-        if (curBitOffset == 8) {
-            curBitOffset = 0
-            curByteOffset++
-        }
-    }
-    // console.log("read:", n)
-    return n
 }
 
 export const encodeXYRRT = (xyrrt: XYRRT<number>): string => {

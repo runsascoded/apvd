@@ -1,7 +1,6 @@
 import {pi2, pi4, tau} from "../src/lib/math";
 import {decodeXYRRT, encodeXYRRT, Shape} from "../src/lib/shape";
 import {Point} from "../src/components/point";
-import {XYRRT} from "apvd";
 
 describe('test encoding XYRRTs', () => {
     function check(c: Point, r: Point, t: number, expected: string, decoded?: Shape<number>) {

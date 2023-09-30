@@ -1,7 +1,7 @@
 import {js} from "./utils";
 import {floor, log2, max} from "./math";
 import {Float, fromFloat, toFloat} from "./float";
-import {decodeInt, encodeInt} from "./shape";
+import {decodeInt, encodeInt} from "./base64";
 
 export type FixedPoint = {
     neg: boolean
@@ -66,7 +66,7 @@ export function encodeFixedPoints(
     bitOffset = encodeInt({ buf, bitOffset, }, expToWrite, expBits)
     const fixedPoints = floats.map(f => toFixedPoint(f, { mantBits, exp: maxExp }))
     // console.log("fixedPoints:", fixedPoints)
-    fixedPoints.forEach(({ neg, mant }, idx) => {
+    fixedPoints.forEach(({ neg, mant }) => {
         // console.log(`writing float ${idx} at bit offset ${bitOffset}`)
         bitOffset = encodeInt({ buf, bitOffset, }, neg ? 1 : 0, 1)
         bitOffset = encodeInt({ buf, bitOffset, }, mant, mantBits)
