@@ -12,7 +12,7 @@ describe('test encoding XYRRTs', () => {
         test(expected, () => check(c, r, t, expected))
     }
 
-    chk("4g00w0g0600w0", { x: 0, y:  0.5 }, { x:  1, y:  1.5 },  pi2)
-    chk("4g00w0g0601w0", { x: 0, y:  0.5 }, { x:  1, y:  1.5 }, -pi2)
-    chk("4g0ww0M0e01w0", { x: 0, y: -0.5 }, { x: -1, y: -1.5 }, -pi2)
+    chk("4g00w0g060100", { x: 0, y:  0.5 }, { x:  1, y:  1.5 },  pi2)
+    chk("4g00w0g060300", { x: 0, y:  0.5 }, { x:  1, y:  1.5 }, -pi2)
+    chk("4g02w0M0e0300", { x: 0, y: -0.5 }, { x: -1, y: -1.5 }, -pi2)
 })

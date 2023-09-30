@@ -1,5 +1,5 @@
 import {R2} from "apvd";
-import {abs, ceil, cos, log2, max, sin, tau} from "./math";
+import {abs, ceil, cos, log2, max, min, sin, tau} from "./math";
 import {Param} from "next-utils/params";
 import {bool} from "prop-types";
 import {boolean} from "zod";
@@ -156,66 +156,91 @@ export const getB64Char = (buf: Buffer, bitIdx: number): string => {
     return b64i2c[i]
 }
 
+export type ScaledFloat = {
+    neg: boolean
+    mant: number
+}
+
+function toScaledFloat(f: Float, maxExp: number, mantBits: number): ScaledFloat {
+    let { neg, exp, mant } = f
+    if (maxExp > exp) {
+        mant = (mant | (1n << 52n)) >> BigInt(maxExp - exp + 52 - mantBits)
+    } else if (maxExp == exp) {
+        mant = mant >> BigInt(52 - mantBits)
+    } else {
+        throw Error(`maxExp ${maxExp} < ${exp}: ${js(f)}`)
+    }
+    return ({ neg, mant: Number(mant) })
+}
+
+export function encodeInt({ buf, bitOffset, }: { buf: Buffer, bitOffset: number, }, n: number, numBits: number): number {
+    let curByteOffset = bitOffset >> 3
+    let curBitOffset = bitOffset & 0x7
+    while (numBits > 0) {
+        const remainingBitsInByte = 8 - curBitOffset
+        const bitsToWrite = min(numBits, remainingBitsInByte)
+        const bitsLeftInByte = remainingBitsInByte - bitsToWrite
+        const bitsLeftToWrite = numBits - bitsToWrite
+        const mask = ((1 << bitsToWrite) - 1) << bitsLeftToWrite
+        const shiftedBitsToWrite = ((n & mask) >> bitsLeftToWrite) << bitsLeftInByte
+        buf[curByteOffset] |= shiftedBitsToWrite
+        n &= (1 << bitsLeftToWrite) - 1
+        numBits -= bitsToWrite
+        curBitOffset += bitsToWrite
+        if (curBitOffset == 8) {
+            curBitOffset = 0
+            curByteOffset++
+        }
+    }
+    return curByteOffset * 8 + curBitOffset
+}
+
+export function encodeScaledFloats(
+    vals: number[],
+    { buf, bitOffset, expBits, mantBits }: {
+        buf: Buffer
+        bitOffset: number
+        expBits: number
+        mantBits: number
+    }
+): number {
+    const floats = vals.map(toFloat)
+    console.log("floats:", floats)
+    const maxExp = max(...floats.map(({ exp, mant }) => (mant > 0n ? exp + 1 : exp)))
+    console.log("maxExp:", maxExp)
+    if (maxExp >= (1 << (expBits - 1))) {
+        throw Error(`maxExp ${maxExp} >= ${1 << expBits}`)
+    }
+    buf[0] |= (maxExp + (1 << (expBits - 1))) & ((1 << expBits) - 1)
+    const scaledFloats = floats.map(f => toScaledFloat(f, maxExp, mantBits))
+    console.log("scaledFloats:", scaledFloats)
+    const expToWrite = (maxExp + (1 << (expBits - 1))) & ((1 << expBits) - 1)
+    console.log("expToWrite:", expToWrite)
+    bitOffset = encodeInt({ buf, bitOffset, }, expToWrite, expBits)
+    scaledFloats.forEach(({ neg, mant }, idx) => {
+        console.log(`writing float ${idx} at bit offset ${bitOffset}`)
+        bitOffset = encodeInt({ buf, bitOffset, }, neg ? 1 : 0, 1)
+        bitOffset = encodeInt({ buf, bitOffset, }, mant, mantBits)
+    })
+    return bitOffset
+}
+
 export const encodeXYRRT = (xyrrt: XYRRT<number>): string => {
     const { c, r, t } = xyrrt
     // 3 + 5 + 5*14 = 78 bits
     const shapeBits = 3
     const expBits = 5
-    const mantBits = 14
-    const totalBits = shapeBits + expBits + 5 * mantBits
+    const mantBits = 13
+    const floatBits = mantBits + 1
+    const totalBits = shapeBits + expBits + 5 * floatBits
     const totalBytes = ceil(totalBits / 8)
-    const buf = Buffer.alloc(10)
-    const floats = [ c.x, c.y, r.x, r.y ].map(toFloat)
-    console.log("floats:", floats)
-    const maxExp = max(...floats.map(({ exp, mant }) => (mant > 0n ? exp + 1 : exp)))
-    console.log("maxExp:", maxExp)
-    const n = 13
-    if (maxExp >= (1 << (expBits - 1))) {
-        throw Error(`maxExp ${maxExp} >= ${1 << expBits}: ${xyrrt}`)
-    }
-    buf[0] |= (maxExp + (1 << (expBits - 1))) & ((1 << expBits) - 1)
-    const scaledFloats = floats.map(({ neg, exp, mant }) => {
-        if (maxExp > exp) {
-            mant = (mant | (1n << 52n)) >> BigInt(maxExp - exp + 53 - mantBits)
-        } else {
-            mant = mant >> BigInt(53 - mantBits)
-        }
-        return ({ neg, mant: Number(mant) })
-    })
-    console.log("scaledFloats:", scaledFloats)
-    let neg: boolean
-    let mant: number
-    let f: { neg: boolean, mant: number }
-    f = scaledFloats[0]; neg = f.neg; mant = f.mant
-    if (neg) buf[1] |= 0x80
-    buf[1] |= (mant >> (n - 7)) & ((1<<7) - 1)
-    buf[2] |= (mant & 0x3f) << 2
-    f = scaledFloats[1]; neg = f.neg; mant = f.mant
-    if (neg) buf[2] |= 0x20
-    buf[2] |= (mant >> (n - 1)) & 0x1
-    buf[3] = (mant >> (n - 8 - 1)) & 0xff
-    buf[4] = (mant & 0xf) << 4
-    f = scaledFloats[2]; neg = f.neg; mant = f.mant
-    if (neg) buf[4] |= 0x8
-    buf[4] |= (mant >> (n - 3)) & 0x7
-    buf[5] = (mant >> (n - 8 - 3)) & 0xff
-    buf[6] = (mant & 0x3) << 6
-    f = scaledFloats[3]; neg = f.neg; mant = f.mant
-    if (neg) buf[6] |= 0x20
-    buf[6] |= (mant >> (n - 5)) & 0x1f
-    buf[7] = (mant >> (n - 8 - 5)) & 0xff
-    const tf = toFloat((t + tau) % tau / tau); neg = tf.neg; let tfMant = tf.mant
-    if (tf.exp > 0) {
-        throw Error(`t ${js(tf)} out of range: ${js(f)}, ${js(xyrrt)}`)
-    } else if (tf.exp < 0) {
-        tfMant = (tfMant | (1n << 52n)) >> BigInt(-tf.exp)
-    }
-    tfMant >>= BigInt(53 - mantBits)
-    console.log("tf:", tf, tfMant)
-    let tfMantN = Number(tfMant)
-    if (neg) buf[8] |= 0x80
-    buf[8] |= (tfMantN >> (n - 7)) & ((1<<7) - 1)
-    buf[9] |= (tfMantN & 0x3f) << 2
+    const buf = Buffer.alloc(totalBytes)
+    let bitOffset = 3;
+    bitOffset = encodeScaledFloats([ c.x, c.y, r.x, r.y ], { buf, bitOffset, expBits, mantBits })
+    const tf = toScaledFloat(toFloat((t + tau) % tau / tau), 0, floatBits)
+    // let neg = tf.neg
+    let mant = tf.mant
+    encodeInt({ buf, bitOffset }, mant, floatBits)
 
     console.log(buf)
     const b64Chars = ceil(totalBits / 6)
