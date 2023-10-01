@@ -26,6 +26,11 @@ export const precisionSchemes = [
     { id: 6, expBits: 5, mantBits: 52 },
 ]
 
+export type ShapesParam = {
+    shapes: Shape<number>[]
+    precisionSchemeId: number
+}
+
 export default class ShapesBuffer {
     buf: BitBuffer
     precisionScheme: PrecisionScheme
@@ -171,7 +176,7 @@ export default class ShapesBuffer {
         shapes.forEach(s => this.encodeShape(s))
         return this
     }
-    decodeShapes(num?: number): Shape<number>[] {
+    decodeShapes(num?: number): ShapesParam {
         const precisionSchemeId = this.buf.decodeInt(3)
         if (precisionSchemeId < 0 || precisionSchemeId >= precisionSchemes.length) {
             throw Error(`precisionSchemeId ${precisionSchemeId} out of range`)
@@ -188,6 +193,6 @@ export default class ShapesBuffer {
                 shapes.push(this.decodeShape())
             }
         }
-        return shapes
+        return { shapes, precisionSchemeId }
     }
 }

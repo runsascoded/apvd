@@ -1,7 +1,7 @@
 import {R2} from "apvd";
 import {abs, cos, max, sin} from "./math";
 import {Param} from "next-utils/params";
-import ShapesBuffer, {Opts} from "./shapes-buffer";
+import ShapesBuffer, {Opts, ShapesParam} from "./shapes-buffer";
 
 export interface Circle<D> {
     kind: 'Circle'
@@ -115,23 +115,23 @@ export function shapeStrJSON(s: Shape<number>): string {
     }
 }
 
-export function shapesParam(opts: Opts = {}): Param<Shape<number>[] | null> {
+export function shapesParam(opts: Opts = {}): Param<ShapesParam | null> {
     return {
-        encode(shapes: Shape<number>[] | null): string | undefined {
-            if (!shapes) return undefined
-            const buf = new ShapesBuffer(opts)
+        encode(param: ShapesParam | null): string | undefined {
+            if (!param) return undefined
+            const { shapes, precisionSchemeId } = param
+            const buf = new ShapesBuffer({ ...opts, precisionSchemeId })
             buf.encodeShapes(shapes)
             return buf.toB64()
         },
-        decode(v: string | undefined): Shape<number>[] | null {
+        decode(v: string | undefined): ShapesParam | null {
             // console.log("decode shapes:", v)
             if (!v) return null
             const buf = ShapesBuffer.fromB64(v, opts)
             const end = buf.end
             buf.seek(0)
             // console.log("end:", end)
-            const shapes: Shape<number>[] = buf.decodeShapes()
-            return shapes
+            return buf.decodeShapes()
         },
     }
 }

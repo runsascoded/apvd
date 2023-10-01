@@ -40,6 +40,7 @@ export const KeySets: { [length: number]: string[] } = fromEntries(
         return [ keySet.length, keySet, ]
     })
 )
+
 export const targetsParam: Param<Target[] | null> = {
     encode: (targets: Target[] | null): string | undefined => {
         if (!targets) {

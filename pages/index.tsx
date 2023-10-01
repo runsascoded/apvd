@@ -28,6 +28,8 @@ import useLocalStorageState from 'use-local-storage-state'
 import _ from "lodash"
 import {boolParam, getHashMap, intParam, Param, ParsedParam, parseHashParams, updatedHash, updateHashParams} from "next-utils/params";
 import CopyLayout from "../src/components/copy-layout"
+import {precisionSchemes, ShapesParam} from "../src/lib/shapes-buffer";
+import {Checkbox, Number, Select} from "../src/components/controls";
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false })
 
@@ -113,50 +115,6 @@ const VariantCallers: Target[] = [
 ]
 
 export type RunningState = "none" | "fwd" | "rev"
-
-export function Number(
-    { label, value, setValue, float, children, ...props }: {
-        label: string
-        value: number
-        setValue: Dispatch<number>
-        float?: boolean
-        children?: ReactNode
-    } & DetailedHTMLProps<InputHTMLAttributes<HTMLInputElement>, HTMLInputElement>
-) {
-    const parse = float ? parseFloat : parseInt
-    return (
-        <div className={css.input}>
-            <label>
-                {label}:
-                <input
-                    type={"number"}
-                    {...props}
-                    // min={0} max={1.2} step={0.1}
-                    value={value}
-                    onChange={(e) => setValue(parse(e.target.value))}
-                    onKeyDown={e => { e.stopPropagation() }}
-                />
-                {children}
-            </label>
-        </div>
-    )
-}
-
-export function Checkbox({ label, checked, setChecked, }: { label: string, checked: boolean, setChecked: Dispatch<boolean>, }) {
-    return (
-        <div className={css.input}>
-            <label>
-                {label}:
-                <input
-                    type={"checkbox"}
-                    checked={checked}
-                    onChange={e => setChecked(e.target.checked)}
-                    onKeyDown={e => { e.stopPropagation() }}
-                />
-            </label>
-        </div>
-    )
-}
 
 export function Details({ open, toggle, summary, className, children, }: {
     open: boolean
@@ -373,12 +331,12 @@ function makeVars(initialSets: S[]) {
 }
 
 type Params = {
-    s: Param<Shape<number>[] | null>
+    s: Param<ShapesParam | null>
     t: Param<Target[] | null>
 }
 
 type ParsedParams = {
-    s: ParsedParam<Shape<number>[] | null>
+    s: ParsedParam<ShapesParam | null>
     t: ParsedParam<Target[] | null>
 }
 
@@ -403,7 +361,7 @@ export function Body() {
     })
     // const [ shapesInUrlFragment, setShapesInUrlFragment ] = useState<boolean>(false)
 
-    // const [ urlShapesPrecisionScheme, setUrlShapesPrecisionScheme ] = useState<number>(5)
+    const [ urlShapesPrecisionScheme, setUrlShapesPrecisionScheme ] = useState<number>(5)
 
     const params: Params = {
         s: shapesParam({ precisionSchemeId: 6 }),
@@ -424,7 +382,8 @@ export function Body() {
         if (urlFragmentShapes) {
             console.log("found urlFragmentShapes:", urlFragmentShapes)
             setUrlFragmentShapes(null)
-            return urlFragmentShapes
+            setUrlShapesPrecisionScheme(urlFragmentShapes.precisionSchemeId)
+            return urlFragmentShapes.shapes
         } else {
             console.log("no urlFragmentShapes found")
         }
@@ -1325,10 +1284,10 @@ export function Body() {
                 return
             }
             // console.log("setting UrlFragmentShapes:", shapes, "current hash:", window.location.hash)
-            setUrlFragmentShapes(shapes)
+            setUrlFragmentShapes({ shapes, precisionSchemeId: urlShapesPrecisionScheme })
             setUrlFragmentTargets(targets)
         },
-        [ shapes, targets, stateInUrlFragment, ]
+        [ shapes, targets, stateInUrlFragment, urlShapesPrecisionScheme, ]
     )
 
     useEffect(
@@ -1453,7 +1412,7 @@ export function Body() {
                                         updateHashParams(params, { s: shapes, t: targets })
                                         console.log("Copying:", window.location.href)
                                         navigator.clipboard.writeText(window.location.href)
-                                        setUrlFragmentShapes(shapes)
+                                        setUrlFragmentShapes({shapes, precisionSchemeId: urlShapesPrecisionScheme})
                                         setUrlFragmentTargets(targets)
                                         // console.log("setting UrlFragmentShapes:", shapes, "current hash:", window.location.hash)
                                     }}>🔗</span>
@@ -1464,16 +1423,27 @@ export function Body() {
                             </>}
                         >
                             <Number
-                                label={"Max error ratio step size"} value={maxErrorRatioStepSize} setValue={setMaxErrorRatioStepSize} float={true}
-                                min={0} max={1.2} step={0.1}
+                                label={"Max error ratio step size"}
+                                tooltip={"On each step, advance (along the gradients toward lower error) by this fraction of the current overall error"}
+                                value={maxErrorRatioStepSize} setValue={setMaxErrorRatioStepSize}
+                                float={true} min={0} max={1.2} step={0.1}
                             />
                             <Number label={"Max steps"} value={maxSteps} setValue={setMaxSteps} />
-                            <Number label={"Step batch size"} className={css.shortNumberInput} value={stepBatchSize} setValue={setStepBatchSize} />
+                            <Number label={"Step batch size"} tooltip={"Advance by this many steps at a time (when at the end of the current model's history)"} className={css.shortNumberInput} value={stepBatchSize} setValue={setStepBatchSize} />
                             <Checkbox label={"Intersections"} checked={showIntersectionPoints} setChecked={setShowIntersectionPoints} />
                             <Checkbox label={"Grid"} checked={showGrid} setChecked={setShowGrid} />
                             {/*<Checkbox label={"Edge points"} checked={showEdgePoints} setChecked={setShowEdgePoints} />*/}
                             <Checkbox label={"Auto-center"} checked={autoCenter} setChecked={setAutoCenter} />
                             <Checkbox label={"State in URL"} checked={stateInUrlFragment} setChecked={setStateInUrlFragment} />
+                            <Select
+                                label={"URL shapes precision"}
+                                tooltip={"Number of bits of precision to use for each shape's coordinates in URL: <mantissa>e<exponent>"}
+                                value={urlShapesPrecisionScheme}
+                                setValue={setUrlShapesPrecisionScheme}>{
+                                precisionSchemes.map(({id, mantBits, expBits}, idx) =>
+                                    <option key={idx} value={idx}>{mantBits}e{expBits}</option>
+                                )
+                            }</Select>
                             <Number label={"Sparklines"} className={css.shortNumberInput} value={sparkLineLimit} setValue={setSparkLineLimit}>
                                 <input
                                     type={"checkbox"}
@@ -1482,20 +1452,16 @@ export function Body() {
                                     onKeyDown={e => { e.stopPropagation() }}
                                 />
                             </Number>
-                            <div className={css.input}>
-                                <label>
-                                    Log level:
-                                    <select
-                                        value={logLevel}
-                                        onChange={e => setLogLevel(e.target.value as LogLevel)}
-                                        onKeyDown={e => { e.stopPropagation() }}
-                                    >{
-                                        ["debug", "info", "warn"].map(level =>
-                                            <option key={level} value={level}>{level}</option>
-                                        )
-                                    }</select>
-                                </label>
-                            </div>
+                            <Select
+                                label={"WASM log level"}
+                                tooltip={<span>Set logging verbosity in WASM module (<A href={"https://github.com/runsascoded/shapes"}>runsascoded/shapes</A>)</span>}
+                                value={logLevel}
+                                setValue={setLogLevel}
+                            >{
+                                ["debug", "info", "warn"].map(level =>
+                                    <option key={level} value={level}>{level}</option>
+                                )
+                            }</Select>
                         </Details>
                     </div>
                 </div>
@@ -1521,8 +1487,14 @@ export function Body() {
                                     {...sparkLineCellProps}
                                 />
                             }
-                            <Checkbox label={"Disjoint sets"} checked={showDisjointSets}
-                                      setChecked={setShowDisjointSets}/>
+                            <Checkbox
+                                label={"Disjoint sets"}
+                                tooltip={<span>
+                                    Express target sizes for "inclusive" (e.g. <code>A**</code>: A's overall size) vs. "exclusive" (<code>A--</code>: A and not B or C) sets
+                                </span>}
+                                checked={showDisjointSets}
+                                setChecked={setShowDisjointSets}
+                            />
                         </DetailsSection>
                         <DetailsSection
                             title={"Examples"}
@@ -1572,7 +1544,12 @@ export function Body() {
                                 <CopyLayout label={"JSON"} shapesTextFn={() => shapesStr(shapeStrJSON)} />,{' '}
                                 <CopyLayout label={"URL"} shapesTextFn={() => {
                                     if (!shapes || !targets) return undefined
-                                    const hash = updatedHash(params, { s: shapes, t: targets })
+                                    const hash = updatedHash(
+                                        params, {
+                                            s: { shapes, precisionSchemeId: urlShapesPrecisionScheme },
+                                            t: targets,
+                                        }
+                                    )
                                     return `${window.location.origin}${window.location.pathname}${hash}`
                                 }} wrap={true} />
                             </div>

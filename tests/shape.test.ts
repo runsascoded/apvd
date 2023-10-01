@@ -41,7 +41,7 @@ describe('test encoding various shapes', () => {
     function check(shapes0: Shape<number>[], expected: string, { decoded, ...opts }: Extra) {
         const encoded = ShapesBuffer.fromShapes(shapes0, opts).toB64()
         expect(encoded).toEqual(expected)
-        const shapes1 = ShapesBuffer.fromB64(encoded, opts).decodeShapes(shapes0.length)
+        const shapes1 = ShapesBuffer.fromB64(encoded, opts).decodeShapes(shapes0.length).shapes
         decoded = decoded || shapes0
         expect(shapes1).toEqual(decoded)
 
