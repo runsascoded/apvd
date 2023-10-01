@@ -66,6 +66,14 @@ export default class ShapesBuffer {
     get end(): number { return this.buf.end }
     get mantBits(): number { return this.precisionScheme.mantBits }
     get expBits(): number { return this.precisionScheme.expBits }
+    done(): boolean {
+        let totalBitOffset = this.totalBitOffset
+        const overhang = totalBitOffset % 6
+        if (overhang) {
+            totalBitOffset += 6 - overhang
+        }
+        return totalBitOffset >= this.end
+    }
 
     encodeXYRRT(xyrrt: XYRRT<number>): ShapesBuffer {
         const { buf, mantBits, expBits, ID, ShapeBits } = this
@@ -163,7 +171,7 @@ export default class ShapesBuffer {
         shapes.forEach(s => this.encodeShape(s))
         return this
     }
-    decodeShapes(num: number): Shape<number>[] {
+    decodeShapes(num?: number): Shape<number>[] {
         const precisionSchemeId = this.buf.decodeInt(3)
         if (precisionSchemeId < 0 || precisionSchemeId >= precisionSchemes.length) {
             throw Error(`precisionSchemeId ${precisionSchemeId} out of range`)
@@ -171,8 +179,14 @@ export default class ShapesBuffer {
         this.precisionScheme = precisionSchemes[precisionSchemeId]
         console.log("decoding shapes with precisionScheme:", this.precisionScheme)
         const shapes: Shape<number>[] = []
-        for (let i = 0; i < num; i++) {
-            shapes.push(this.decodeShape())
+        if (num === undefined) {
+            while (!this.done()) {
+                shapes.push(this.decodeShape())
+            }
+        } else {
+            for (let i = 0; i < num; i++) {
+                shapes.push(this.decodeShape())
+            }
         }
         return shapes
     }

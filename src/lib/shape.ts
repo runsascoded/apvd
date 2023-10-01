@@ -120,7 +120,7 @@ export function shapesParam(opts: Opts = {}): Param<Shape<number>[] | null> {
         encode(shapes: Shape<number>[] | null): string | undefined {
             if (!shapes) return undefined
             const buf = new ShapesBuffer(opts)
-            shapes.forEach(shape => buf.encodeShape(shape))
+            buf.encodeShapes(shapes)
             return buf.toB64()
         },
         decode(v: string | undefined): Shape<number>[] | null {
@@ -130,16 +130,7 @@ export function shapesParam(opts: Opts = {}): Param<Shape<number>[] | null> {
             const end = buf.end
             buf.seek(0)
             // console.log("end:", end)
-            const shapes: Shape<number>[] = []
-            while (true) {
-                let totalBitOffset = buf.totalBitOffset
-                const overhang = totalBitOffset % 6
-                if (overhang) {
-                    totalBitOffset += 6 - overhang
-                }
-                if (totalBitOffset >= end) break
-                shapes.push(buf.decodeShape())
-            }
+            const shapes: Shape<number>[] = buf.decodeShapes()
             return shapes
         },
     }

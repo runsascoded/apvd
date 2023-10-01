@@ -5,8 +5,61 @@ import css from "../../../pages/index.module.scss";
 import {SparkLineCell, SparkLineProps, SparkNum} from "../spark-lines";
 import {S} from "../../lib/shape";
 import { abs } from "../../lib/math";
+import {fromEntries} from "next-utils/objs";
+import {Param} from "next-utils/params";
 
 export type Target = [ string, number ]
+
+export function makeKeys(n: number): string[] {
+    if (n == 0) {
+        return ['']
+    }
+    if (n >= 10) {
+        throw new Error(`makeKeys: n >= 10: ${n}`)
+    }
+    const ch = (n - 1).toString()
+    const suffixes = makeKeys(n - 1)
+    return ([] as string[]).concat(
+        suffixes.map(s => s + '-'),
+        suffixes.map(s => s + ch),
+    )
+}
+
+export function makeKeySet(n: number): string[] {
+    const keySet = makeKeys(n)
+    const [ first, ...rest ] = keySet
+    const noneKey = String('-').repeat(n)
+    if (first != noneKey) {
+        throw new Error(`KeySets: first != String('-').repeat(i): ${first} != ${noneKey}`)
+    }
+    return rest
+}
+export const KeySets: { [length: number]: string[] } = fromEntries(
+    Array(6).fill(0).map((_, i) => {
+        const keySet = makeKeySet(i)
+        return [ keySet.length, keySet, ]
+    })
+)
+export const targetsParam: Param<Target[] | null> = {
+    encode: (targets: Target[] | null): string | undefined => {
+        if (!targets) {
+            return undefined
+        }
+        return targets.map(([ key, value ]) => value.toString()).join(',')
+    },
+    decode: (targets: string | undefined): Target[] | null => {
+        if (targets === undefined) {
+            return null
+        }
+        const values = targets.split(',')
+        const len = values.length
+        if (!(len in KeySets)) {
+            throw new Error(`targetsParam: len not in KeySets: ${len}, {${Object.entries(KeySets).map(([ len ]) => len).join(', ')}}`)
+        }
+        const keys = KeySets[len]
+        return values.map((value, idx) => [ keys[idx], parseFloat(value) ])
+    }
+}
 
 export const makeSortKeys = (ch: string) => ([ a ]: Target, [ b ]: Target) => {
     let numSetsA = a.split('').filter(c => c != ch).length

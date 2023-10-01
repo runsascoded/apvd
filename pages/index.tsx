@@ -18,7 +18,7 @@ import {cos, max, min, PI, pi2, pi4, round, sin, sq3, sqrt} from "../src/lib/mat
 import Apvd, {LogLevel} from "../src/components/apvd";
 import {getMidpoint, getPointAndDirectionAtTheta, getRegionCenter} from "../src/lib/region";
 import {BoundingBox, getRadii, mapShape, rotate, S, Set, shapeBox, shapeStrJS, shapeStrJSON, shapeStrRust, Shape, shapesParam} from "../src/lib/shape";
-import {Target, TargetsTable} from "../src/components/tables/targets";
+import {makeKeys, Target, targetsParam, TargetsTable} from "../src/components/tables/targets";
 import {Disjoint, Ellipses4, Ellipses4t, InitialLayout, SymmetricCircleDiamond, toShape} from "../src/lib/layout";
 import {VarsTable} from "../src/components/tables/vars";
 import {SparkLineProps} from "../src/components/spark-lines";
@@ -374,10 +374,12 @@ function makeVars(initialSets: S[]) {
 
 type Params = {
     s: Param<Shape<number>[] | null>
+    t: Param<Target[] | null>
 }
 
 type ParsedParams = {
     s: ParsedParam<Shape<number>[] | null>
+    t: ParsedParam<Target[] | null>
 }
 
 export function Body() {
@@ -401,14 +403,18 @@ export function Body() {
     })
     // const [ shapesInUrlFragment, setShapesInUrlFragment ] = useState<boolean>(false)
 
+    // const [ urlShapesPrecisionScheme, setUrlShapesPrecisionScheme ] = useState<number>(5)
+
     const params: Params = {
-        s: shapesParam({ precisionSchemeId: 4 }),
+        s: shapesParam({ precisionSchemeId: 6 }),
+        t: targetsParam,
     }
 
-    const [ shapesInUrlFragment, setShapesInUrlFragment ] = useLocalStorageState<boolean>("shapesInUrlFragment", { defaultValue: false })
+    const [ stateInUrlFragment, setStateInUrlFragment ] = useLocalStorageState<boolean>("shapesInUrlFragment", { defaultValue: false })
 
     const {
         s: [ urlFragmentShapes, setUrlFragmentShapes ],
+        t: [ urlFragmentTargets, setUrlFragmentTargets ],
     }: ParsedParams = parseHashParams({ params })
 
     // console.log("render: urlFragmentShapes", urlFragmentShapes)
@@ -429,13 +435,23 @@ export function Body() {
 
     // console.log("initialLayout:", initialLayout)
     // console.log("initialShapes:", initialShapes)
-    const [ rawTargets, setTargets ] = useLocalStorageState<Target[]>(targetsKey, { defaultValue:
-        // FizzBuzz
-        FizzBuzzBazz
-        // FizzBuzzBazzQux
-        // VariantCallers
-        // ThreeEqualCircles
-        // CentroidRepel
+    // const [ rawTargets, setTargets ] = useLocalStorageState<Target[]>(targetsKey, { defaultValue:
+    const [ rawTargets, setTargets ] = useState<Target[]>(() => {
+        if (urlFragmentTargets) {
+            console.log("found urlFragmentTargets:", urlFragmentTargets)
+            setUrlFragmentTargets(null)
+            return urlFragmentTargets
+        }
+        const str = localStorage.getItem(targetsKey)
+        if (!str) return (
+            // FizzBuzz
+            FizzBuzzBazz
+            // FizzBuzzBazzQux
+            // VariantCallers
+            // ThreeEqualCircles
+            // CentroidRepel
+        )
+        return JSON.parse(str)
     })
 
     const { targets, expandedTargets, expandedTargetsMap, numShapes, initialSets  } = useMemo(
@@ -1302,15 +1318,17 @@ export function Body() {
     useEffect(
         () => {
             if (!shapes) return
-            if (!shapesInUrlFragment) {
+            if (!stateInUrlFragment) {
                 // console.log("clearing UrlFragmentShapes")
                 setUrlFragmentShapes(null)
+                setUrlFragmentTargets(null)
                 return
             }
             // console.log("setting UrlFragmentShapes:", shapes, "current hash:", window.location.hash)
             setUrlFragmentShapes(shapes)
+            setUrlFragmentTargets(targets)
         },
-        [ shapes, shapesInUrlFragment, ]
+        [ shapes, targets, stateInUrlFragment, ]
     )
 
     useEffect(
@@ -1432,10 +1450,11 @@ export function Body() {
                                         e.stopPropagation()
                                         if (!shapes) return
                                         // Synchronously update window.location.hash
-                                        updateHashParams(params, { s: shapes })
+                                        updateHashParams(params, { s: shapes, t: targets })
                                         console.log("Copying:", window.location.href)
                                         navigator.clipboard.writeText(window.location.href)
                                         setUrlFragmentShapes(shapes)
+                                        setUrlFragmentTargets(targets)
                                         // console.log("setting UrlFragmentShapes:", shapes, "current hash:", window.location.hash)
                                     }}>🔗</span>
                                 </OverlayTrigger>
@@ -1454,7 +1473,7 @@ export function Body() {
                             <Checkbox label={"Grid"} checked={showGrid} setChecked={setShowGrid} />
                             {/*<Checkbox label={"Edge points"} checked={showEdgePoints} setChecked={setShowEdgePoints} />*/}
                             <Checkbox label={"Auto-center"} checked={autoCenter} setChecked={setAutoCenter} />
-                            <Checkbox label={"Shapes in URL"} checked={shapesInUrlFragment} setChecked={setShapesInUrlFragment} />
+                            <Checkbox label={"State in URL"} checked={stateInUrlFragment} setChecked={setStateInUrlFragment} />
                             <Number label={"Sparklines"} className={css.shortNumberInput} value={sparkLineLimit} setValue={setSparkLineLimit}>
                                 <input
                                     type={"checkbox"}
@@ -1552,8 +1571,8 @@ export function Body() {
                                 <CopyLayout label={"Rust"} shapesTextFn={() => shapesStr(shapeStrRust)} />,{' '}
                                 <CopyLayout label={"JSON"} shapesTextFn={() => shapesStr(shapeStrJSON)} />,{' '}
                                 <CopyLayout label={"URL"} shapesTextFn={() => {
-                                    if (!shapes) return undefined
-                                    const hash = updatedHash(params, { s: shapes })
+                                    if (!shapes || !targets) return undefined
+                                    const hash = updatedHash(params, { s: shapes, t: targets })
                                     return `${window.location.origin}${window.location.pathname}${hash}`
                                 }} wrap={true} />
                             </div>
