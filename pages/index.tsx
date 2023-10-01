@@ -1,7 +1,7 @@
 'use client'
 
 import Grid, {GridState} from "../src/components/grid"
-import React, {DetailedHTMLProps, Dispatch, HTMLAttributes, InputHTMLAttributes, ReactNode, useCallback, useEffect, useMemo, useRef, useState} from "react"
+import React, {DetailedHTMLProps, Dispatch, HTMLAttributes, ReactNode, useCallback, useEffect, useMemo, useState} from "react"
 import * as apvd from "apvd"
 import {train, update_log_level} from "apvd"
 import {makeModel, Model, Region, Step} from "../src/lib/regions"
@@ -12,22 +12,22 @@ import dynamic from "next/dynamic"
 import Button from 'react-bootstrap/Button'
 import OverlayTrigger from 'react-bootstrap/OverlayTrigger'
 import Tooltip from 'react-bootstrap/Tooltip'
-import {entries, fromEntries, values} from "next-utils/objs";
+import {entries, values} from "next-utils/objs";
 import {getSliderValue} from "../src/components/inputs";
-import {cos, max, min, PI, pi2, pi4, round, sin, sq3, sqrt} from "../src/lib/math";
+import {cos, max, min, PI, pi2, round, sin, sq3, sqrt} from "../src/lib/math";
 import Apvd, {LogLevel} from "../src/components/apvd";
 import {getMidpoint, getPointAndDirectionAtTheta, getRegionCenter} from "../src/lib/region";
-import {BoundingBox, getRadii, mapShape, rotate, S, Set, shapeBox, shapeStrJS, shapeStrJSON, shapeStrRust, Shape, shapesParam} from "../src/lib/shape";
+import {BoundingBox, getRadii, mapShape, S, Shape, shapeBox, shapesParam, shapeStrJS, shapeStrJSON, shapeStrRust} from "../src/lib/shape";
 import {TargetsTable} from "../src/components/tables/targets";
 import {makeTargets, Target, Targets, targetsParam} from "../src/lib/targets";
 import {Disjoint, Ellipses4, Ellipses4t, InitialLayout, SymmetricCircleDiamond, toShape} from "../src/lib/layout";
 import {VarsTable} from "../src/components/tables/vars";
 import {SparkLineProps} from "../src/components/spark-lines";
-import {CircleCoord, CircleCoords, CircleFloatGetters, Coord, makeVars, VarCoord, Vars, XYRRCoord, XYRRCoords, XYRRFloatGetters, XYRRTCoord, XYRRTCoords, XYRRTFloatGetters} from "../src/lib/vars";
+import {CircleCoords, Coord, makeVars, Vars, XYRRCoords, XYRRTCoords} from "../src/lib/vars";
 import {ShapesTable} from "../src/components/tables/shapes";
 import useLocalStorageState from 'use-local-storage-state'
 import _ from "lodash"
-import {boolParam, getHashMap, intParam, Param, ParsedParam, parseHashParams, updatedHash, updateHashParams} from "next-utils/params";
+import {Param, ParsedParam, parseHashParams, updatedHash, updateHashParams} from "next-utils/params";
 import CopyLayout from "../src/components/copy-layout"
 import {precisionSchemes, ShapesParam} from "../src/lib/shapes-buffer";
 import {Checkbox, Number, Select} from "../src/components/controls";
@@ -324,15 +324,18 @@ export function Body() {
             return urlFragmentTargets
         }
         const str = localStorage.getItem(targetsKey)
-        const entries = str ? JSON.parse(str) : (
-            // FizzBuzz
-            FizzBuzzBazz
-            // FizzBuzzBazzQux
-            // VariantCallers
-            // ThreeEqualCircles
-            // CentroidRepel
+        return makeTargets(
+            str
+                ? JSON.parse(str)
+                : (
+                    // FizzBuzz
+                    FizzBuzzBazz
+                    // FizzBuzzBazzQux
+                    // VariantCallers
+                    // ThreeEqualCircles
+                    // CentroidRepel
+                )
         )
-        return makeTargets(entries)
     })
 
     // Layer of indirection around `rawTargets`, to ensure `initialSets` and `targets` are updated atomically.
@@ -430,7 +433,8 @@ export function Body() {
     // Save targets to localStorage
     useEffect(
         () => {
-            localStorage.setItem(targetsKey, JSON.stringify(rawTargets))
+            const { givenInclusive, inclusive, exclusive } = rawTargets
+            localStorage.setItem(targetsKey, JSON.stringify(givenInclusive ? inclusive : exclusive))
         },
         [ rawTargets, ]
     )
