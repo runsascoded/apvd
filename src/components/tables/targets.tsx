@@ -46,7 +46,18 @@ export const targetsParam: Param<Target[] | null> = {
         if (!targets) {
             return undefined
         }
-        return targets.map(([ key, value ]) => value.toString()).join(',')
+        if (!(targets.length in KeySets)) {
+            throw new Error(`targetsParam: targets.length not in KeySets: ${targets.length}, {${Object.entries(KeySets).map(([ len ]) => len).join(', ')}}`)
+        }
+        const keys = KeySets[targets.length]
+        const targetsMap = new Map(targets)
+        return keys.map(key => {
+            const val = targetsMap.get(key)
+            if (val === undefined) {
+                throw new Error(`targetsParam: !targetsMap.has(key): ${key}`)
+            }
+            return val.toString()
+        }).join(',')
     },
     decode: (targets: string | undefined): Target[] | null => {
         if (targets === undefined) {

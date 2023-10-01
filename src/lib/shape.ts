@@ -120,6 +120,10 @@ export function shapesParam(opts: Opts = {}): Param<ShapesParam | null> {
         encode(param: ShapesParam | null): string | undefined {
             if (!param) return undefined
             const { shapes, precisionSchemeId } = param
+            if (!shapes) {
+                console.warn(`No shapes in truthy ShapesParam:`, param)
+                return undefined
+            }
             const buf = new ShapesBuffer({ ...opts, precisionSchemeId })
             buf.encodeShapes(shapes)
             return buf.toB64()

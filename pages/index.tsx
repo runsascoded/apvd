@@ -361,7 +361,7 @@ export function Body() {
     })
     // const [ shapesInUrlFragment, setShapesInUrlFragment ] = useState<boolean>(false)
 
-    const [ urlShapesPrecisionScheme, setUrlShapesPrecisionScheme ] = useState<number>(5)
+    const [ urlShapesPrecisionScheme, setUrlShapesPrecisionScheme ] = useLocalStorageState<number>("urlShapesPrecisionScheme", { defaultValue: 6 })
 
     const params: Params = {
         s: shapesParam({ precisionSchemeId: 6 }),

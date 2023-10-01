@@ -182,7 +182,7 @@ export default class ShapesBuffer {
             throw Error(`precisionSchemeId ${precisionSchemeId} out of range`)
         }
         this.precisionScheme = precisionSchemes[precisionSchemeId]
-        console.log("decoding shapes with precisionScheme:", this.precisionScheme)
+        // console.log("decoding shapes with precisionScheme:", this.precisionScheme)
         const shapes: Shape<number>[] = []
         if (num === undefined) {
             while (!this.done()) {
