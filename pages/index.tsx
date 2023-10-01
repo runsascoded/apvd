@@ -18,11 +18,12 @@ import {cos, max, min, PI, pi2, pi4, round, sin, sq3, sqrt} from "../src/lib/mat
 import Apvd, {LogLevel} from "../src/components/apvd";
 import {getMidpoint, getPointAndDirectionAtTheta, getRegionCenter} from "../src/lib/region";
 import {BoundingBox, getRadii, mapShape, rotate, S, Set, shapeBox, shapeStrJS, shapeStrJSON, shapeStrRust, Shape, shapesParam} from "../src/lib/shape";
-import {makeKeys, Target, targetsParam, TargetsTable} from "../src/components/tables/targets";
+import {TargetsTable} from "../src/components/tables/targets";
+import {makeTargets, Target, Targets, targetsParam} from "../src/lib/targets";
 import {Disjoint, Ellipses4, Ellipses4t, InitialLayout, SymmetricCircleDiamond, toShape} from "../src/lib/layout";
 import {VarsTable} from "../src/components/tables/vars";
 import {SparkLineProps} from "../src/components/spark-lines";
-import {CircleCoord, CircleCoords, CircleFloatGetters, Coord, VarCoord, Vars, XYRRCoord, XYRRCoords, XYRRFloatGetters, XYRRTCoord, XYRRTCoords, XYRRTFloatGetters} from "../src/lib/vars";
+import {CircleCoord, CircleCoords, CircleFloatGetters, Coord, makeVars, VarCoord, Vars, XYRRCoord, XYRRCoords, XYRRFloatGetters, XYRRTCoord, XYRRTCoords, XYRRTFloatGetters} from "../src/lib/vars";
 import {ShapesTable} from "../src/components/tables/shapes";
 import useLocalStorageState from 'use-local-storage-state'
 import _ from "lodash"
@@ -242,105 +243,27 @@ const layouts: LinkItem<InitialLayout>[] = [
 ]
 const layoutsMap = new Map(layouts.map(({ name, val }) => [ name, val ]))
 
-function makeVars(initialSets: S[]) {
-    // Create Vars
-    const allCoords: Coord[][] = initialSets.map(({shape: {kind}}) => {
-        switch (kind) {
-            case 'Circle':
-                return CircleCoords
-            case 'XYRR':
-                return XYRRCoords
-            case 'XYRRT':
-                return XYRRTCoords
-        }
-    })
-    const numCoords = ([] as string[]).concat(...allCoords).length
-    const skipVars: Coord[][] = [
-        // Fix all coords of shapes[0], it is the unit circle centered at the origin, WLOG
-        // CircleCoords,
-        // XYRRCoords,
-        // Fix shapes[1].y. This can be done WLOG if it's a Circle. Having the second shape be an XYRR (aligned
-        // ellipse, no rotation) is effectively equivalent to it being an XYRRT (ellipse with rotation allowed),
-        // but where the rotation has been factored out WLOG.
-        // ['y'],
-    ]
-    const numSkipVars = ([] as string[]).concat(...skipVars).length
-    const numVars = numCoords - numSkipVars
-    const filteredCoords = allCoords.map(
-        (circleVars, idx) =>
-            circleVars.filter(v =>
-                !(skipVars[idx] || []).includes(v)
-            )
-    )
-    const coords: VarCoord[] = []
-    filteredCoords.forEach((shapeVars, shapeIdx) => {
-        shapeVars.forEach(shapeVar => {
-            coords.push([shapeIdx, shapeVar])
-        })
-    })
-    console.log(`${coords.length} coords`)
-
-    function getVal(step: Step, varIdx: number): number | null {
-        const [setIdx, coord] = coords[varIdx]
-        // console.log("getVal:", setIdx, varIdx, coord)
-        const {shape} = step.sets[setIdx]
-        let shapeGetters, shapeCoord
-        switch (shape.kind) {
-            case "Circle":
-                shapeGetters = CircleFloatGetters
-                shapeCoord = coord as CircleCoord
-                if (!(shapeCoord in shapeGetters)) {
-                    console.warn(`Circle coord ${shapeCoord} not found in`, shapeGetters)
-                    return null
-                } else {
-                    return CircleFloatGetters[coord as CircleCoord](shape)
-                }
-            case "XYRR":
-                shapeGetters = XYRRFloatGetters
-                shapeCoord = coord as XYRRCoord
-                if (!(shapeCoord in shapeGetters)) {
-                    console.warn(`XYRR coord ${shapeCoord} not found in`, shapeGetters)
-                    return null
-                } else {
-                    return XYRRFloatGetters[coord as XYRRCoord](shape)
-                }
-            case "XYRRT":
-                shapeGetters = XYRRTFloatGetters
-                shapeCoord = coord as XYRRTCoord
-                if (!(shapeCoord in shapeGetters)) {
-                    console.warn(`XYRRT coord ${shapeCoord} not found in`, shapeGetters)
-                    return null
-                } else {
-                    return XYRRTFloatGetters[coord as XYRRTCoord](shape)
-                }
-        }
-    }
-
-    const vars: Vars = {
-        allCoords,
-        numCoords,
-        skipVars,
-        numSkipVars,
-        vars: filteredCoords,
-        numVars,
-        coords,
-        getVal,
-    }
-
-    return vars
-}
-
 type Params = {
     s: Param<ShapesParam | null>
-    t: Param<Target[] | null>
+    t: Param<Targets | null>
 }
 
 type ParsedParams = {
     s: ParsedParam<ShapesParam | null>
-    t: ParsedParam<Target[] | null>
+    t: ParsedParam<Targets | null>
 }
 
 export function Body() {
+    const fizzBuzzLink = <A href={"https://en.wikipedia.org/wiki/Fizz_buzz"}>Fizz Buzz</A>
+    const exampleTargets: LinkItem<Targets>[] = [
+        { name: "Fizz Buzz", val: FizzBuzz, description: <>2 circles, of size 1/3 and 1/5, representing integers divisible by 3 and by 5. Inspired by {fizzBuzzLink}.</> },
+        { name: "Fizz Buzz Bazz", val: FizzBuzzBazz, description: <>Extended version of {fizzBuzzLink} above, with 3 sets, representing integers divisible by 3, 5, or 7. This is impossible to model accurately with 3 circles, but possible with ellipses.</> },
+        { name: "Fizz Buzz Bazz Qux", val: FizzBuzzBazzQux, description: <>Extended version of {fizzBuzzLink} above, with 4 sets, representing integers divisible by 2, 3, 5, or 7. Impossible to model exactly even with 4 ellipses (AFAIK!), but gradient descent gets as close as it can.</> },
+        { name: "3 symmetric sets", val: ThreeEqualCircles, description: <>Simple test case, 3 circles, one starts slightly off-center from the other two, "target" ratios require the 3 circles to be in perfectly symmetric position with each other.</> },
+        { name: "Variant callers", val: VariantCallers, description: <>Values from <A href={"https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3753564/pdf/btt375.pdf"}>Roberts et al (2013)</A>, "A comparative analysis of algorithms for somatic SNV detection
+                in cancer," Fig. 3</>}
+    ].map(({ name, val, description }) => ({ name, val: makeTargets(val), description }))
+
     const [ logLevel, setLogLevel ] = useLocalStorageState<LogLevel>("logLevel", { defaultValue: "info" })
     useEffect(
         () => {
@@ -395,14 +318,14 @@ export function Body() {
     // console.log("initialLayout:", initialLayout)
     // console.log("initialShapes:", initialShapes)
     // const [ rawTargets, setTargets ] = useLocalStorageState<Target[]>(targetsKey, { defaultValue:
-    const [ rawTargets, setTargets ] = useState<Target[]>(() => {
+    const [ rawTargets, setTargets ] = useState<Targets>(() => {
         if (urlFragmentTargets) {
             console.log("found urlFragmentTargets:", urlFragmentTargets)
             setUrlFragmentTargets(null)
             return urlFragmentTargets
         }
         const str = localStorage.getItem(targetsKey)
-        if (!str) return (
+        const entries = str ? JSON.parse(str) : (
             // FizzBuzz
             FizzBuzzBazz
             // FizzBuzzBazzQux
@@ -410,13 +333,20 @@ export function Body() {
             // ThreeEqualCircles
             // CentroidRepel
         )
-        return JSON.parse(str)
+        return makeTargets(entries)
     })
 
-    const { targets, expandedTargets, expandedTargetsMap, numShapes, initialSets  } = useMemo(
+    // const [ showDisjointSets, setShowDisjointSets ] = useLocalStorageState("showDisjointSets", { defaultValue: false })
+
+    // Layer of indirection around `rawTargets`, to ensure `initialSets` and `targets` are updated atomically.
+    // Otherwise, changing targets / numbers of shapes can result in intermediate renders with inconsistent sizes of
+    // shape- and target-arrays.
+    const { targets, expandedTargetsMap, initialSets  } = useMemo(
         () => {
             const targets = rawTargets
-            const numShapes = targets[0][0].length
+            // const targets = rawTargets
+            const { numShapes, all: expandedTargetsMap } = targets
+
             const initialSets =
                 initialShapes
                     .slice(0, numShapes)
@@ -429,13 +359,11 @@ export function Body() {
                             shape: shape,
                         }
                     })
-            const expandedTargets = apvd.expand_targets(targets).all as Map<string, number>
-            const expandedTargetsMap = expandedTargets ? fromEntries(expandedTargets) : null
-            console.log("updated targets block:", targets[0][0], numShapes, initialSets, "layout:", initialLayout.length)
 
-            return { targets, numShapes, initialSets, expandedTargets, expandedTargetsMap, }
+            console.log("updated targets block:", numShapes, targets, initialSets, "layout:", initialLayout.length)
+            return { targets, initialSets, expandedTargetsMap, }
         },
-        [ rawTargets, initialShapes, ]
+        [ rawTargets, initialShapes ]
     )
 
     const gridState = GridState({
@@ -475,7 +403,6 @@ export function Body() {
     const [ autoCenterInterpRate, setAutoCenterInterpRate ] = useState(1)
     const [ setLabelDistance, setSetLabelDistance ] = useState(0.15)
     const [ setLabelSize, setSetLabelSize ] = useState(20)
-    const [ showDisjointSets, setShowDisjointSets ] = useLocalStorageState("showDisjointSets", { defaultValue: false })
 
     const [ stepIdx, setStepIdx ] = useMemo(
         () => {
@@ -549,11 +476,12 @@ export function Body() {
             })
             console.log("inputs:", inputs)
             console.log("targets:", targets)
-            if (inputs.length != targets[0][0].length) {
-                console.warn("inputs.length != targets[0][0].length", inputs.length, targets[0][0].length)
+            const tgtList: Target[] = Array.from(targets.all)
+            if (inputs.length != tgtList[0][0].length) {
+                console.warn("inputs.length != tgtList[0][0].length", inputs.length, tgtList[0][0].length)
                 return
             }
-            const model = makeModel(apvd.make_model(inputs, targets), initialSets)
+            const model = makeModel(apvd.make_model(inputs, tgtList), initialSets)
             console.log("new model:", model)
             setModel(model)
             setStepIdx(0)
@@ -1142,7 +1070,7 @@ export function Body() {
                     containerIdxs.sort()
                     const label = containerIdxs.map(idx => sets[idx].name).join('')
                     const area = totalRegionAreas && totalRegionAreas[key] || 0
-                    const target = expandedTargetsMap ? expandedTargetsMap[key] : 0
+                    const target = expandedTargetsMap?.get(key) || 0
                     const tooltip = `${label}: ${(area / curStep.total_area.v * curStep.targets.total_area).toPrecision(3)} ${target.toPrecision(3)}`
                     // console.log("key:", key, "hoveredRegion:", hoveredRegion)
                     return (
@@ -1210,16 +1138,6 @@ export function Body() {
         [ curStep, scale, hoveredRegion, ],
     )
 
-    const fizzBuzzLink = <A href={"https://en.wikipedia.org/wiki/Fizz_buzz"}>Fizz Buzz</A>
-    const exampleTargets: LinkItem<Target[]>[] = [
-        { name: "Fizz Buzz", val: FizzBuzz, description: <>2 circles, of size 1/3 and 1/5, representing integers divisible by 3 and by 5. Inspired by {fizzBuzzLink}.</> },
-        { name: "Fizz Buzz Bazz", val: FizzBuzzBazz, description: <>Extended version of {fizzBuzzLink} above, with 3 sets, representing integers divisible by 3, 5, or 7. This is impossible to model accurately with 3 circles, but possible with ellipses.</> },
-        { name: "Fizz Buzz Bazz Qux", val: FizzBuzzBazzQux, description: <>Extended version of {fizzBuzzLink} above, with 4 sets, representing integers divisible by 2, 3, 5, or 7. Impossible to model exactly even with 4 ellipses (AFAIK!), but gradient descent gets as close as it can.</> },
-        { name: "3 symmetric sets", val: ThreeEqualCircles, description: <>Simple test case, 3 circles, one starts slightly off-center from the other two, "target" ratios require the 3 circles to be in perfectly symmetric position with each other.</> },
-        { name: "Variant callers", val: VariantCallers, description: <>Values from <A href={"https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3753564/pdf/btt375.pdf"}>Roberts et al (2013)</A>, "A comparative analysis of algorithms for somatic SNV detection
-                in cancer," Fig. 3</>}
-    ]
-
     const shapesStr = useCallback(
         (fn: (shape: Shape<number>) => string) => {
             if (!shapes) return
@@ -1229,26 +1147,8 @@ export function Body() {
         [ shapes ]
     )
 
-    const shapesTextRust = useMemo(() => shapesStr(shapeStrRust), [ shapesStr, ])
-    const shapesTextJSON = useMemo(
-        () => {
-            if (!shapes) return
-            const shapeStrs = shapes.map(shape => shapeStrJSON(shape))
-            return `[\n  ${shapeStrs.join(",\n  ")}\n]`
-        },
-        [ shapes ],
-    )
-    const shapesTextJS = useMemo(
-        () => {
-            if (!shapes) return
-            const shapeStrs = shapes.map(shape => shapeStrJS(shape))
-            return `[\n  ${shapeStrs.join(",\n  ")},\n]`
-        },
-        [ shapes ],
-    )
-
     const setTargetsLink = useCallback(
-        (v: Target[]) => {
+        (v: Targets) => {
             setTargets(v)
             setInitialShapes(initialLayout.map(s => toShape(s)))
         },
@@ -1476,11 +1376,11 @@ export function Body() {
                             className={css.targets}
                         >
                             {
-                                model && curStep && expandedTargets && error && sparkLineCellProps &&
+                                model && curStep && targets && error && sparkLineCellProps &&
                                 <TargetsTable
                                     initialShapes={initialSets}
-                                    targets={expandedTargets}
-                                    showDisjointSets={showDisjointSets}
+                                    targets={targets}
+                                    showDisjointSets={!targets.givenInclusive}
                                     curStep={curStep}
                                     error={error}
                                     hoveredRegion={hoveredRegion}
@@ -1492,8 +1392,8 @@ export function Body() {
                                 tooltip={<span>
                                     Express target sizes for "inclusive" (e.g. <code>A**</code>: A's overall size) vs. "exclusive" (<code>A--</code>: A and not B or C) sets
                                 </span>}
-                                checked={showDisjointSets}
-                                setChecked={setShowDisjointSets}
+                                checked={!targets.givenInclusive}
+                                setChecked={showDisjointSets => setTargets(t => ({ ...t, givenInclusive: !showDisjointSets }))}
                             />
                         </DetailsSection>
                         <DetailsSection

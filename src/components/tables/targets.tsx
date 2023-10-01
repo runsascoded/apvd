@@ -1,94 +1,16 @@
 import {Model, Step} from "../../lib/regions";
-import {Dual} from "apvd";
+import {Dual} from "apvd"
 import React, {useCallback, useMemo, useState} from "react";
 import css from "../../../pages/index.module.scss";
 import {SparkLineCell, SparkLineProps, SparkNum} from "../spark-lines";
 import {S} from "../../lib/shape";
-import { abs } from "../../lib/math";
-import {fromEntries} from "next-utils/objs";
-import {Param} from "next-utils/params";
-
-export type Target = [ string, number ]
-
-export function makeKeys(n: number): string[] {
-    if (n == 0) {
-        return ['']
-    }
-    if (n >= 10) {
-        throw new Error(`makeKeys: n >= 10: ${n}`)
-    }
-    const ch = (n - 1).toString()
-    const suffixes = makeKeys(n - 1)
-    return ([] as string[]).concat(
-        suffixes.map(s => s + '-'),
-        suffixes.map(s => s + ch),
-    )
-}
-
-export function makeKeySet(n: number): string[] {
-    const keySet = makeKeys(n)
-    const [ first, ...rest ] = keySet
-    const noneKey = String('-').repeat(n)
-    if (first != noneKey) {
-        throw new Error(`KeySets: first != String('-').repeat(i): ${first} != ${noneKey}`)
-    }
-    return rest
-}
-export const KeySets: { [length: number]: string[] } = fromEntries(
-    Array(6).fill(0).map((_, i) => {
-        const keySet = makeKeySet(i)
-        return [ keySet.length, keySet, ]
-    })
-)
-
-export const targetsParam: Param<Target[] | null> = {
-    encode: (targets: Target[] | null): string | undefined => {
-        if (!targets) {
-            return undefined
-        }
-        if (!(targets.length in KeySets)) {
-            throw new Error(`targetsParam: targets.length not in KeySets: ${targets.length}, {${Object.entries(KeySets).map(([ len ]) => len).join(', ')}}`)
-        }
-        const keys = KeySets[targets.length]
-        const targetsMap = new Map(targets)
-        return keys.map(key => {
-            const val = targetsMap.get(key)
-            if (val === undefined) {
-                throw new Error(`targetsParam: !targetsMap.has(key): ${key}`)
-            }
-            return val.toString()
-        }).join(',')
-    },
-    decode: (targets: string | undefined): Target[] | null => {
-        if (targets === undefined) {
-            return null
-        }
-        const values = targets.split(',')
-        const len = values.length
-        if (!(len in KeySets)) {
-            throw new Error(`targetsParam: len not in KeySets: ${len}, {${Object.entries(KeySets).map(([ len ]) => len).join(', ')}}`)
-        }
-        const keys = KeySets[len]
-        return values.map((value, idx) => [ keys[idx], parseFloat(value) ])
-    }
-}
-
-export const makeSortKeys = (ch: string) => ([ a ]: Target, [ b ]: Target) => {
-    let numSetsA = a.split('').filter(c => c != ch).length
-    let numSetsB = b.split('').filter(c => c != ch).length
-    if (numSetsA == numSetsB) {
-        return -a.localeCompare(b)
-    } else {
-        return numSetsA - numSetsB
-    }
-}
-export const inclusiveKeyCmp = makeSortKeys('*')
-export const exclusiveKeyCmp = makeSortKeys('-')
+import {abs} from "../../lib/math";
+import {Targets} from "../../lib/targets";
 
 export function TargetsTable(
     { initialShapes, targets, showDisjointSets, model, curStep, error, stepIdx, hoveredRegion, ...sparkLineProps }: {
         initialShapes: S[]
-        targets: Map<string, number>
+        targets: Targets
         showDisjointSets: boolean
         model: Model
         curStep: Step
@@ -119,31 +41,11 @@ export function TargetsTable(
         [ initialShapes, ],
     )
 
-    const numShapes = useMemo(() => initialShapes.length, [ initialShapes, ])
-    const [ noneKey, allKey ] = useMemo(() => [ '-'.repeat(numShapes), '*'.repeat(numShapes) ], [ numShapes, ])
-    const [ exclusiveSets, inclusiveSets ] = useMemo(
-        () => {
-            const exclusiveSets: Target[] = []
-            const inclusiveSets: Target[] = []
-            // console.log("targets:", targets)
-            targets.forEach((value, key) => {
-                if (!key.includes('*') && key != noneKey) {
-                    exclusiveSets.push([ key, value ])
-                }
-                if (!key.includes('-') && key != allKey) {
-                    inclusiveSets.push([ key, value ])
-                }
-            })
-            inclusiveSets.sort(inclusiveKeyCmp)
-            exclusiveSets.sort(exclusiveKeyCmp)
-            return [ exclusiveSets, inclusiveSets ]
-        },
-        [ targets, ]
-    )
+    const { inclusive, exclusive, } = targets
 
     const displayTargets = useMemo(
-        () => showDisjointSets ? exclusiveSets : inclusiveSets,
-        [ showDisjointSets, exclusiveSets, inclusiveSets, ],
+        () => showDisjointSets ? exclusive : inclusive,
+        [ showDisjointSets, exclusive, inclusive, ],
     )
 
     const sum = useMemo(
