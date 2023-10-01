@@ -317,7 +317,6 @@ export function Body() {
 
     // console.log("initialLayout:", initialLayout)
     // console.log("initialShapes:", initialShapes)
-    // const [ rawTargets, setTargets ] = useLocalStorageState<Target[]>(targetsKey, { defaultValue:
     const [ rawTargets, setTargets ] = useState<Targets>(() => {
         if (urlFragmentTargets) {
             console.log("found urlFragmentTargets:", urlFragmentTargets)
@@ -336,16 +335,14 @@ export function Body() {
         return makeTargets(entries)
     })
 
-    // const [ showDisjointSets, setShowDisjointSets ] = useLocalStorageState("showDisjointSets", { defaultValue: false })
-
     // Layer of indirection around `rawTargets`, to ensure `initialSets` and `targets` are updated atomically.
     // Otherwise, changing targets / numbers of shapes can result in intermediate renders with inconsistent sizes of
     // shape- and target-arrays.
-    const { targets, expandedTargetsMap, initialSets  } = useMemo(
+    const { targets, initialSets  } = useMemo(
         () => {
             const targets = rawTargets
             // const targets = rawTargets
-            const { numShapes, all: expandedTargetsMap } = targets
+            const { numShapes } = targets
 
             const initialSets =
                 initialShapes
@@ -361,9 +358,9 @@ export function Body() {
                     })
 
             console.log("updated targets block:", numShapes, targets, initialSets, "layout:", initialLayout.length)
-            return { targets, initialSets, expandedTargetsMap, }
+            return { targets, initialSets, }
         },
-        [ rawTargets, initialShapes ]
+        [ rawTargets.all, rawTargets.numShapes, initialShapes ]
     )
 
     const gridState = GridState({
@@ -433,9 +430,9 @@ export function Body() {
     // Save targets to localStorage
     useEffect(
         () => {
-            localStorage.setItem(targetsKey, JSON.stringify(targets))
+            localStorage.setItem(targetsKey, JSON.stringify(rawTargets))
         },
-        [ targets, ]
+        [ rawTargets, ]
     )
 
     // Save latest `model` to `window`, for debugging
@@ -487,7 +484,7 @@ export function Body() {
             setStepIdx(0)
             setVars(vars)
         },
-        [ initialSets, targets, ]
+        [ initialSets, targets.all, ]
     )
 
     const fwdStep = useCallback(
@@ -1070,7 +1067,7 @@ export function Body() {
                     containerIdxs.sort()
                     const label = containerIdxs.map(idx => sets[idx].name).join('')
                     const area = totalRegionAreas && totalRegionAreas[key] || 0
-                    const target = expandedTargetsMap?.get(key) || 0
+                    const target = targets.all.get(key) || 0
                     const tooltip = `${label}: ${(area / curStep.total_area.v * curStep.targets.total_area).toPrecision(3)} ${target.toPrecision(3)}`
                     // console.log("key:", key, "hoveredRegion:", hoveredRegion)
                     return (
@@ -1185,9 +1182,9 @@ export function Body() {
             }
             // console.log("setting UrlFragmentShapes:", shapes, "current hash:", window.location.hash)
             setUrlFragmentShapes({ shapes, precisionSchemeId: urlShapesPrecisionScheme })
-            setUrlFragmentTargets(targets)
+            setUrlFragmentTargets(rawTargets)
         },
-        [ shapes, targets, stateInUrlFragment, urlShapesPrecisionScheme, ]
+        [ shapes, rawTargets, stateInUrlFragment, urlShapesPrecisionScheme, ]
     )
 
     useEffect(
@@ -1309,11 +1306,11 @@ export function Body() {
                                         e.stopPropagation()
                                         if (!shapes) return
                                         // Synchronously update window.location.hash
-                                        updateHashParams(params, { s: shapes, t: targets })
+                                        updateHashParams(params, { s: shapes, t: rawTargets })
                                         console.log("Copying:", window.location.href)
                                         navigator.clipboard.writeText(window.location.href)
                                         setUrlFragmentShapes({shapes, precisionSchemeId: urlShapesPrecisionScheme})
-                                        setUrlFragmentTargets(targets)
+                                        setUrlFragmentTargets(rawTargets)
                                         // console.log("setting UrlFragmentShapes:", shapes, "current hash:", window.location.hash)
                                     }}>🔗</span>
                                 </OverlayTrigger>
@@ -1379,8 +1376,8 @@ export function Body() {
                                 model && curStep && targets && error && sparkLineCellProps &&
                                 <TargetsTable
                                     initialShapes={initialSets}
-                                    targets={targets}
-                                    showDisjointSets={!targets.givenInclusive}
+                                    targets={rawTargets}
+                                    showDisjointSets={!rawTargets.givenInclusive}
                                     curStep={curStep}
                                     error={error}
                                     hoveredRegion={hoveredRegion}
@@ -1392,7 +1389,7 @@ export function Body() {
                                 tooltip={<span>
                                     Express target sizes for "inclusive" (e.g. <code>A**</code>: A's overall size) vs. "exclusive" (<code>A--</code>: A and not B or C) sets
                                 </span>}
-                                checked={!targets.givenInclusive}
+                                checked={!rawTargets.givenInclusive}
                                 setChecked={showDisjointSets => setTargets(t => ({ ...t, givenInclusive: !showDisjointSets }))}
                             />
                         </DetailsSection>
