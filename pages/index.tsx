@@ -1,7 +1,7 @@
 'use client'
 
 import Grid, {GridState} from "../src/components/grid"
-import React, {DetailedHTMLProps, Dispatch, HTMLAttributes, ReactNode, useCallback, useEffect, useMemo, useState} from "react"
+import React, {DetailedHTMLProps, Dispatch, HTMLAttributes, ReactNode, useCallback, useEffect, useMemo, useRef, useState} from "react"
 import * as apvd from "apvd"
 import {train, update_log_level} from "apvd"
 import {makeModel, Model, Region, Step} from "../src/lib/regions"
@@ -12,7 +12,7 @@ import dynamic from "next/dynamic"
 import Button from 'react-bootstrap/Button'
 import OverlayTrigger from 'react-bootstrap/OverlayTrigger'
 import Tooltip from 'react-bootstrap/Tooltip'
-import {entries, values} from "next-utils/objs";
+import {entries, mapEntries, values} from "next-utils/objs";
 import {getSliderValue} from "../src/components/inputs";
 import {cos, max, min, PI, pi2, round, sin, sq3, sqrt} from "../src/lib/math";
 import Apvd, {LogLevel} from "../src/components/apvd";
@@ -384,48 +384,6 @@ export function Body() {
 
     const router = useRouter()
 
-    // const maybePushHistory = useCallback(
-    //     (/*state: HistoryState*/) => {
-    //         if (!initialShapes || !targets) {
-    //             return
-    //         }
-    //         const state: HistoryState = { s: { shapes: initialShapes, precisionSchemeId: urlShapesPrecisionScheme }, t: targets }
-    //         const eq = _.isEqual(state, history.state)
-    //         // const eqsMatch = (state === history.state) == eq
-    //         // if (!eqsMatch) {
-    //         //     console.warn(`eqsMatch: === ${state === history.state}, _ ${eq},`, "state:", state, "history.state:", history.state)
-    //         // }
-    //         if (!eq) {
-    //             console.log("getting updatedHash:", state)
-    //             const hash = updatedHash(params, state)
-    //             // const url = `${window.location.pathname}#${hash}`
-    //             const url = `#${hash}`
-    //             console.log(`pushState: ${initialShapes[0].t},`, url, state, "cur:", history.state)
-    //             // router.push(url)
-    //             // history.pushState(state, "", window.location.href)
-    //         } else {
-    //             console.log(`pushState: ${initialShapes[0].t}, not pushing, state is unchanged`, state, history.state)
-    //         }
-    //     },
-    //     [ initialShapes, targets, urlShapesPrecisionScheme ]
-    // )
-
-    // const [ historyState, setHistoryState] = useState<HistoryState>({ s: initialShapes, t: targets, })
-    // useEffect(
-    //     () => {
-    //         // const { s, t } = historyState[0]
-    //         // const hash = updatedHash(params, { s, t })
-    //         // console.log("pushState:", hash)
-    //         // history.pushState({ s, t }, "", hash)
-    //         const prevState = historyState
-    //         maybePushHistory(prevState)
-    //         const newState = { s: initialShapes, t: targets }
-    //         maybePushHistory(newState)
-    //         setHistoryState(newState)
-    //     },
-    //     [ initialShapes, targets, ]
-    // )
-
     const gridState = GridState({
         localStorage: true,
         center: { x: 0, y: sq3/4, },
@@ -477,9 +435,6 @@ export function Body() {
         [ modelStepIdx, setModelStepIdx, vStepIdx, setVStepIdx, ]
     )
 
-    // const [ nextStepPush, setNextStepPush ] = useState<boolean>(false)
-    // const [ pushOnLeaveStep, setPushOnLeaveStep ] = useState<number | null>(null)
-
     const [ curStep, sets, shapes, ] = useMemo(
         () => {
             if (!model || stepIdx === null) return [ null, null ]
@@ -492,22 +447,12 @@ export function Body() {
             const shapes = curStep.sets.map(({ shape }) => shape)
             localStorage.setItem(shapesKey, JSON.stringify(shapes))
             const sets = curStep.sets.map(set => ({ ...initialSets[set.idx], ...set, }))
-            // let push = false
-            // if (nextStepPush) {
-            //     setNextStepPush(false)
-            //     setPushOnLeaveStep(stepIdx)
-            // } else if (setPushOnLeaveStep !== null) {
-            //     if (stepIdx != pushOnLeaveStep) {
-            //         setPushOnLeaveStep(null)
-            //         push = true
-            //     }
-            // }
-            // const param = { shapes }
-            // console.log(`new shapes: nextStepPush ${nextStepPush}, pushOnLeaveStep ${pushOnLeaveStep}, push ${push}`)
-            // updateHashParams(params, { s: param }, router, push)
+            // const param: ShapesParam = { shapes, precisionSchemeId: urlShapesPrecisionScheme }
+            // console.log("updating hash:", shapes)
+            // updateHashParams(params, { s: param, t: targets }, router)
             return [ curStep, sets, shapes ]
         },
-        [ model, stepIdx, initialSets, ]
+        [ model, stepIdx, initialSets, urlShapesPrecisionScheme, targets, ]
     )
 
     // Save targets to localStorage
@@ -535,7 +480,7 @@ export function Body() {
                 const url = history.state.url
                 const hash = url.split('#')[1]
                 console.log("popstate", e.state, url, "hash:", hash)
-                const { s, t } = getHashMap(params, hash) as HistoryState
+                const { s, t } = mapEntries(getHashMap(params, hash), (k, { val }) => [ k, val ]) as HistoryState
 
                 // console.log("history.state:", history.state, `"${history.state.hash}"`)
                 // if (!e.state) {
@@ -1263,36 +1208,32 @@ export function Body() {
         [ shapes ]
     )
 
-    const setTargetsLink = useCallback(
-        (v: Targets) => {
-            setTargets(v)
-            setInitialShapes(initialLayout.map(s => toShape(s)))
-        },
-        [ setTargets, setInitialShapes, initialLayout, ]
-    )
+    // const setTargetsLink = useCallback(
+    //     (v: Targets) => {
+    //         setTargets(v)
+    //         const newShapes = initialLayout.slice(0, v.numShapes).map(s => toShape(s))
+    //         console.log(`target link: setting ${v.numShapes} shapes:`, newShapes)
+    //         setInitialShapes(newShapes)
+    //     },
+    //     [ setTargets, setInitialShapes, initialLayout, ]
+    // )
     const [ clearExampleTooltip, exampleLinks ] = Links({
         links: exampleTargets,
         cur: targets,
         setVal: v => {
-            // maybePushHistory()
-            setTargetsLink(v)
+            setTargets(v)
+            const newShapes = initialLayout.slice(0, v.numShapes).map(s => toShape(s))
+            console.log(`target link: setting ${v.numShapes} shapes:`, newShapes)
+            setInitialShapes(newShapes)
         },
         activeVisited: true,
     })
-    // const setLayoutLink = useCallback(
-    //     (v: InitialLayout) => {
-    //         setInitialLayout(v)
-    //         setInitialShapes(v.map(s => toShape(s)))
-    //     },
-    //     [ setInitialLayout, setInitialShapes, ]
-    // )
     const [ clearLayoutTooltip, layoutLinks ] = Links({
         links: layouts,
         cur: initialLayout,
         setVal: v => {
-            // maybePushHistory()
             setInitialLayout(v)
-            setInitialShapes(v.map(s => toShape(s)))
+            setInitialShapes(v.slice(0, targets.numShapes).map(s => toShape(s)))
         },
         activeVisited: true,
     })
@@ -1314,38 +1255,73 @@ export function Body() {
         [ stateInUrlFragment, setUrlFragmentShapes, setUrlFragmentTargets, ]
     )
 
-    router.events.on("routeChangeError", (err, url, { shallow }) => {
-        console.log("Navigating to: " + "url: " + url, {cancelled: err.cancelled} )
-    });
+    // router.events.on("routeChangeError", (err, url, { shallow }) => {
+    //     console.log("Navigating to: " + "url: " + url, {cancelled: err.cancelled} )
+    // });
+    // router.events.on("routeChangeStart", (a, b) => { console.log("router.events routeChangeStart:", a, b)})
+    // router.events.on("beforeHistoryChange", (a, b) => { console.log("router.events beforeHistoryChange:", a, b)})
+    // router.events.on("routeChangeComplete", (a, b) => { console.log("router.events routeChangeComplete:", a, b)})
+    // // router.events.on("routeChangeError", (a, b) => { console.log("router.events routeChangeError:", a, b)})
+    // router.events.on("hashChangeStart", (a, b) => { console.log("router.events hashChangeStart:", a, b)})
+    // router.events.on("hashChangeComplete", (a, b) => { console.log("router.events hashChangeComplete:", a, b)})
 
-    const [ hashMap, setHashMap ] = useState<{ [key: string]: any } | null>(null)
+    const [ hashMap, setHashMap ] = useState<Partial<HistoryState> | null>(null)
 
     useEffect(
         () => {
-            // if (!shapes) return
+            if (!shapes) return
             if (!stateInUrlFragment) return
-            const param = { shapes: initialShapes, precisionSchemeId: urlShapesPrecisionScheme }
+            if (rawTargets.numShapes != initialShapes.length) {
+                console.warn("skipping effect push: rawTargets.numShapes != initialShapes.length", rawTargets.numShapes, initialShapes.length)
+                return
+            }
+            if (shapes.length != initialShapes.length) {
+                console.warn("skipping effect push: shapes.length != initialShapes.length", shapes.length, initialShapes.length)
+                return
+            }
+            const push = _.isEqual(shapes, initialShapes)
+            console.log(`effect push: ${rawTargets.numShapes} target sets, ${initialShapes.length} shapes (vs. ${shapes.length})`, push, "shapes:", shapes, "initialShapes:", initialShapes, "rawTargets:", rawTargets)
+            const param = { shapes, precisionSchemeId: urlShapesPrecisionScheme }
             setUrlFragmentTargets(rawTargets)
             setUrlFragmentShapes(param)
             const newHashMap = { s: param, t: rawTargets, }
             if (_.isEqual(hashMap, newHashMap)) {
-                console.log("skipping hashMap push:", hashMap, newHashMap)
+                console.log("skipping hashMap push:", hashMap, newHashMap, push)
             } else {
-                console.log("hashMap push:", hashMap, newHashMap)
+                console.log("setting hashMap push:", hashMap, newHashMap, push)
+                // console.log("pushing:", hashMap, "router.isReady", router.isReady)
+                updateHashParams(params, newHashMap, /*router*/ null, push)
                 setHashMap(newHashMap)
             }
         },
-        [ initialShapes, stateInUrlFragment, urlShapesPrecisionScheme, rawTargets, /*setNextStepPush, */]
+        [ shapes, initialShapes, stateInUrlFragment, urlShapesPrecisionScheme, rawTargets, hashMap, /*setNextStepPush, */]
     )
 
-    useEffect(
-        () => {
-            if (!hashMap) return
-            console.log("would push:", hashMap)
-            updateHashParams(params, hashMap, router, true)
-        },
-        [ hashMap ]
-    )
+    // const navigating = useRef(false)
+    // useEffect(
+    //     () => {
+    //         if (!hashMap) return
+    //         // if (navigating.current) {
+    //         //     console.warn("already navigating, skipping push:", hashMap)
+    //         //     return
+    //         // }
+    //         console.log("pushing:", hashMap, "router.isReady", router.isReady)
+    //         // navigating.current = true
+    //         updateHashParams(params, hashMap, router, true)
+    //             // .catch((e) => {
+    //             //     // workaround for https://github.com/vercel/next.js/issues/37362
+    //             //     console.warn("caught error navigating:", e, "hashMap:", hashMap)
+    //             //     if (!e.cancelled) {
+    //             //         throw e
+    //             //     }
+    //             // })
+    //             // .then(() => {
+    //             //     console.log("done navigating:", hashMap)
+    //             //     navigating.current = false
+    //             // })
+    //     },
+    //     [ hashMap, router.isReady ]
+    // )
 
     useEffect(
         () => {
@@ -1448,6 +1424,7 @@ export function Body() {
                                         Best step: {model.min_idx}, error: {(bestStep.error.v * curStep.targets.total_area).toPrecision(3)} ({(bestStep.error.v * 100).toPrecision(3)}%)
                                     </span>
                                 }</p>
+                                <p>History length: {history.length}</p>
                                 {repeatSteps && stepIdx == repeatSteps[1] ?
                                     <p className={css.repeatSteps}>♻️ Step {repeatSteps[1]} repeats step {repeatSteps[0]}</p> :
                                     <p className={`${css.repeatSteps} ${css.invisible}`}>♻️ Step {"?"} repeats step {"?"}</p>
@@ -1467,7 +1444,7 @@ export function Body() {
                                         if (!shapes) return
                                         // Synchronously update window.location.hash
                                         const shapesParam = { shapes, precisionSchemeId: urlShapesPrecisionScheme }
-                                        const newHash = updateHashParams(params, { s: shapesParam, t: rawTargets }, router, true)
+                                        // const newHash = updateHashParams(params, { s: shapesParam, t: rawTargets }, router, true)
                                         // const href = `${window.location.origin}${window.location.pathname}#${newHash}`
                                         // window.location = `#${newHash}`
                                         const href = window.location.href
