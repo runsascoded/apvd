@@ -17,7 +17,7 @@ import {getSliderValue} from "../src/components/inputs";
 import {cos, max, min, PI, pi2, round, sin, sq3, sqrt} from "../src/lib/math";
 import Apvd, {LogLevel} from "../src/components/apvd";
 import {getMidpoint, getPointAndDirectionAtTheta, getRegionCenter} from "../src/lib/region";
-import {BoundingBox, getRadii, mapShape, S, Shape, shapeBox, shapesParam, shapeStrJS, shapeStrJSON, shapeStrRust} from "../src/lib/shape";
+import {BoundingBox, getRadii, mapShape, S, Shape, shapeBox, Shapes, shapesParam, shapeStrJS, shapeStrJSON, shapeStrRust} from "../src/lib/shape";
 import {TargetsTable} from "../src/components/tables/targets";
 import {makeTargets, Target, Targets, targetsParam} from "../src/lib/targets";
 import {Disjoint, Ellipses4, Ellipses4t, InitialLayout, SymmetricCircleDiamond, toShape} from "../src/lib/layout";
@@ -27,10 +27,11 @@ import {CircleCoords, Coord, makeVars, Vars, XYRRCoords, XYRRTCoords} from "../s
 import {ShapesTable} from "../src/components/tables/shapes";
 import useLocalStorageState from 'use-local-storage-state'
 import _ from "lodash"
-import {Param, ParsedParam, parseHashParams, updatedHash, updateHashParams} from "next-utils/params";
+import {getHashMap, Param, ParsedParam, parseHashParams, updatedHash, updateHashParams} from "next-utils/params";
 import CopyLayout from "../src/components/copy-layout"
 import {precisionSchemes, ShapesParam} from "../src/lib/shapes-buffer";
 import {Checkbox, Number, Select} from "../src/components/controls";
+import {useRouter} from "next/router";
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false })
 
@@ -253,6 +254,11 @@ type ParsedParams = {
     t: ParsedParam<Targets | null>
 }
 
+type HistoryState = {
+    s: ShapesParam
+    t: Targets
+}
+
 export function Body() {
     const fizzBuzzLink = <A href={"https://en.wikipedia.org/wiki/Fizz_buzz"}>Fizz Buzz</A>
     const exampleTargets: LinkItem<Targets>[] = [
@@ -282,7 +288,6 @@ export function Body() {
         // TwoOverOne
         // Lattice_0_1
     })
-    // const [ shapesInUrlFragment, setShapesInUrlFragment ] = useState<boolean>(false)
 
     const [ urlShapesPrecisionScheme, setUrlShapesPrecisionScheme ] = useLocalStorageState<number>("urlShapesPrecisionScheme", { defaultValue: 6 })
 
@@ -293,14 +298,27 @@ export function Body() {
 
     const [ stateInUrlFragment, setStateInUrlFragment ] = useLocalStorageState<boolean>("shapesInUrlFragment", { defaultValue: false })
 
+    const popStateCb = useCallback(
+        (state: { [k: string]: any }) => {
+            const { s: newShapes, t: newTargets } = state as { s: ShapesParam, t: Targets }
+            console.log("popStateCb:", newShapes, newTargets)
+            if (newShapes) {
+                setInitialShapes(newShapes.shapes)
+            }
+            if (newTargets) {
+                setTargets(newTargets)
+            }
+        },
+        []
+    )
     const {
         s: [ urlFragmentShapes, setUrlFragmentShapes ],
         t: [ urlFragmentTargets, setUrlFragmentTargets ],
-    }: ParsedParams = parseHashParams({ params })
+    }: ParsedParams = parseHashParams({ params, /*popStateCb*/ })
 
     // console.log("render: urlFragmentShapes", urlFragmentShapes)
 
-    const [ initialShapes, setInitialShapes ] = useState<Shape<number>[]>(() => {
+    const [ initialShapes, setInitialShapes ] = useState<Shapes>(() => {
         // console.log("initialShapes: hash", window.location.hash)
         if (urlFragmentShapes) {
             console.log("found urlFragmentShapes:", urlFragmentShapes)
@@ -344,9 +362,7 @@ export function Body() {
     const { targets, initialSets  } = useMemo(
         () => {
             const targets = rawTargets
-            // const targets = rawTargets
             const { numShapes } = targets
-
             const initialSets =
                 initialShapes
                     .slice(0, numShapes)
@@ -360,11 +376,55 @@ export function Body() {
                         }
                     })
 
-            console.log("updated targets block:", numShapes, targets, initialSets, "layout:", initialLayout.length)
+            console.log("updated targets block:", numShapes, targets, initialSets, "layout:", initialLayout.length, "hash:", window.location.hash)
             return { targets, initialSets, }
         },
         [ rawTargets.all, rawTargets.numShapes, initialShapes ]
     )
+
+    const router = useRouter()
+
+    // const maybePushHistory = useCallback(
+    //     (/*state: HistoryState*/) => {
+    //         if (!initialShapes || !targets) {
+    //             return
+    //         }
+    //         const state: HistoryState = { s: { shapes: initialShapes, precisionSchemeId: urlShapesPrecisionScheme }, t: targets }
+    //         const eq = _.isEqual(state, history.state)
+    //         // const eqsMatch = (state === history.state) == eq
+    //         // if (!eqsMatch) {
+    //         //     console.warn(`eqsMatch: === ${state === history.state}, _ ${eq},`, "state:", state, "history.state:", history.state)
+    //         // }
+    //         if (!eq) {
+    //             console.log("getting updatedHash:", state)
+    //             const hash = updatedHash(params, state)
+    //             // const url = `${window.location.pathname}#${hash}`
+    //             const url = `#${hash}`
+    //             console.log(`pushState: ${initialShapes[0].t},`, url, state, "cur:", history.state)
+    //             // router.push(url)
+    //             // history.pushState(state, "", window.location.href)
+    //         } else {
+    //             console.log(`pushState: ${initialShapes[0].t}, not pushing, state is unchanged`, state, history.state)
+    //         }
+    //     },
+    //     [ initialShapes, targets, urlShapesPrecisionScheme ]
+    // )
+
+    // const [ historyState, setHistoryState] = useState<HistoryState>({ s: initialShapes, t: targets, })
+    // useEffect(
+    //     () => {
+    //         // const { s, t } = historyState[0]
+    //         // const hash = updatedHash(params, { s, t })
+    //         // console.log("pushState:", hash)
+    //         // history.pushState({ s, t }, "", hash)
+    //         const prevState = historyState
+    //         maybePushHistory(prevState)
+    //         const newState = { s: initialShapes, t: targets }
+    //         maybePushHistory(newState)
+    //         setHistoryState(newState)
+    //     },
+    //     [ initialShapes, targets, ]
+    // )
 
     const gridState = GridState({
         localStorage: true,
@@ -417,14 +477,34 @@ export function Body() {
         [ modelStepIdx, setModelStepIdx, vStepIdx, setVStepIdx, ]
     )
 
+    // const [ nextStepPush, setNextStepPush ] = useState<boolean>(false)
+    // const [ pushOnLeaveStep, setPushOnLeaveStep ] = useState<number | null>(null)
+
     const [ curStep, sets, shapes, ] = useMemo(
         () => {
             if (!model || stepIdx === null) return [ null, null ]
+            if (stepIdx >= model.steps.length) {
+                console.warn("stepIdx >= model.steps.length", stepIdx, model.steps.length)
+                return [ null, null ]
+            }
             const curStep = model.steps[stepIdx]
             // Save current shapes to localStorage
             const shapes = curStep.sets.map(({ shape }) => shape)
             localStorage.setItem(shapesKey, JSON.stringify(shapes))
             const sets = curStep.sets.map(set => ({ ...initialSets[set.idx], ...set, }))
+            // let push = false
+            // if (nextStepPush) {
+            //     setNextStepPush(false)
+            //     setPushOnLeaveStep(stepIdx)
+            // } else if (setPushOnLeaveStep !== null) {
+            //     if (stepIdx != pushOnLeaveStep) {
+            //         setPushOnLeaveStep(null)
+            //         push = true
+            //     }
+            // }
+            // const param = { shapes }
+            // console.log(`new shapes: nextStepPush ${nextStepPush}, pushOnLeaveStep ${pushOnLeaveStep}, push ${push}`)
+            // updateHashParams(params, { s: param }, router, push)
             return [ curStep, sets, shapes ]
         },
         [ model, stepIdx, initialSets, ]
@@ -447,6 +527,41 @@ export function Body() {
             }
         },
         [ model,]
+    )
+
+    useEffect(
+        () => {
+            const fn = (e: PopStateEvent) => {
+                const url = history.state.url
+                const hash = url.split('#')[1]
+                console.log("popstate", e.state, url, "hash:", hash)
+                const { s, t } = getHashMap(params, hash) as HistoryState
+
+                // console.log("history.state:", history.state, `"${history.state.hash}"`)
+                // if (!e.state) {
+                //     console.warn("no state in popstate event:", e.state)
+                //     return
+                // }
+                // const { s, t } = e.state
+                if (s) {
+                    console.log("setting shapes from history state:", s)
+                    setInitialShapes(s.shapes)
+                    // setUrlShapesPrecisionScheme(s.precisionSchemeId)
+                } else {
+                    console.warn("no shapes in history state")
+                }
+                if (t) {
+                    console.log("setting targets from history state:", t)
+                    setTargets(t)
+                } else {
+                    console.warn("no targets in history state")
+                }
+                // const hashMap = getHashMap(params, hash)
+            }
+            window.addEventListener('popstate', fn)
+            return () => window.removeEventListener('popstate', fn)
+        },
+        [ setInitialShapes, setTargets, ]
     )
 
     const [ vars, setVars ] = useState<Vars | null>(null)
@@ -1158,37 +1273,78 @@ export function Body() {
     const [ clearExampleTooltip, exampleLinks ] = Links({
         links: exampleTargets,
         cur: targets,
-        setVal: setTargetsLink,
+        setVal: v => {
+            // maybePushHistory()
+            setTargetsLink(v)
+        },
         activeVisited: true,
     })
-    const setLayoutLink = useCallback(
-        (v: InitialLayout) => {
-            setInitialLayout(v)
-            setInitialShapes(v.map(s => toShape(s)))
-        },
-        [ setInitialLayout, setInitialShapes, ]
-    )
+    // const setLayoutLink = useCallback(
+    //     (v: InitialLayout) => {
+    //         setInitialLayout(v)
+    //         setInitialShapes(v.map(s => toShape(s)))
+    //     },
+    //     [ setInitialLayout, setInitialShapes, ]
+    // )
     const [ clearLayoutTooltip, layoutLinks ] = Links({
         links: layouts,
         cur: initialLayout,
-        setVal: setLayoutLink,
+        setVal: v => {
+            // maybePushHistory()
+            setInitialLayout(v)
+            setInitialShapes(v.map(s => toShape(s)))
+        },
         activeVisited: true,
     })
 
     useEffect(
         () => {
-            if (!shapes) return
             if (!stateInUrlFragment) {
+                // if (window.location.hash.replace('#', '')) {
+                //     console.log(`pushState: ""`, window.location.hash)
+                //     window.history.pushState({ hash: window.location.hash }, '', window.location.href.split('#')[0])
+                // }
                 // console.log("clearing UrlFragmentShapes")
                 setUrlFragmentShapes(null)
                 setUrlFragmentTargets(null)
                 return
             }
             // console.log("setting UrlFragmentShapes:", shapes, "current hash:", window.location.hash)
-            setUrlFragmentShapes({ shapes, precisionSchemeId: urlShapesPrecisionScheme })
-            setUrlFragmentTargets(rawTargets)
         },
-        [ shapes, rawTargets, stateInUrlFragment, urlShapesPrecisionScheme, ]
+        [ stateInUrlFragment, setUrlFragmentShapes, setUrlFragmentTargets, ]
+    )
+
+    router.events.on("routeChangeError", (err, url, { shallow }) => {
+        console.log("Navigating to: " + "url: " + url, {cancelled: err.cancelled} )
+    });
+
+    const [ hashMap, setHashMap ] = useState<{ [key: string]: any } | null>(null)
+
+    useEffect(
+        () => {
+            // if (!shapes) return
+            if (!stateInUrlFragment) return
+            const param = { shapes: initialShapes, precisionSchemeId: urlShapesPrecisionScheme }
+            setUrlFragmentTargets(rawTargets)
+            setUrlFragmentShapes(param)
+            const newHashMap = { s: param, t: rawTargets, }
+            if (_.isEqual(hashMap, newHashMap)) {
+                console.log("skipping hashMap push:", hashMap, newHashMap)
+            } else {
+                console.log("hashMap push:", hashMap, newHashMap)
+                setHashMap(newHashMap)
+            }
+        },
+        [ initialShapes, stateInUrlFragment, urlShapesPrecisionScheme, rawTargets, /*setNextStepPush, */]
+    )
+
+    useEffect(
+        () => {
+            if (!hashMap) return
+            console.log("would push:", hashMap)
+            updateHashParams(params, hashMap, router, true)
+        },
+        [ hashMap ]
     )
 
     useEffect(
@@ -1310,10 +1466,14 @@ export function Body() {
                                         e.stopPropagation()
                                         if (!shapes) return
                                         // Synchronously update window.location.hash
-                                        updateHashParams(params, { s: shapes, t: rawTargets })
-                                        console.log("Copying:", window.location.href)
-                                        navigator.clipboard.writeText(window.location.href)
-                                        setUrlFragmentShapes({shapes, precisionSchemeId: urlShapesPrecisionScheme})
+                                        const shapesParam = { shapes, precisionSchemeId: urlShapesPrecisionScheme }
+                                        const newHash = updateHashParams(params, { s: shapesParam, t: rawTargets }, router, true)
+                                        // const href = `${window.location.origin}${window.location.pathname}#${newHash}`
+                                        // window.location = `#${newHash}`
+                                        const href = window.location.href
+                                        console.log("Copying:", href)
+                                        navigator.clipboard.writeText(href)
+                                        setUrlFragmentShapes(shapesParam)
                                         setUrlFragmentTargets(rawTargets)
                                         // console.log("setting UrlFragmentShapes:", shapes, "current hash:", window.location.hash)
                                     }}>🔗</span>

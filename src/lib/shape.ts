@@ -23,6 +23,7 @@ export interface XYRRT<D> {
 }
 
 export type Shape<D> = Circle<D> | XYRR<D> | XYRRT<D>
+export type Shapes = Shape<number>[]
 
 export type Set = {
     idx: number
