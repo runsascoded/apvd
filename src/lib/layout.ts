@@ -30,7 +30,7 @@ export const toShape = (s: Shape): Shapes.Shape<number> => {
 
 export type InitialLayout = Shape[]
 
-export const SymmetricCircleDiamond: InitialLayout = [
+export const Circles: InitialLayout = [
     { c: { x: -0.5, y:      0, }, r: { x: 1, y: 1 }, t: 0 },
     { c: { x:  0  , y:  sq3/2, }, r: { x: 1, y: 1 }, t: 0 },
     { c: { x:  0.5, y:      0, }, r: { x: 1, y: 1 }, t: 0 },
