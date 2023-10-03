@@ -310,12 +310,13 @@ export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, 
                 }}
                 handle={<hr className={css.resizeHandle} />}
             >
-                <div>{svgNode}</div>
+                <div className={css.svgContainer}>{svgNode}</div>
             </ResizableBox>
             : svgNode
 
     const scrollWheelNode = (
         <ReactScrollWheelHandler
+            className={`row ${css.scrollWheelHandler}`}
             timeout={0}
             preventScroll={true}
             upHandler={e => {

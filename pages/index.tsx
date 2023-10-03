@@ -1380,8 +1380,12 @@ export function Body() {
                                         // Synchronously update window.location.hash
                                         const shapesParam = { shapes, precisionSchemeId: urlShapesPrecisionScheme }
                                         const href = window.location.href
-                                        console.log("Copying:", href)
-                                        navigator.clipboard.writeText(href)
+                                        if (navigator.clipboard) {
+                                            console.log("Copying:", href)
+                                            navigator.clipboard.writeText(href)
+                                        } else {
+                                            console.warn("No navigator.clipboard found")
+                                        }
                                         setUrlFragmentShapes(shapesParam)
                                         setUrlFragmentTargets(rawTargets)
                                         // console.log("setting UrlFragmentShapes:", shapes, "current hash:", window.location.hash)
