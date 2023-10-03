@@ -6,6 +6,7 @@ import css from "./grid.module.scss"
 import ReactScrollWheelHandler from "react-scroll-wheel-handler";
 import {ceil, floor} from "../lib/math";
 import useLocalStorageState from "use-local-storage-state";
+import useSessionStorageState from "use-session-storage-state";
 
 export type GridStateProps = {
     center?: Point
@@ -14,7 +15,7 @@ export type GridStateProps = {
     height: number
     gridSize?: number
     showGrid?: boolean
-    localStorage?: boolean
+    storage?: 'local' | 'session'
 }
 export type GridState = {
     center: State<Point>
@@ -34,8 +35,18 @@ export function useLocalStorageStateWrapper<V>(key: string, { defaultValue }: { 
     return [ v, setter ]
 }
 
+export function useSessionStorageStateWrapper<V>(key: string, { defaultValue }: { defaultValue: V }): State<V> {
+    const [ v, setter ] = useSessionStorageState(key, { defaultValue })
+    return [ v, setter ]
+}
+
 export function GridState(init: GridStateProps): GridState {
-    const useFn = init.localStorage ? useLocalStorageStateWrapper : useStateWrapper
+    const useFn =
+        init.storage == 'local'
+            ? useLocalStorageStateWrapper
+            : init.storage == 'session'
+                ? useSessionStorageStateWrapper
+                : useStateWrapper
     const center = useFn("center", { defaultValue: init.center || { x: 0, y: 0 } })
     const scale = useFn("scale", { defaultValue: init.scale })
     const width = useFn("width", { defaultValue: init.width })

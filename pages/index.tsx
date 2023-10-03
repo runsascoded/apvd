@@ -25,7 +25,6 @@ import {VarsTable} from "../src/components/tables/vars";
 import {SparkLineProps} from "../src/components/spark-lines";
 import {CircleCoords, Coord, makeVars, Vars, XYRRCoords, XYRRTCoords} from "../src/lib/vars";
 import {ShapesTable} from "../src/components/tables/shapes";
-import useLocalStorageState from 'use-local-storage-state'
 import _ from "lodash"
 import {getHashMap, getHistoryStateHash, HashMapVal, Param, ParsedParam, parseHashParams, updatedHash, updateHashParams} from "next-utils/params";
 import CopyLayout from "../src/components/copy-layout"
@@ -33,6 +32,7 @@ import {precisionSchemes, ShapesParam} from "../src/lib/shapes-buffer";
 import {Checkbox, Number, Select} from "../src/components/controls";
 import {useRouter} from "next/router";
 import Link from "next/link";
+import useSessionStorageState from "use-session-storage-state";
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false })
 
@@ -283,7 +283,7 @@ export function Body() {
                 in cancer," Fig. 3</>}
     ].map(({ name, val, description }) => ({ name, val: makeTargets(val), description }))
 
-    const [ logLevel, setLogLevel ] = useLocalStorageState<LogLevel>("logLevel", { defaultValue: "info" })
+    const [ logLevel, setLogLevel ] = useSessionStorageState<LogLevel>("logLevel", { defaultValue: "info" })
     useEffect(
         () => {
             update_log_level(logLevel)
@@ -291,7 +291,7 @@ export function Body() {
         [ logLevel, ]
     );
 
-    const [ initialLayout, setInitialLayout] = useLocalStorageState<InitialLayout>(initialLayoutKey, { defaultValue:
+    const [ initialLayout, setInitialLayout] = useSessionStorageState<InitialLayout>(initialLayoutKey, { defaultValue:
         Circles
         // SymmetricCircleLattice
         // Disjoint
@@ -302,14 +302,14 @@ export function Body() {
         // Lattice_0_1
     })
 
-    const [ urlShapesPrecisionScheme, setUrlShapesPrecisionScheme ] = useLocalStorageState<number>("urlShapesPrecisionScheme", { defaultValue: 6 })
+    const [ urlShapesPrecisionScheme, setUrlShapesPrecisionScheme ] = useSessionStorageState<number>("urlShapesPrecisionScheme", { defaultValue: 6 })
 
     const params: Params = {
-        s: shapesParam({ precisionSchemeId: 6 }),
+        s: shapesParam({ precisionSchemeId: 1 }),
         t: targetsParam,
     }
 
-    const [ stateInUrlFragment, setStateInUrlFragment ] = useLocalStorageState<boolean>("shapesInUrlFragment", { defaultValue: true })
+    const [ stateInUrlFragment, setStateInUrlFragment ] = useSessionStorageState<boolean>("shapesInUrlFragment", { defaultValue: true })
 
     const {
         s: [ urlFragmentShapes, setUrlFragmentShapes ],
@@ -326,7 +326,7 @@ export function Body() {
         } else {
             console.log("no urlFragmentShapes found")
         }
-        const str = localStorage.getItem(shapesKey)
+        const str = sessionStorage.getItem(shapesKey)
         if (!str) return initialLayout.map(s => toShape(s))
         return JSON.parse(str)
     })
@@ -337,7 +337,7 @@ export function Body() {
             setUrlFragmentTargets(null)
             return urlFragmentTargets
         }
-        const str = localStorage.getItem(targetsKey)
+        const str = sessionStorage.getItem(targetsKey)
         return makeTargets(
             str
                 ? JSON.parse(str)
@@ -381,7 +381,7 @@ export function Body() {
     const router = useRouter()
 
     const gridState = GridState({
-        localStorage: true,
+        storage: 'session',
         center: { x: 0, y: sq3/4, },
         scale: 100,
         width: 800,
@@ -396,24 +396,24 @@ export function Body() {
         showGrid: [ showGrid, setShowGrid ],
     } = gridState
 
-    const [ settingsShown, setSettingsShown ] = useLocalStorageState("settingsShown", { defaultValue: false, })
-    const [ targetsShown, setTargetsShown ] = useLocalStorageState("targetsShown", { defaultValue: false, })
-    const [ examplesShown, setExamplesShown ] = useLocalStorageState("examplesShown", { defaultValue: false, })
-    const [ errorPlotShown, setErrorPlotShown ] = useLocalStorageState("errorPlotShown", { defaultValue: false, })
-    const [ varsShown, setVarsShown ] = useLocalStorageState("varsShown", { defaultValue: false, })
-    const [ shapesShown, setShapesShown ] = useLocalStorageState("shapesShown", { defaultValue: false, })
-    const [ layoutsShown, setLayoutsShown ] = useLocalStorageState("layoutsShown", { defaultValue: false, })
+    const [ settingsShown, setSettingsShown ] = useSessionStorageState("settingsShown", { defaultValue: false, })
+    const [ targetsShown, setTargetsShown ] = useSessionStorageState("targetsShown", { defaultValue: false, })
+    const [ examplesShown, setExamplesShown ] = useSessionStorageState("examplesShown", { defaultValue: false, })
+    const [ errorPlotShown, setErrorPlotShown ] = useSessionStorageState("errorPlotShown", { defaultValue: false, })
+    const [ varsShown, setVarsShown ] = useSessionStorageState("varsShown", { defaultValue: false, })
+    const [ shapesShown, setShapesShown ] = useSessionStorageState("shapesShown", { defaultValue: false, })
+    const [ layoutsShown, setLayoutsShown ] = useSessionStorageState("layoutsShown", { defaultValue: false, })
 
-    const [ maxErrorRatioStepSize, setMaxErrorRatioStepSize ] = useLocalStorageState("maxErrorRatioStepSize", { defaultValue: 0.5 })
-    const [ maxSteps, setMaxSteps ] = useLocalStorageState("maxSteps", { defaultValue: 10000 })
-    const [ stepBatchSize, setStepBatchSize ] = useLocalStorageState("stepBatchSize", { defaultValue: 10 })
+    const [ maxErrorRatioStepSize, setMaxErrorRatioStepSize ] = useSessionStorageState("maxErrorRatioStepSize", { defaultValue: 0.5 })
+    const [ maxSteps, setMaxSteps ] = useSessionStorageState("maxSteps", { defaultValue: 10000 })
+    const [ stepBatchSize, setStepBatchSize ] = useSessionStorageState("stepBatchSize", { defaultValue: 10 })
 
     const [ model, setModel ] = useState<Model | null>(null)
     const [ modelStepIdx, setModelStepIdx ] = useState<number | null>(null)
     const [ vStepIdx, setVStepIdx ] = useState<number | null>(null)
     const [ runningState, setRunningState ] = useState<RunningState>("none")
     const [ frameLen, setFrameLen ] = useState(0)
-    const [ autoCenter, setAutoCenter ] = useLocalStorageState("autoCenter", { defaultValue: true })
+    const [ autoCenter, setAutoCenter ] = useSessionStorageState("autoCenter", { defaultValue: true })
     const [ autoCenterInterpRate, setAutoCenterInterpRate ] = useState(1)
     const [ setLabelDistance, setSetLabelDistance ] = useState(0.15)
     const [ setLabelSize, setSetLabelSize ] = useState(20)
@@ -454,23 +454,16 @@ export function Body() {
                 return [ null, null ]
             }
             const curStep = model.steps[stepIdx]
-            // Save current shapes to localStorage
+            // Save current shapes to sessionStorage
             const shapes = curStep.sets.map(({ shape }) => shape)
-            localStorage.setItem(shapesKey, JSON.stringify(shapes))
+            sessionStorage.setItem(shapesKey, JSON.stringify(shapes))
             const sets = curStep.sets.map(set => ({ ...initialSets[set.idx], ...set, }))
 
             if (stateInUrlFragment) {
-                let updateUrl = true
-                if (targets.numShapes != initialShapes.length) {
-                    console.warn("skipping updateUrl push: targets.numShapes != initialShapes.length", targets.numShapes, initialShapes.length)
-                    updateUrl = false
-                }
-                if (shapes.length != initialShapes.length) {
-                    console.warn("skipping updateUrl push: shapes.length != initialShapes.length", shapes.length, initialShapes.length)
-                    updateUrl = false
-                }
-                if (updateUrl) {
+                if (targets.numShapes == shapes.length) {
                     pushHistoryState(shapes, targets, false)
+                } else {
+                    console.warn("skipping updateUrl push: targets.numShapes != shapes.length", targets.numShapes, shapes.length)
                 }
             }
             return [ curStep, sets, shapes ]
@@ -478,11 +471,11 @@ export function Body() {
         [ model, stepIdx, initialSets, targets, stateInUrlFragment, pushHistoryState, ]
     )
 
-    // Save targets to localStorage
+    // Save targets to sessionStorage
     useEffect(
         () => {
             const { givenInclusive, inclusive, exclusive } = rawTargets
-            localStorage.setItem(targetsKey, JSON.stringify(givenInclusive ? inclusive : exclusive))
+            sessionStorage.setItem(targetsKey, JSON.stringify(givenInclusive ? inclusive : exclusive))
         },
         [ rawTargets, ]
     )
@@ -844,8 +837,8 @@ export function Body() {
         [ model, stepIdx, plotInitialized, ],
     )
 
-    const [ showSparkLines, setShowSparkLines ] = useLocalStorageState("showSparkLines", { defaultValue: true })
-    const [ sparkLineLimit, setSparkLineLimit ] = useLocalStorageState("sparkLineLimit", { defaultValue: 40 })
+    const [ showSparkLines, setShowSparkLines ] = useSessionStorageState("showSparkLines", { defaultValue: true })
+    const [ sparkLineLimit, setSparkLineLimit ] = useSessionStorageState("sparkLineLimit", { defaultValue: 40 })
     const [ sparkLineStrokeWidth, setSparkLineStrokeWidth ] = useState(1)
     const [ sparkLineMargin, setSparkLineMargin ] = useState(1)
     const [ sparkLineWidth, setSparkLineWidth ] = useState(80)
@@ -922,7 +915,7 @@ export function Body() {
         [ sets, scale ],
     )
 
-    const [ showIntersectionPoints, setShowIntersectionPoints ] = useLocalStorageState("showIntersectionPoints", { defaultValue: false })
+    const [ showIntersectionPoints, setShowIntersectionPoints ] = useSessionStorageState("showIntersectionPoints", { defaultValue: false })
     const intersectionNodes = useMemo(
         () => showIntersectionPoints && <g id={"intersections"}>{
             curStep && ([] as ReactNode[]).concat(...curStep.components.map((component, componentIdx) => component.points.map(({ x, y, }, pointIdx) => {
