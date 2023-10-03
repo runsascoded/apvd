@@ -27,11 +27,12 @@ import {CircleCoords, Coord, makeVars, Vars, XYRRCoords, XYRRTCoords} from "../s
 import {ShapesTable} from "../src/components/tables/shapes";
 import useLocalStorageState from 'use-local-storage-state'
 import _ from "lodash"
-import {getHashMap, getHistoryStateHash, Param, ParsedParam, parseHashParams, updatedHash, updateHashParams} from "next-utils/params";
+import {getHashMap, getHistoryStateHash, HashMapVal, Param, ParsedParam, parseHashParams, updatedHash, updateHashParams} from "next-utils/params";
 import CopyLayout from "../src/components/copy-layout"
 import {precisionSchemes, ShapesParam} from "../src/lib/shapes-buffer";
 import {Checkbox, Number, Select} from "../src/components/controls";
 import {useRouter} from "next/router";
+import Link from "next/link";
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false })
 
@@ -161,12 +162,12 @@ export function DetailsSection({ title, tooltip, open, toggle, className, childr
     )
 }
 
-export type LinkItem<Val> = { name: string, val: Val, description: ReactNode }
-export function Links<Val>({ links, cur, setVal, activeVisited, }: {
+export type LinkItem<Val> = { name: string, val: Val | string, description: ReactNode }
+export function Links<Val>({ links, cur, setVal, setHash, }: {
     links: LinkItem<Val>[]
-    cur: Val
+    cur: Val | string
     setVal: Dispatch<Val>
-    activeVisited?: boolean
+    setHash: (hash: string) => void
 }): [ () => void, ReactNode ] {
     const [ showTooltip, setShowTooltip ] = useState<string | null>(null)
     return [
@@ -176,24 +177,27 @@ export function Links<Val>({ links, cur, setVal, activeVisited, }: {
                 const overlay = <Tooltip onClick={e => console.log("tooltip click:", name)}>{description}</Tooltip>
                 const isCurVal = _.isEqual(cur, val)
                 // console.log("link:", isCurVal, cur, val)
-                const a = (className?: string) => <a className={className || ''} href={window.location.hash} onClick={e => {
-                    setVal(val)
-                    setShowTooltip(null)
-                    e.preventDefault()
-                    e.stopPropagation()
-                    console.log(`clicked link: ${name}`)
-                }}>{name}</a>
+                const a = (
+                    typeof val === 'string'
+                        ? <Link
+                            href={val}
+                            onClick={e => {
+                                console.log("Setting hash:", val)
+                                setHash(val)
+                                setShowTooltip(null)
+                            }}
+                        >{name}</Link>
+                        : <a className={isCurVal ? css.activeLink : ''} href={window.location.hash} onClick={e => {
+                            setVal(val)
+                            setShowTooltip(null)
+                            e.preventDefault()
+                            e.stopPropagation()
+                            console.log(`clicked link: ${name}`)
+                        }}>{name}</a>
+                )
                 return (
                     <li key={idx}>
-                        {
-                            isCurVal
-                                ? (
-                                    activeVisited
-                                        ? a(css.activeLink)
-                                        : <span>{name}</span>
-                                ) : a()
-                        }
-                        {' '}
+                        {a}{' '}
                         <OverlayTrigger
                             trigger={["focus", "click"]}
                             onToggle={shown => {
@@ -235,26 +239,35 @@ export const initialLayoutKey = "initialLayout"
 export const shapesKey = "shapes"
 export const targetsKey = "targets"
 
+export const VariantCallersPaperLink = <A href={"https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3753564/pdf/btt375.pdf"}>Roberts et al (2013)</A>
+
 const layouts: LinkItem<InitialLayout>[] = [
     { name: "Ellipses", val: Ellipses4t, description: "4 ellipses intersecting to form all 15 possible regions, rotated -45°", },
     { name: "Ellipses (axis-aligned)", val: Ellipses4, description: "Same as above, but ellipse axes are horizontal/vertical (and rotation is disabled)", },
     { name: "Circles", val: Circles, description: "4 circles in a diamond shape, such that 2 different subsets (of 3) are symmetric, and 11 of 15 possible regions are represented (missing 2 4C2's and 2 4C3's).", },
-    { name: "Disjoint", val: Disjoint, description: "4 disjoint circles" },
+    { name: "Disjoint", val: Disjoint, description: "4 disjoint circles. When two (or more) sets are supposed to intersect, but don't, a synthetic penalty is added to the error computation, which is proportional to: 1) each involved set's distance to the centroid of the centers of the sets that are supposed to intersect, as well as 2) the size of the target subset. This \"disjoint\" initial layout serves demonstrate/test this behavior. More sophisticated heuristics would be useful here, as the current scheme is generally insufficient to coerce all sets into intersecting as they should." },
+    { name: "Variant callers (best)", val: "#s=Mzxv4Cc95664TAhIgtTaZ1wTbpB32hca6RnYrxzN5QRgbF4oaXr5MStC6KxNYYZy5g5IuzaS1moF4lLWtIXXY-VOO2f8wNvsQk9Jqqfg0B-RDkXMZTCTpTaymPnuwF-vswFGRVwFE4hgScC1ofXRaBdnvzm84fjZ8wtEkWHaqiifUM4TVEtIbh8&t=633,618,112,187,0,14,1,319,13,55,17,21,0,9,36", description: <>Best computed layout for the "variant callers" example, from {VariantCallersPaperLink}. ≈50,000 steps beginning from the "Circles" layout above, error &lt;0.176%.</>},
+    { name: "Variant callers (alternate)", val: "#s=MzC1VAFocttl2gbaDkR1obVIOSo-npdk8mfAn4j0s68wpq4FE4o0YIptFI5hupi525mqCJLTS0BbLsnqcJ0oFOtaun28Afy9HfyAHhdHhtsAsLO8mNdyKFNwt4op_97d4DXguxY3S4k7RxPbNbPIu_2XIvm5qJ0NJn5qsgeVxEhvcgoRO8FFnpU&t=633,618,112,187,0,14,1,319,13,55,17,21,0,9,36", description: <>Another layout for the "variant callers" example, from {VariantCallersPaperLink}. ≈20,000 steps beginning from the "Ellipses" layout above, error ≈2.27%.</>}
     // { name: "CircleLattice", layout: SymmetricCircleLattice, description: "4 circles centered at (0,0), (0,1), (1,0), (1,1)", },
 ]
 const layoutsMap = new Map(layouts.map(({ name, val }) => [ name, val ]))
 
-type Params = {
+export type Params = {
     s: Param<ShapesParam | null>
     t: Param<Targets | null>
 }
 
-type ParsedParams = {
+export type ParsedParams = {
     s: ParsedParam<ShapesParam | null>
     t: ParsedParam<Targets | null>
 }
 
-type HistoryState = {
+export type HashMap = {
+    s: HashMapVal<ShapesParam>
+    t: HashMapVal<Targets>
+}
+
+export type HistoryState = {
     s: ShapesParam
     t: Targets
 }
@@ -265,8 +278,8 @@ export function Body() {
         { name: "Fizz Buzz", val: FizzBuzz, description: <>2 circles, of size 1/3 and 1/5, representing integers divisible by 3 and by 5. Inspired by {fizzBuzzLink}.</> },
         { name: "Fizz Buzz Bazz", val: FizzBuzzBazz, description: <>Extended version of {fizzBuzzLink} above, with 3 sets, representing integers divisible by 3, 5, or 7. This is impossible to model accurately with 3 circles, but possible with ellipses.</> },
         { name: "Fizz Buzz Bazz Qux", val: FizzBuzzBazzQux, description: <>Extended version of {fizzBuzzLink} above, with 4 sets, representing integers divisible by 2, 3, 5, or 7. Impossible to model exactly even with 4 ellipses (AFAIK!), but gradient descent gets as close as it can.</> },
-        { name: "3 symmetric sets", val: ThreeEqualCircles, description: <>Simple test case, 3 circles, one starts slightly off-center from the other two, "target" ratios require the 3 circles to be in perfectly symmetric position with each other.</> },
-        { name: "Variant callers", val: VariantCallers, description: <>Values from <A href={"https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3753564/pdf/btt375.pdf"}>Roberts et al (2013)</A>, "A comparative analysis of algorithms for somatic SNV detection
+        // { name: "3 symmetric sets", val: ThreeEqualCircles, description: <>Simple test case, 3 circles, one starts slightly off-center from the other two, "target" ratios require the 3 circles to be in perfectly symmetric position with each other.</> },
+        { name: "Variant callers", val: VariantCallers, description: <>Values from {VariantCallersPaperLink}, "A comparative analysis of algorithms for somatic SNV detection
                 in cancer," Fig. 3</>}
     ].map(({ name, val, description }) => ({ name, val: makeTargets(val), description }))
 
@@ -484,16 +497,21 @@ export function Body() {
         [ model,]
     )
 
+    const getHistoryState = useCallback(
+        (hash: string) => mapEntries(getHashMap<Params, HashMap>(params, hash), (k, { val }) => [ k, val ]) as HistoryState,
+        [ params ]
+    )
+
     useEffect(
         () => {
-            const fn = (e: PopStateEvent) => {
+            const popStateFn = (e: PopStateEvent) => {
                 const hash = getHistoryStateHash()
                 console.log("popstate: hash", hash, "e.state", e.state, "history.state", history.state)
                 if (!hash) {
                     console.warn(`no hash in history state url ${history.state.url} or as ${history.state.as}`)
                     return
                 }
-                const { s, t } = mapEntries(getHashMap(params, hash), (k, { val }) => [ k, val ]) as HistoryState
+                const { s, t } = getHistoryState(hash)
                 if (s) {
                     console.log("setting shapes from history state:", s)
                     setInitialShapes(s.shapes)
@@ -508,8 +526,15 @@ export function Body() {
                     console.warn("no targets in history state")
                 }
             }
-            window.addEventListener('popstate', fn)
-            return () => window.removeEventListener('popstate', fn)
+            const hashChangeFn = (e: HashChangeEvent) => {
+                console.log("hashchange: oldURL", e.oldURL, "newURL", e.newURL, e)
+            }
+            window.addEventListener('popstate', popStateFn)
+            window.addEventListener('hashchange', hashChangeFn)
+            return () => {
+                window.removeEventListener('popstate', popStateFn)
+                window.removeEventListener('hashchange', hashChangeFn)
+            }
         },
         [ setInitialShapes, setUrlShapesPrecisionScheme, setTargets, ]
     )
@@ -1218,6 +1243,18 @@ export function Body() {
         [ shapes ]
     )
 
+    const setHash = useCallback(
+        (hash: string) => {
+            const { s, t } = getHistoryState(hash)
+            if (!s) { console.warn(`no s in hash ${hash}`); return }
+            if (!t) { console.warn(`no t in hash ${hash}`); return }
+            console.log(`setting shapes and targets from hash ${hash}:`, s.shapes, `(${s.precisionSchemeId})`, t)
+            setInitialShapes(s.shapes)
+            setUrlShapesPrecisionScheme(s.precisionSchemeId)
+            setTargets(t)
+        },
+        [ params, setInitialShapes, setTargets, ]
+    )
     const [ clearExampleTooltip, exampleLinks ] = Links({
         links: exampleTargets,
         cur: targets,
@@ -1228,7 +1265,7 @@ export function Body() {
             setInitialShapes(newShapes)
             pushHistoryState(newShapes, newTargets, true)
         },
-        activeVisited: true,
+        setHash,
     })
     const [ clearLayoutTooltip, layoutLinks ] = Links({
         links: layouts,
@@ -1239,7 +1276,7 @@ export function Body() {
             setInitialShapes(newShapes)
             pushHistoryState(newShapes, targets, true)
         },
-        activeVisited: true,
+        setHash,
     })
 
     // Clear URL fragment state if `stateInUrlFragment` has been set to `false`

@@ -40,8 +40,8 @@ export const Circles: InitialLayout = [
 export const Disjoint: InitialLayout = [
     { c: { x: 0, y: 0, }, r: { x: 1, y: 1 }, t: 0, },
     { c: { x: 3, y: 0, }, r: { x: 1, y: 1 }, t: 0, },
-    { c: { x: 0, y: 3, }, r: { x: 1, y: 1 }, t: 0, },
     { c: { x: 3, y: 3, }, r: { x: 1, y: 1 }, t: 0, },
+    { c: { x: 0, y: 3, }, r: { x: 1, y: 1 }, t: 0, },
 ]
 export const SymmetricCircleLattice: InitialLayout = [
     { c: { x: 0, y: 0, }, r: { x: 1, y: 1 }, t: 0, },
