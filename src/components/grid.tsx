@@ -1,5 +1,5 @@
 import React, {MouseEvent, ReactNode, useCallback, useEffect, useMemo, useRef, useState} from "react";
-import {Resizable} from 'react-resizable';
+import {ResizableBox} from 'react-resizable';
 import {Point} from "./point";
 import {State} from "../lib/utils";
 import css from "./grid.module.scss"
@@ -262,7 +262,8 @@ export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, 
         <svg
             ref={svg}
             viewBox={`0 0 ${width} ${height}`}
-            className={`${css.svg} ${className || ''}`}
+            className={`${css.grid} ${className || ''}`}
+            style={{ height }}
             onMouseDown={onMouseDown}
             onMouseMove={onMouseMove}
             onMouseUp={onMouseUp}
@@ -284,13 +285,14 @@ export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, 
 
     const resizableNode =
         resizableBottom ?
-            <Resizable
+            <ResizableBox
                 height={height}
                 axis={'y'}
                 onResizeStart={e => {
-                    console.log("resize start:", height)
+                    console.log("resize start: height", height, "scale", scale)
                     setResizeStartHeight({ height, scale })
                     e.stopPropagation()
+                    e.preventDefault()
                 }}
                 onResizeStop={e => {
                     console.log("resize stop:", height)
@@ -298,19 +300,18 @@ export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, 
                     e.stopPropagation()
                 }}
                 onResize={(e, { node, size, handle,}) => {
-                    // console.log("height:", height, size.height)
-                    setHeight(size.height)
                     if (resizeStartHeight) {
-                        setScale(resizeStartHeight.scale * height / resizeStartHeight.height)
+                        const newScale = resizeStartHeight.scale * size.height / resizeStartHeight.height
+                        // console.log(`resize height: ${resizeStartHeight.height} → (${height}, ${size.height}), scale: ${resizeStartHeight.scale} → ${newScale},`, e.type)
+                        setHeight(size.height)
+                        setScale(newScale)
                     }
                     e.stopPropagation()
                 }}
-                handle={
-                    <hr className={css.resizeHandle} />
-                }
+                handle={<hr className={css.resizeHandle} />}
             >
                 <div>{svgNode}</div>
-            </Resizable>
+            </ResizableBox>
             : svgNode
 
     const scrollWheelNode = (
