@@ -30,11 +30,18 @@ export const toShape = (s: Shape): Shapes.Shape<number> => {
 
 export type InitialLayout = Shape[]
 
-export const Circles: InitialLayout = [
+export const CirclesFlexible: InitialLayout = [
     { c: { x: -0.5, y:      0, }, r: { x: 1, y: 1 }, t: 0 },
     { c: { x:  0  , y:  sq3/2, }, r: { x: 1, y: 1 }, t: 0 },
     { c: { x:  0.5, y:      0, }, r: { x: 1, y: 1 }, t: 0 },
     { c: { x:  0  , y: -sq3/2, }, r: { x: 1, y: 1 }, t: 0 },
+]
+
+export const CirclesFixed: InitialLayout = [
+    { c: { x: -0.5, y:      0, }, r: 1 },
+    { c: { x:  0  , y:  sq3/2, }, r: 1 },
+    { c: { x:  0.5, y:      0, }, r: 1 },
+    { c: { x:  0  , y: -sq3/2, }, r: 1 },
 ]
 
 export const Disjoint: InitialLayout = [

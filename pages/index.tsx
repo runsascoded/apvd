@@ -20,7 +20,7 @@ import {getMidpoint, getPointAndDirectionAtTheta, getRegionCenter} from "../src/
 import {BoundingBox, getRadii, mapShape, S, Shape, shapeBox, Shapes, shapesParam, shapeStrJS, shapeStrJSON, shapeStrRust} from "../src/lib/shape";
 import {TargetsTable} from "../src/components/tables/targets";
 import {makeTargets, Target, Targets, targetsParam} from "../src/lib/targets";
-import {Disjoint, Ellipses4, Ellipses4t, InitialLayout, Circles, toShape} from "../src/lib/layout";
+import {Disjoint, Ellipses4, Ellipses4t, InitialLayout, CirclesFlexible, toShape, CirclesFixed} from "../src/lib/layout";
 import {VarsTable} from "../src/components/tables/vars";
 import {SparkLineProps} from "../src/components/spark-lines";
 import {CircleCoords, Coord, makeVars, Vars, XYRRCoords, XYRRTCoords} from "../src/lib/vars";
@@ -115,6 +115,16 @@ const VariantCallers: Target[] = [
     [ "0-23",   0 ],
     [ "-123",   9 ],
     [ "0123",  36 ],
+]
+
+const BenFredCircles: Target[] = [
+    [ "0**", 16 ],
+    [ "*1*", 16 ],
+    [ "**2", 12 ],
+    [ "01*",  4 ],
+    [ "0*2",  4 ],
+    [ "*12",  3 ],
+    [ "012",  2 ],
 ]
 
 export type RunningState = "none" | "fwd" | "rev"
@@ -244,7 +254,8 @@ export const VariantCallersPaperLink = <A href={"https://www.ncbi.nlm.nih.gov/pm
 const layouts: LinkItem<InitialLayout>[] = [
     { name: "Ellipses", val: Ellipses4t, description: "4 ellipses intersecting to form all 15 possible regions, rotated -45°", },
     { name: "Ellipses (axis-aligned)", val: Ellipses4, description: "Same as above, but ellipse axes are horizontal/vertical (and rotation is disabled)", },
-    { name: "Circles", val: Circles, description: "4 circles in a diamond shape, such that 2 different subsets (of 3) are symmetric, and 11 of 15 possible regions are represented (missing 2 4C2's and 2 4C3's).", },
+    { name: "Circles (flexible)", val: CirclesFlexible, description: "4 ellipses, initialized as circles, and oriented in a diamond configuration, such that 2 different subsets (of 3) are symmetric, and 11 of 15 possible regions are represented (missing 2 4C2's and 2 4C3's).", },
+    { name: "Circles (fixed)", val: CirclesFixed, description: "4 circles, initialized in a diamond as in \"Circles (flexible)\" above, but these are fixed as circles (rx and ry remain constant, rotation is immaterial)", },
     { name: "Disjoint", val: Disjoint, description: "4 disjoint circles. When two (or more) sets are supposed to intersect, but don't, a synthetic penalty is added to the error computation, which is proportional to: 1) each involved set's distance to the centroid of the centers of the sets that are supposed to intersect, as well as 2) the size of the target subset. This \"disjoint\" initial layout serves demonstrate/test this behavior. More sophisticated heuristics would be useful here, as the current scheme is generally insufficient to coerce all sets into intersecting as they should." },
     { name: "Variant callers (best)", val: "#s=Mzxv4Cc95664TAhIgtTaZ1wTbpB32hca6RnYrxzN5QRgbF4oaXr5MStC6KxNYYZy5g5IuzaS1moF4lLWtIXXY-VOO2f8wNvsQk9Jqqfg0B-RDkXMZTCTpTaymPnuwF-vswFGRVwFE4hgScC1ofXRaBdnvzm84fjZ8wtEkWHaqiifUM4TVEtIbh8&t=633,618,112,187,0,14,1,319,13,55,17,21,0,9,36", description: <>Best computed layout for the "variant callers" example, from {VariantCallersPaperLink}. ≈50,000 steps beginning from the "Circles" layout above, error &lt;0.176%.</>},
     { name: "Variant callers (alternate)", val: "#s=MzC1VAFocttl2gbaDkR1obVIOSo-npdk8mfAn4j0s68wpq4FE4o0YIptFI5hupi525mqCJLTS0BbLsnqcJ0oFOtaun28Afy9HfyAHhdHhtsAsLO8mNdyKFNwt4op_97d4DXguxY3S4k7RxPbNbPIu_2XIvm5qJ0NJn5qsgeVxEhvcgoRO8FFnpU&t=633,618,112,187,0,14,1,319,13,55,17,21,0,9,36", description: <>Another layout for the "variant callers" example, from {VariantCallersPaperLink}. ≈20,000 steps beginning from the "Ellipses" layout above, error ≈2.27%.</>}
@@ -274,14 +285,18 @@ export type HistoryState = {
 
 export function Body() {
     const fizzBuzzLink = <A href={"https://en.wikipedia.org/wiki/Fizz_buzz"}>Fizz Buzz</A>
-    const exampleTargets: LinkItem<Targets>[] = [
-        { name: "Fizz Buzz", val: FizzBuzz, description: <>2 circles, of size 1/3 and 1/5, representing integers divisible by 3 and by 5. Inspired by {fizzBuzzLink}.</> },
-        { name: "Fizz Buzz Bazz", val: FizzBuzzBazz, description: <>Extended version of {fizzBuzzLink} above, with 3 sets, representing integers divisible by 3, 5, or 7. This is impossible to model accurately with 3 circles, but possible with ellipses.</> },
-        { name: "Fizz Buzz Bazz Qux", val: FizzBuzzBazzQux, description: <>Extended version of {fizzBuzzLink} above, with 4 sets, representing integers divisible by 2, 3, 5, or 7. Impossible to model exactly even with 4 ellipses (AFAIK!), but gradient descent gets as close as it can.</> },
-        // { name: "3 symmetric sets", val: ThreeEqualCircles, description: <>Simple test case, 3 circles, one starts slightly off-center from the other two, "target" ratios require the 3 circles to be in perfectly symmetric position with each other.</> },
-        { name: "Variant callers", val: VariantCallers, description: <>Values from {VariantCallersPaperLink}, "A comparative analysis of algorithms for somatic SNV detection
-                in cancer," Fig. 3</>}
-    ].map(({ name, val, description }) => ({ name, val: makeTargets(val), description }))
+    const exampleTargets: LinkItem<Targets>[] = useMemo(
+        () => [
+            { name: "Fizz Buzz", val: FizzBuzz, description: <>2 circles, of size 1/3 and 1/5, representing integers divisible by 3 and by 5. Inspired by {fizzBuzzLink}.</> },
+            { name: "Fizz Buzz Bazz", val: FizzBuzzBazz, description: <>Extended version of {fizzBuzzLink} above, with 3 sets, representing integers divisible by 3, 5, or 7. This is impossible to model accurately with 3 circles, but possible with ellipses.</> },
+            { name: "Fizz Buzz Bazz Qux", val: FizzBuzzBazzQux, description: <>Extended version of {fizzBuzzLink} above, with 4 sets, representing integers divisible by 2, 3, 5, or 7. Impossible to model exactly even with 4 ellipses (AFAIK!), but gradient descent gets as close as it can.</> },
+            // { name: "3 symmetric sets", val: ThreeEqualCircles, description: <>Simple test case, 3 circles, one starts slightly off-center from the other two, "target" ratios require the 3 circles to be in perfectly symmetric position with each other.</> },
+            { name: "Variant callers", val: VariantCallers, description: <>Values from {VariantCallersPaperLink}, "A comparative analysis of algorithms for somatic SNV detection
+                    in cancer," Fig. 3</>},
+            { name: "\"Venn Diagrams with D3.js\" example", val: BenFredCircles, description: <>Example from Ben Frederickson's blog post, <A href={"https://www.benfrederickson.com/venn-diagrams-with-d3.js/"}>"Venn Diagrams with D3.js"</A>.</> },
+        ].map(({ name, val, description }) => ({ name, val: makeTargets(val), description })),
+        []
+    )
 
     const [ logLevel, setLogLevel ] = useSessionStorageState<LogLevel>("logLevel", { defaultValue: "info" })
     useEffect(
@@ -292,7 +307,7 @@ export function Body() {
     );
 
     const [ initialLayout, setInitialLayout] = useSessionStorageState<InitialLayout>(initialLayoutKey, { defaultValue:
-        Circles
+        CirclesFlexible
         // SymmetricCircleLattice
         // Disjoint
         // Ellipses4t
