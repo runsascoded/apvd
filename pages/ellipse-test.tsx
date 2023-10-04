@@ -9,6 +9,8 @@ export default function Page() {
     return <Apvd>{() => <Body />}</Apvd>
 }
 
+export type Color = "green" | "red"
+
 export function Body() {
     const gridState = GridState({
         center: { x: 1, y: 1 },
@@ -96,77 +98,41 @@ export function Body() {
         { idx: 2, c: { x: 0.5, y: 0. }, r: { x: 3, y: 3, } },
         { idx: 3, c: { x: 0. , y: 3. }, r: { x: 1, y: 1, } },
     ]
-    const fillOpacity = 0.3
-    const [ regionOver, setRegionOver ] = useState<"heart" | "circle" | null>(null)
+    const fillOpacity = 0.5
+    const [ regionOver, setRegionOver ] = useState<"outer" | Color | null>(null)
     console.log("regionOver:", regionOver)
-    const circle = (props: Partial<React.SVGProps<SVGCircleElement>>) => <circle cx={3} cy={3} r={1} {...props} />
+    const containerPath = `M0,0H7V4H0Z`
+    const subregions: [ string, Color ][] = [
+        [`M1,1H3V3H1Z`, "red"],
+        [`M4,1H6V3H4Z`, "green"],
+    ]
+    // const circle = (props: Partial<React.SVGProps<SVGCircleElement>>) => <circle cx={3} cy={3} r={1} {...props} />
     return <div className={css.body}>
         <div className={`${css.row} ${css.content}`}>
             <Grid className={css.grid} state={gridState}>
+                <path
+                    d={`${containerPath} ${subregions.map(([ path ]) => path).join(" ")}`}
+                    fillRule={"evenodd"}
+                    onMouseOver={() => { console.log("outer over"); setRegionOver("outer") }}
+                    // onMouseMove={() => console.log("outer move")}
+                    onMouseOut={() => { console.log("outer out"); setRegionOver(null) }}
+                    fillOpacity={regionOver === "outer" ? 1 : fillOpacity}
+                    fill={`blue`}
+                />
                 {
-                    (CentroidRepel as XYRR<number>[]).map(({ c, r }, shapeIdx) =>
-                        <ellipse
-                            key={shapeIdx}
-                            cx={c.x}
-                            cy={c.y}
-                            rx={r.x}
-                            ry={r.y}
-                            fill={colors[shapeIdx]}
-                            fillOpacity={fillOpacity}
+                    subregions.map(([subregion, color], subregionIdx) =>
+                        <path
+                            key={subregionIdx}
+                            d={subregion}
+                            fill={color}
+                            fillOpacity={regionOver === color ? 1 : fillOpacity}
+                            onMouseOver={() => { console.log(`${color} over`); setRegionOver(color) }}
+                            // onMouseMove={() => console.log("inner move")},
+                            onMouseOut={() => console.log(`${color} out`)}
                         />
                     )
                 }
-                {/*<circle cx={0} cy={0} r={1} fill={"green"} fillOpacity={0.3} />*/}
-                {/*<ellipse cx={e.c.x.v} cy={e.c.y.v} rx={e.r.x.v} ry={e.r.y.v} fill={"orange"} fillOpacity={0.3} />*/}
-                {/*{*/}
-                {/*    points.map(({ x, y }, i) =>*/}
-                {/*        <circle key={i} cx={x.v} cy={y.v} r={0.05} fill={"red"} />*/}
-                {/*    )*/}
-                {/*}*/}
-                <defs>
-                    <clipPath id="myClip" onMouseMove={() => console.log("clipPath")}>
-                        {circle({
-                            // fill: "black",
-                            onMouseMove: () => console.log("clipPath circle")
-                        })}
-                        {/*<circle cx={3} cy={3} r={1} fill={"black"} onMouseMove={() => console.log("circle")} />*/}
-                    </clipPath>
-                </defs>
-                <g
-                    fill={"blue"}
-                    // onMouseOver={() => console.log("g over")}
-                    // onMouseMove={() => console.log("g move")}
-                    // onMouseOut={() => console.log("g out")}
-                >
-                    <path
-                        id="heart"
-                        d="M1,3 A2,2,0,0,1,5,3 A2,2,0,0,1,9,3 Q9,6,5,9 Q1,6,1,3 Z"
-                        onMouseOver={() => { console.log("heart over"); setRegionOver("heart") }}
-                        // onMouseMove={() => console.log("heart move")}
-                        onMouseOut={() => { console.log("heart out"); setRegionOver(null) }}
-                        fillOpacity={regionOver === "heart" ? 1 : fillOpacity}
-                        fill={`black`}
-                        clipPath="url(#myClip)"
-                    />
-                    {/*<use*/}
-                    {/*    clipPath="url(#myClip)"*/}
-                    {/*    href="#heart"*/}
-                    {/*    // fill="red"*/}
-                    {/*    // fillOpacity={regionOver === "circle" ? 1 : fillOpacity}*/}
-                    {/*    onMouseOver={() => { console.log("use over"); setRegionOver("circle") }}*/}
-                    {/*    // onMouseMove={() => console.log("use move")}*/}
-                    {/*    onMouseOut={() => console.log("use out")}*/}
-                    {/*>*/}
-                    {/*    /!*<rect x={0} y={0} width={1} height={1} fill={"green"} fillOpacity={fillOpacity} />*!/*/}
-                    {/*</use>*/}
-                </g>
-                {circle({
-                    fill: "green",
-                    fillOpacity: regionOver === "circle" ? 1 : fillOpacity,
-                    onMouseOver: () => console.log("circle over"),
-                    // onMouseMove: () => console.log("circle move"),
-                    onMouseOut: () => console.log("circle out"),
-                })}
+                {/*</rect>*/}
             </Grid>
         </div>
     </div>
