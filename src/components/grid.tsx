@@ -66,8 +66,9 @@ export function GridState(init: GridStateProps): GridState {
 export type Transform = [ string, number, number ]
 
 export type Props = {
-    handleMouseMove?: (e: MouseEvent, offset: Point, vOffset: Point) => void
     handleMouseDown?: (e: MouseEvent, rect?: DOMRect) => void
+    handleMouseMove?: (e: MouseEvent, offset: Point, vOffset: Point) => void
+    handleDrag?: (e: MouseEvent, { dragStart, delta, vOffset }: { dragStart: Point, delta: Point, vOffset: Point }) => boolean
     handleMouseUp?: () => void
     resizableBottom?: boolean
     state: GridState
@@ -87,7 +88,7 @@ export type OffsetEvent = {
     offsetY: number
 }
 
-export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, resizableBottom, state, children, outerChildren, className, svgClassName, }: Props) {
+export default function Grid({ handleMouseDown, handleMouseMove, handleDrag, handleMouseUp, resizableBottom, state, children, outerChildren, className, svgClassName, }: Props) {
     const svg = useRef<SVGSVGElement>(null)
     const {
         center: [ center, setCenter ],
@@ -126,7 +127,7 @@ export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, 
 
     useEffect(
         () => {
-            // console.log("svg dims:", svg.current?.clientWidth, svg.current?.clientHeight)
+            console.log("svg dims: client", svg.current?.clientWidth, svg.current?.clientHeight, "plain", svg.current?.width, svg.current?.height)
             if (svg.current?.clientWidth) {
                 setWidth(svg.current.clientWidth)
             }
@@ -188,7 +189,9 @@ export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, 
                     y: dragDelta.y - centerDelta.y,
                 }
                 // console.log("drag:", offset, vOffset, "dragStart", dragStart, "dragDelta", dragDelta, "centerDelta", centerDelta, "delta", delta)
+                if (handleDrag && handleDrag(e, { dragStart, delta, vOffset })) return
                 const newCenter = { x: originalCenter.x - delta.x, y: originalCenter.y - delta.y }
+                // console.log("originalCenter:", originalCenter, "newCenter:", newCenter)
                 setCenter(newCenter)
                 // setDragStart(newCenter)
             }
@@ -314,7 +317,7 @@ export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, 
                 onResize={(e, { node, size, handle,}) => {
                     if (resizeStartHeight) {
                         const newScale = resizeStartHeight.scale * size.height / resizeStartHeight.height
-                        // console.log(`resize height: ${resizeStartHeight.height} → (${height}, ${size.height}), scale: ${resizeStartHeight.scale} → ${newScale},`, e.type)
+                        console.log(`resize height: ${resizeStartHeight.height} → (${height}, ${size.height}), scale: ${resizeStartHeight.scale} → ${newScale},`, e.type)
                         setHeight(size.height)
                         setScale(newScale)
                     }
@@ -337,7 +340,7 @@ export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, 
                     return
                 }
                 const virtualCoords = virtualMouseCoords(e)
-                // console.log("Grid.wheelProps.upHandler", virtualCoords)
+                console.log("Grid.wheelProps.upHandler", virtualCoords)
                 const interp = 1 / 1.1
                 const newCenter = {
                     x: center.x * interp + virtualCoords.x * (1 - interp),
@@ -352,7 +355,7 @@ export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, 
                     return
                 }
                 const virtualCoords = virtualMouseCoords(e)
-                // console.log("Grid.wheelProps.downHandler", virtualCoords)
+                console.log("Grid.wheelProps.downHandler", virtualCoords)
                 const interp = 1 / 1.1
                 const newCenter = {
                     x: center.x / interp - virtualCoords.x * (1 - interp) / interp,

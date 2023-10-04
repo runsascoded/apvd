@@ -50,6 +50,14 @@ export const Disjoint: InitialLayout = [
     { c: { x: 3, y: 3, }, r: { x: 1, y: 1 }, t: 0, },
     { c: { x: 0, y: 3, }, r: { x: 1, y: 1 }, t: 0, },
 ]
+
+export const Concentric: InitialLayout = [
+    { c: { x: 0, y: 0, }, r: { x: 1, y: 1 }, t: 0, },
+    { c: { x: 0.5, y: 0, }, r: { x: 2, y: 2 }, t: 0, },
+    { c: { x: 0, y: 0, }, r: { x: 3, y: 3 }, t: 0, },
+    { c: { x: 0, y: 0, }, r: { x: 4, y: 4 }, t: 0, },
+]
+
 export const SymmetricCircleLattice: InitialLayout = [
     { c: { x: 0, y: 0, }, r: { x: 1, y: 1 }, t: 0, },
     { c: { x: 1, y: 0, }, r: { x: 1, y: 1 }, t: 0, },

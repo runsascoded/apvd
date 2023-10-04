@@ -78,6 +78,7 @@ export default function Svg({ ellipses, idx, onEllipseDrag, transformBy, onCurso
 
     const handleMouseMove = useCallback(
         (e: MouseEvent, offset: Point, vOffset: Point) => {
+            console.log("handleMouseMove:", offset, vOffset)
             if (onCursor) {
                 if (transformBy) {
                     const [x, y] = transformBy.invert(vOffset.x, vOffset.y);
