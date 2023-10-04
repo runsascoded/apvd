@@ -2,4 +2,14 @@
   td.skipped {
     background-color: #ddd;
   }
+  td.varCell {
+    min-width: 4em;
+    max-width: 4em;
+    overflow: hidden;
+  }
+  th {
+    .math {
+      font-weight: bold;
+    }
+  }
 }

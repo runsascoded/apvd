@@ -16,6 +16,7 @@
         "react": "^18.2.0",
         "react-bootstrap": "^2.8.0",
         "react-dom": "^18.0.0",
+        "react-mathquill": "^1.0.3",
         "react-plotly.js": "^2.6.0",
         "react-resizable": "^3.0.5",
         "react-scroll-wheel-handler": "^2.2.0",

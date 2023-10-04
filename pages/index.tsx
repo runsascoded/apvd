@@ -1558,7 +1558,19 @@ export function Body() {
                             toggle={setShapesShown}
                             tooltip={"\"Wide\" version of the \"Vars\" table above. View shapes' dimensions/coordinates, copy to clipboard"}
                         >
-                            {vars && <ShapesTable sets={sets || []} vars={vars}/>}
+                            {
+                                vars &&
+                                <ShapesTable
+                                    sets={sets || []}
+                                    setShape={(idx, shape) => {
+                                        if (!shapes) return
+                                        const newShapes = shapes.map((s, i) => i == idx ? shape : s)
+                                        setInitialShapes(newShapes)
+                                        setUrlFragmentShapes({ shapes: newShapes, precisionSchemeId: urlShapesPrecisionScheme })
+                                    }}
+                                    vars={vars}
+                                />
+                            }
                             <div>
                                 Copy as{' '}
                                 <CopyLayout label={"JS"} shapesTextFn={() => shapesStr(shapeStrJS)} />,{' '}

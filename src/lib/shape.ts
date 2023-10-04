@@ -52,24 +52,25 @@ export function level(xyrrt: XYRRT<number>): XYRR<number> {
     }
 }
 
-export const getRadii = <D>(s: Shape<D>): [D, D] => {
-    switch (s.kind) {
-        case 'Circle': return [s.r, s.r]
-        case 'XYRR': return [s.r.x, s.r.y]
-        case 'XYRRT': return [s.r.x, s.r.y]
-    }
-}
+export const getRadii = <D>(s: Shape<D>): [D, D] => mapShape(
+    s,
+    ({ r }) => [r, r],
+    ({ r }) => [r.x, r.y],
+)
 
 export function mapShape<D, O>(
     s: Shape<D>,
     circleFn: (c: Circle<D>) => O,
     xyrrFn: (e: XYRR<D>) => O,
-    xyrrtFn: (e: XYRRT<D>) => O,
+    xyrrtFn?: (e: XYRRT<D>) => O,
 ): O {
     switch (s.kind) {
         case 'Circle': return circleFn(s)
         case 'XYRR': return xyrrFn(s)
-        case 'XYRRT': return xyrrtFn(s)
+        case 'XYRRT':
+            if (xyrrtFn) return xyrrtFn(s)
+            const { c, r } = s
+            return xyrrFn({ kind: "XYRR", c, r })
     }
 }
 
@@ -133,7 +134,7 @@ export function shapesParam(opts: Opts = {}): Param<ShapesParam | null> {
             // console.log("decode shapes:", v)
             if (!v) return null
             const buf = ShapesBuffer.fromB64(v, opts)
-            const end = buf.end
+            // const end = buf.end
             buf.seek(0)
             // console.log("end:", end)
             return buf.decodeShapes()
