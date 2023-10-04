@@ -130,6 +130,12 @@ There's also a partial [Scala.js] implementation in [this repo's @scala branch](
 
 ## Other references <a id="misc"></a>
 
+### Venn Diagrams in the wild <a id="wild"></a>
+
+![](public/img/mpower.png)
+
+https://pubmed.ncbi.nlm.nih.gov/35190375/ (supplement, pg. 13): https://jitc.bmj.com/content/jitc/10/2/e003027.full.pdf
+
 ### combinatorics.org Survey <a id="survey"></a>
 https://www.combinatorics.org/files/Surveys/ds5/ds5v3-2005/VennEJC.html
 
