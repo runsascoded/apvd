@@ -283,6 +283,14 @@ export type HistoryState = {
     t: Targets
 }
 
+function usePreviousValue<T>(value: T) {
+    const ref = useRef<T>();
+    useEffect(() => {
+        ref.current = value;
+    });
+    return ref.current;
+}
+
 export function Body() {
     const fizzBuzzLink = <A href={"https://en.wikipedia.org/wiki/Fizz_buzz"}>Fizz Buzz</A>
     const exampleTargets: LinkItem<Targets>[] = useMemo(
@@ -1094,13 +1102,10 @@ export function Body() {
                         ]
                     )
             return setLabelPoints ? values(setLabelPoints).reduce<BoundingBox<number>>(
-                (box, { x, y }) => [{
-                    x: min(x, box[0].x),
-                    y: min(y, box[0].y),
-                }, {
-                    x: max(x, box[1].x),
-                    y: max(y, box[1].y),
-                }],
+                (box, { x, y }) => [
+                    { x: min(x, box[0].x), y: min(y, box[0].y), },
+                    { x: max(x, box[1].x), y: max(y, box[1].y), },
+                ],
                 shapesBox
             ) : shapesBox
         },
@@ -1138,16 +1143,22 @@ export function Body() {
     useEffect(
         () => {
             if (!autoCenter) return
-            if (stepIdx == 0) {
-                // console.log("setDoPanZoom(1): model start, panZoom warp")
-                panZoom(1)
-                return
-            }
             if (runningState == 'none') return
-            // console.log(`setDoPanZoom(${autoCenterInterpRate}): autoCenter`)
+            // console.log(`panZoom(${autoCenterInterpRate}): autoCenter`)
             panZoom(autoCenterInterpRate)
         },
         [ curStep, stepIdx, runningState, autoCenterInterpRate, autoCenter, panZoom ]
+    )
+
+    const prevBoundingBox = usePreviousValue(boundingBox)
+    useEffect(
+        () => {
+            if (stepIdx == 0 && !_.isEqual(prevBoundingBox, boundingBox)) {
+                console.log("stepIdx == 0 + new bounding box: panZoom(1)")
+                panZoom(1)
+            }
+        },
+        [ boundingBox, prevBoundingBox, stepIdx, panZoom ]
     )
 
     // panZoom "warp" on vStepIdx changes (e.g. mouseover history slider or error plot)
