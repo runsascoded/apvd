@@ -54,9 +54,9 @@ const ThreeEqualCircles: Target[] = [
 ]
 
 const FizzBuzz: Target[] = [
-    [ "0*", 1/3 ],
-    [ "*1", 1/5 ],
-    [ "01", 1/15 ],
+    [ "0*", 5 ],
+    [ "*1", 3 ],
+    [ "01", 1 ],
 ]
 
 const FizzBuzzBazz: Target[] = [ // Fractions scaled up by LCM
@@ -451,14 +451,12 @@ export function Body() {
         (shapes: Shapes, targets: Targets, push: boolean) => {
             if (stateInUrlFragment) {
                 const param = { shapes, precisionSchemeId: urlShapesPrecisionScheme }
-                // setUrlFragmentTargets(targets)
-                // setUrlFragmentShapes(param)
                 const newHashMap = { s: param, t: targets, }
                 if (historyLog) console.log(`history push (${push ? "push" : "replace"}, ${targets.numShapes}, ${shapes.length}`, newHashMap)
                 updateHashParams(params, newHashMap, { push, log: historyLog })
             }
         },
-        [ stateInUrlFragment, urlShapesPrecisionScheme, /*setUrlFragmentTargets, setUrlFragmentShapes, */]
+        [ stateInUrlFragment, urlShapesPrecisionScheme, ]
     )
 
     const [ curStep, sets, shapes, ] = useMemo(
@@ -1499,6 +1497,11 @@ export function Body() {
                                 <TargetsTable
                                     initialShapes={initialSets}
                                     targets={rawTargets}
+                                    setTargets={newTargets => {
+                                        setTargets(newTargets)
+                                        setUrlFragmentTargets(newTargets)
+                                        pushHistoryState(shapes, newTargets, false)
+                                    }}
                                     showDisjointSets={!rawTargets.givenInclusive}
                                     curStep={curStep}
                                     error={error}

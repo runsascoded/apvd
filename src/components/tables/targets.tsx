@@ -1,16 +1,34 @@
 import {Model, Step} from "../../lib/regions";
 import {Dual} from "apvd"
-import React, {useCallback, useMemo, useState} from "react";
+import React, {Dispatch, useCallback, useMemo, useState} from "react";
 import css from "../../../pages/index.module.scss";
 import {SparkLineCell, SparkLineProps, SparkNum} from "../spark-lines";
 import {S} from "../../lib/shape";
 import {abs} from "../../lib/math";
-import {Targets} from "../../lib/targets";
+import {makeTargets, Target, Targets} from "../../lib/targets";
+
+export function getNegativeEntries(targets: Targets): Map<string, number> {
+    const entries: Target[] = []
+    targets
+        .exclusive
+        .filter(([ _, v ]) => v < 0)
+        .forEach(([ k, v ]) => {
+            entries.push([k, v])
+            const inclusiveKey = k.replaceAll('-', '*')
+            const inclusiveVal = targets.all.get(inclusiveKey)
+            if (inclusiveVal === undefined) {
+                throw Error(`getNegativeKeys: inclusiveVal === undefined for key ${inclusiveKey}`)
+            }
+            entries.push([ inclusiveKey, inclusiveVal ])
+        })
+    return new Map(entries)
+}
 
 export function TargetsTable(
-    { initialShapes, targets, showDisjointSets, model, curStep, error, stepIdx, hoveredRegion, ...sparkLineProps }: {
+    { initialShapes, targets, setTargets, showDisjointSets, model, curStep, error, stepIdx, hoveredRegion, ...sparkLineProps }: {
         initialShapes: S[]
         targets: Targets
+        setTargets: Dispatch<Targets>
         showDisjointSets: boolean
         model: Model
         curStep: Step
@@ -20,6 +38,8 @@ export function TargetsTable(
     } & SparkLineProps
 ) {
     // console.log(`TargetsTable: ${initialShapes.length} shapes`)
+    const [ negativeEntries, setNegativeEntries ] = useState<Map<string, number> | null>(null)
+    const negativePropsEntries = useMemo(() => getNegativeEntries(targets), [ targets ])
     const targetName = useCallback(
         (key: string) =>
             key.split('').map((ch: string, idx: number) => {
@@ -78,7 +98,7 @@ export function TargetsTable(
         () => new Map(displayTargets.map(([ key, value ]) => [ key, value ])),
         [ displayTargets, ],
     )
-
+    const [ editingValue, setEditingValue ] = useState<[ string, string ] | null>(null)
     const totalTargetArea = curStep.targets.total_area
     const [ showTargetCurCol, setShowTargetCurCol ] = useState(false)
     const { showSparkLines } = sparkLineProps
@@ -86,10 +106,54 @@ export function TargetsTable(
     const targetTableRows = displayTargets.map(([ key, value ]) => {
         const name = targetName(key)
         const err = curStep.errors.get(key)
+        const negativeKey = negativeEntries && negativeEntries.has(key) || negativePropsEntries.has(key)
         const activeRegion = key == hoveredRegion || (!(hoveredRegion && targetsMap.has(hoveredRegion)) && regionContains(key, hoveredRegion))
-        return <tr className={activeRegion ? css.activeRegion : ''} key={key}>
-            <td className={css.val}>{name}</td>
-            <td className={css.val}>{value.toPrecision(3).replace(/\.?0+$/, '')}</td>
+        const className = negativeKey ? css.negativeKey : activeRegion ? css.activeRegion : ''
+        const valueStr =
+            editingValue && editingValue[0] == key
+                ? editingValue[1]
+                : value.toPrecision(3).replace(/\.?0+$/, '')
+        return <tr className={className} key={key}>
+            <td className={`${css.val} ${negativeKey}`}>{name}</td>
+            <td className={`${css.val} ${css.targetVal}`}>
+                <input
+                    onFocus={e => {
+                        console.log("onFocus:", key, e)
+                        setEditingValue([ key, e.target.value ])
+                    }}
+                    onBlur={e => {
+                        console.log("onBlur:", key, e)
+                        if (editingValue && editingValue[0] == key) {
+                            setEditingValue(null)
+                        }
+                    }}
+                    type={"number"}
+                    value={valueStr}
+                    onKeyDown={e => { e.stopPropagation() }}
+                    onKeyUp={e => { e.stopPropagation() }}
+                    onChange={e => {
+                        const newValueStr = e.target.value
+                        const newValue = parseFloat(newValueStr)
+                        console.log("onChange:", key, newValueStr, newValue, "isNaN(newValue):", isNaN(newValue))
+                        setEditingValue([ key, newValueStr ])
+                        if (isNaN(newValue)) {
+                            return
+                        }
+                        const entries: Target[] = showDisjointSets ? targets.exclusive : targets.inclusive
+                        const newEntries: Target[] = entries.map(([k, v]) => k == key ? [k, newValue] : [k, v])
+                        const newTargets = makeTargets(newEntries)
+                        const newNegativeEntries = getNegativeEntries(newTargets)
+                        if (newNegativeEntries.size) {
+                            console.log("negative entries:", newNegativeEntries)
+                            setNegativeEntries(newNegativeEntries)
+                        } else {
+                            setNegativeEntries(null)
+                        }
+                        console.log("newTargets:", newTargets)
+                        setTargets(newTargets)
+                    }}
+                />
+            </td>
             {
                 showTargetCurCol &&
                 <td className={css.val}>{
@@ -110,7 +174,7 @@ export function TargetsTable(
             <thead>
             <tr>
                 <th></th>
-                <th>Goal</th>
+                <th className={css.goalHeading}>Goal</th>
                 {showTargetCurCol && <th>Cur</th>}
                 <th style={{ textAlign: "center" }} colSpan={showSparkLines ? 2 : 1}>Error</th>
             </tr>
