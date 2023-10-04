@@ -74,6 +74,7 @@ export type Props = {
     children: ReactNode
     outerChildren?: ReactNode
     className?: string
+    svgClassName?: string
 }
 
 export type ClientEvent = {
@@ -86,7 +87,7 @@ export type OffsetEvent = {
     offsetY: number
 }
 
-export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, resizableBottom, state, children, outerChildren, className, }: Props) {
+export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, resizableBottom, state, children, outerChildren, className, svgClassName, }: Props) {
     const svg = useRef<SVGSVGElement>(null)
     const {
         center: [ center, setCenter ],
@@ -273,7 +274,7 @@ export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, 
         <svg
             ref={svg}
             viewBox={`0 0 ${width} ${height}`}
-            className={`${css.grid} ${className || ''}`}
+            className={`${css.grid} ${svgClassName || ''}`}
             style={{ height }}
             onMouseDown={onMouseDown}
             onMouseMove={onMouseMove}
@@ -327,7 +328,7 @@ export default function Grid({ handleMouseMove, handleMouseDown, handleMouseUp, 
 
     const scrollWheelNode = (
         <ReactScrollWheelHandler
-            className={`row ${css.scrollWheelHandler}`}
+            className={`${className || ''} ${css.scrollWheelHandler}`}
             timeout={0}
             preventScroll={true}
             upHandler={e => {

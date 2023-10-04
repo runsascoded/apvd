@@ -1322,7 +1322,8 @@ export function Body() {
         <div className={css.body}>
             <div className={`${css.row} ${css.content}`}>
                 <Grid
-                    className={css.grid}
+                    className={"row"}
+                    svgClassName={css.grid}
                     state={gridState}
                     resizableBottom={true}
                 >

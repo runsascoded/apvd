@@ -4,6 +4,11 @@
   width: 300px;
   border: 1px solid black;
 
+  svg {
+    width: 100%;
+    padding: 0;
+    border: 0;
+  }
   .ellipses ellipse {
     fill-opacity: 0.2;
   }
