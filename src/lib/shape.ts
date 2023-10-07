@@ -2,6 +2,7 @@ import {R2} from "apvd";
 import {abs, cos, max, sin} from "./math";
 import {Param} from "next-utils/params";
 import ShapesBuffer, {Opts, ShapesParam} from "./shapes-buffer";
+import {Component} from "./regions";
 
 export interface Circle<D> {
     kind: 'Circle'

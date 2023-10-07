@@ -277,14 +277,14 @@ export default function Grid({ handleMouseDown, handleMouseMove, handleDrag, han
         <svg
             ref={svg}
             viewBox={`0 0 ${width} ${height}`}
-            className={`${css.grid} ${svgClassName || ''}`}
+            className={`${css.grid || ''} ${svgClassName || ''}`}
             style={{ height }}
             onMouseDown={onMouseDown}
             onMouseMove={onMouseMove}
             onMouseUp={onMouseUp}
         >
             <g
-                className={`${css.projection}`}
+                className={css.projection}
                 transform={transforms.map(([type, x, y]) => `${type}(${x},${y})`).join(" ")}
             >
                 {gridLines}

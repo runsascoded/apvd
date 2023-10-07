@@ -1,6 +1,8 @@
 import * as apvd from "apvd";
-import {Dual, Error, Targets} from "apvd"
-import {S, Set, Shape} from "./shape";
+import {Dual, Targets} from "apvd"
+import {getRadii, S, Set, Shape} from "./shape";
+import {PI} from "./math";
+import {getMidpoint} from "./region";
 
 export type Point = {
     x: Dual
@@ -8,7 +10,7 @@ export type Point = {
     edges: Edge[]
 }
 
-export type Errors = Map<string, Error>
+export type Errors = Map<string, apvd.Error>
 
 export type Step = {
     sets: S[]
@@ -49,13 +51,26 @@ export function makeStep(step: apvd.Step, initialSets: Set[]): Step {
     const { components, errors, ...rest } = step
     const sets: S[] = []
     components.forEach(c => c.sets.forEach(({ idx, shape }) => {
-        sets[idx] = { ...initialSets[idx], shape: makeShape(shape) }
+        sets[idx] = { ...initialSets[idx], shape: makeShape(shape), }
     }))
     const newComponents = components.map(c => makeComponent(c, sets))
+    const newComponentsMap = new Map(newComponents.map(c => [c.key, c]))
     // console.log("initial sets:", sets)
     const points = newComponents.flatMap(c => c.points)
     const edges = newComponents.flatMap(c => c.edges)
     const regions = newComponents.flatMap(c => c.regions)
+    newComponents.forEach((newComponent, idx) => {
+        const apvdComponent = components[idx]
+        apvdComponent.regions.forEach((apvdRegion, regionIdx) => {
+            const newRegion = newComponent.regions[regionIdx]
+            // console.log("region:", apvdRegion, "children:", apvdRegion.child_component_keys)
+            newRegion.childComponents = apvdRegion.child_component_keys.map(key => {
+                const newComponent = newComponentsMap.get(key)
+                if (!newComponent) throw Error(`no component with key ${key}; referenced in region ${apvdRegion.key} of component ${apvdComponent.key}`)
+                return newComponent
+            })
+        })
+    })
     return {
         sets,
         points,
@@ -81,34 +96,52 @@ export function makeShape(shape: apvd.Shape<number>): Shape<number> {
     }
 }
 
+export function makeRegion(region: apvd.Region, allSets: S[], edges: Edge[]): Region {
+    // console.log("makeRegion:", region)
+    const segments = region.segments.map(({ edge_idx, fwd }) => ({
+        edge: edges[edge_idx],
+        fwd,
+    }))
+    const containers = region.container_set_idxs.map(idx => allSets[idx])
+    return {
+        key: region.key,
+        segments,
+        area: region.area,
+        containers,
+        childComponents: [],
+    }
+}
+
 export function makeComponent(component: apvd.Component, allSets: S[]): Component {
     // console.log("makeComponent:", component)
     const points: Point[] = component.points.map(({ p: { x, y }}) => ({
         x, y,
         edges: []
     }))
-    const edges: Edge[] = component.edges.map(({ set_idx, node0_idx, node1_idx, theta0, theta1, container_idxs, is_component_boundary, }) => ({
-        set: allSets[set_idx],
-        node0: points[node0_idx],
-        node1: points[node1_idx],
-        theta0, theta1,
-        containers: container_idxs.map(setIdx => allSets[setIdx]),
-        isComponentBoundary: is_component_boundary,
-    }))
+    const edges: Edge[] = component.edges.map(({ set_idx, node0_idx, node1_idx, theta0, theta1, container_idxs, is_component_boundary, }) => {
+        const node0 = points[node0_idx]
+        const node1 = points[node1_idx]
+        if (!node0 || !node1) {
+            throw Error(`node0 or node1 is null: ${node0_idx} ${node1_idx}, ${node0} ${node1}`)
+        }
+        return ({
+            set: allSets[set_idx],
+            node0: points[node0_idx],
+            node1: points[node1_idx],
+            theta0, theta1,
+            containers: container_idxs.map(setIdx => allSets[setIdx]),
+            isComponentBoundary: is_component_boundary,
+        })
+    })
     component.points.forEach(({ edge_idxs }, pointIdx) => {
         const point = points[pointIdx]
         point.edges = edge_idxs.map(edgeIdx => edges[edgeIdx])
     })
-    const regions: Region[] = component.regions.map(({ key, segments, area, container_idxs }) => ({
-        key,
-        segments: segments.map(({ edge_idx, fwd }) => ({
-            edge: edges[edge_idx],
-            fwd,
-        })),
-        area,
-        containers: container_idxs.map((cidx: number) => allSets[cidx]),
-    }))
-    return { sets: component.sets.map(({ idx }) => allSets[idx]), points, edges, regions, }
+    const regions: Region[] = component.regions.map(r => makeRegion(r, allSets, edges))
+    // const containers = component.container_idxs.map((cidx: number) => allSets[cidx])
+    const sets = component.sets.map(({ idx }) => allSets[idx])
+    const hull = makeRegion(component.hull, allSets, edges)
+    return { key: component.key, sets, points, edges, regions, /*containers, */hull, }
 }
 
 export type Region = {
@@ -116,6 +149,35 @@ export type Region = {
     segments: Segment[]
     area: Dual
     containers: S[]
+    childComponents: Component[]
+}
+
+export function regionPath({ segments, childComponents, }: Region): string {
+    let d = ''
+    segments.forEach(({edge, fwd}, idx) => {
+        const { set: { shape }, node0, node1, theta0, theta1, } = edge
+        const [rx, ry] = getRadii(shape)
+        const theta = shape.kind === 'XYRRT' ? shape.t : 0
+        const degrees = theta * 180 / PI
+        const [startNode, endNode] = fwd ? [node0, node1] : [node1, node0]
+        const start = { x: startNode.x.v, y: startNode.y.v }
+        const end = { x: endNode.x.v, y: endNode.y.v }
+        if (idx == 0) {
+            d = `M ${start.x} ${start.y}`
+        }
+        // console.log("edge:", edge, "fwd:", fwd, "theta0:", theta0, "theta1:", theta1, "start:", start, "end:", end, "shape:", shape, "degrees:", degrees)
+        if (segments.length == 1) {
+            const mid = getMidpoint(edge, 0.4)
+            d += ` A ${rx},${ry} ${degrees} 0 ${fwd ? 1 : 0} ${mid.x},${mid.y}`
+            d += ` A ${rx},${ry} ${degrees} 1 ${fwd ? 1 : 0} ${end.x},${end.y}`
+        } else {
+            d += ` A ${rx},${ry} ${degrees} ${theta1 - theta0 > PI ? 1 : 0} ${fwd ? 1 : 0} ${end.x},${end.y}`
+        }
+    })
+    if (childComponents?.length) {
+        d += ` ${childComponents.map(c => regionPath(c.hull)).join(' ')}`
+    }
+    return d
 }
 
 export interface Segment {
@@ -134,8 +196,10 @@ export type Edge = {
 }
 
 export type Component = {
+    key: string
     sets: S[]
     points: Point[]
     edges: Edge[]
     regions: Region[]
+    hull: Region
 }

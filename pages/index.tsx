@@ -4,7 +4,7 @@ import Grid, {GridState} from "../src/components/grid"
 import React, {DetailedHTMLProps, Dispatch, HTMLAttributes, ReactNode, useCallback, useEffect, useMemo, useRef, useState} from "react"
 import * as apvd from "apvd"
 import {train, update_log_level} from "apvd"
-import {makeModel, Model, Region, Step} from "../src/lib/regions"
+import {makeModel, Model, Region, regionPath, Step} from "../src/lib/regions"
 import {Point} from "../src/components/point"
 import css from "./index.module.scss"
 import A from "next-utils/a"
@@ -20,7 +20,7 @@ import {getMidpoint, getPointAndDirectionAtTheta, getRegionCenter} from "../src/
 import {BoundingBox, getRadii, mapShape, S, Shape, shapeBox, Shapes, shapesParam, shapeStrJS, shapeStrJSON, shapeStrRust} from "../src/lib/shape";
 import {TargetsTable} from "../src/components/tables/targets";
 import {makeTargets, Target, Targets, targetsParam} from "../src/lib/targets";
-import {Disjoint, Ellipses4, Ellipses4t, InitialLayout, CirclesFlexible, toShape, CirclesFixed, Concentric} from "../src/lib/layout";
+import {Disjoint, Ellipses4, Ellipses4t, InitialLayout, CirclesFlexible, toShape, CirclesFixed, Nested} from "../src/lib/layout";
 import {VarsTable} from "../src/components/tables/vars";
 import {SparkLineProps} from "../src/components/spark-lines";
 import {CircleCoords, Coord, makeVars, Vars, XYRRCoords, XYRRTCoords} from "../src/lib/vars";
@@ -257,7 +257,7 @@ const layouts: LinkItem<InitialLayout>[] = [
     { name: "Circles (flexible)", val: CirclesFlexible, description: "4 ellipses, initialized as circles, and oriented in a diamond configuration, such that 2 different subsets (of 3) are symmetric, and 11 of 15 possible regions are represented (missing 2 4C2's and 2 4C3's).", },
     { name: "Circles (fixed)", val: CirclesFixed, description: "4 circles, initialized in a diamond as in \"Circles (flexible)\" above, but these are fixed as circles (rx and ry remain constant, rotation is immaterial)", },
     { name: "Disjoint", val: Disjoint, description: "4 disjoint circles. When two (or more) sets are supposed to intersect, but don't, a synthetic penalty is added to the error computation, which is proportional to: 1) each involved set's distance to the centroid of the centers of the sets that are supposed to intersect, as well as 2) the size of the target subset. This \"disjoint\" initial layout serves demonstrate/test this behavior. More sophisticated heuristics would be useful here, as the current scheme is generally insufficient to coerce all sets into intersecting as they should." },
-    { name: "Concentric", val: Concentric, description: "4 concentric circles, stress test disjoint/contained region handling" },
+    { name: "Nested", val: Nested, description: "4 nested circles, stresses disjoint/contained region handling, which has known issues!" },
     { name: "Variant callers (best)", val: "#s=Mzxv4Cc95664TAhIgtTaZ1wTbpB32hca6RnYrxzN5QRgbF4oaXr5MStC6KxNYYZy5g5IuzaS1moF4lLWtIXXY-VOO2f8wNvsQk9Jqqfg0B-RDkXMZTCTpTaymPnuwF-vswFGRVwFE4hgScC1ofXRaBdnvzm84fjZ8wtEkWHaqiifUM4TVEtIbh8&t=633,618,112,187,0,14,1,319,13,55,17,21,0,9,36", description: <>Best computed layout for the "variant callers" example, from {VariantCallersPaperLink}. ≈50,000 steps beginning from the "Circles" layout above, error &lt;0.176%.</>},
     { name: "Variant callers (alternate)", val: "#s=MzC1VAFocttl2gbaDkR1obVIOSo-npdk8mfAn4j0s68wpq4FE4o0YIptFI5hupi525mqCJLTS0BbLsnqcJ0oFOtaun28Afy9HfyAHhdHhtsAsLO8mNdyKFNwt4op_97d4DXguxY3S4k7RxPbNbPIu_2XIvm5qJ0NJn5qsgeVxEhvcgoRO8FFnpU&t=633,618,112,187,0,14,1,319,13,55,17,21,0,9,36", description: <>Another layout for the "variant callers" example, from {VariantCallersPaperLink}. ≈20,000 steps beginning from the "Ellipses" layout above, error ≈2.27%.</>}
     // { name: "CircleLattice", layout: SymmetricCircleLattice, description: "4 circles centered at (0,0), (0,1), (1,0), (1,1)", },
@@ -383,7 +383,7 @@ export function Body() {
         () => {
             const targets = rawTargets
             const { numShapes } = targets
-            const initialSets =
+            const initialSets: S[] =
                 initialShapes
                     .slice(0, numShapes)
                     .map((s, idx) => {
@@ -507,9 +507,10 @@ export function Body() {
         () => {
             if (typeof window !== 'undefined') {
                 window.model = model
+                window.curStep = curStep
             }
         },
-        [ model,]
+        [ model, curStep ]
     )
 
     const getHistoryState = useCallback(
@@ -1219,28 +1220,9 @@ export function Body() {
     const regionPaths = useMemo(
         () =>
             curStep && <g id={"regionPaths"}>{
-                curStep.regions.map(({ key, segments}, regionIdx) => {
-                    let d = ''
-                    segments.forEach(({edge, fwd}, idx) => {
-                        const { set: { shape }, node0, node1, theta0, theta1, } = edge
-                        const [rx, ry] = getRadii(shape)
-                        const theta = shape.kind === 'XYRRT' ? shape.t : 0
-                        const degrees = theta * 180 / PI
-                        const [startNode, endNode] = fwd ? [node0, node1] : [node1, node0]
-                        const start = {x: startNode.x.v, y: startNode.y.v}
-                        const end = {x: endNode.x.v, y: endNode.y.v}
-                        if (idx == 0) {
-                            d = `M ${start.x} ${start.y}`
-                        }
-                        // console.log("edge:", edge, "fwd:", fwd, "theta0:", theta0, "theta1:", theta1, "start:", start, "end:", end, "shape:", shape, "degrees:", degrees)
-                        if (segments.length == 1) {
-                            const mid = getMidpoint(edge, 0.4)
-                            d += ` A ${rx},${ry} ${degrees} 0 ${fwd ? 1 : 0} ${mid.x},${mid.y}`
-                            d += ` A ${rx},${ry} ${degrees} 1 ${fwd ? 1 : 0} ${end.x},${end.y}`
-                        } else {
-                            d += ` A ${rx},${ry} ${degrees} ${theta1 - theta0 > PI ? 1 : 0} ${fwd ? 1 : 0} ${end.x},${end.y}`
-                        }
-                    })
+                curStep.regions.map((region, regionIdx) => {
+                    const { key, segments} = region
+                    const d = regionPath(region)
                     const isHovered = hoveredRegion == key
                     return (
                         <path
@@ -1251,6 +1233,7 @@ export function Body() {
                             strokeWidth={1 / scale}
                             fill={"grey"}
                             fillOpacity={isHovered ? 0.4 : 0}
+                            fillRule={"evenodd"}
                             onMouseOver={() => setHoveredRegion(key)}
                             // onMouseLeave={() => setHoveredRegion(null)}
                             onMouseOut={() => setHoveredRegion(null)}

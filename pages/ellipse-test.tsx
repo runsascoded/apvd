@@ -110,6 +110,16 @@ export function Body() {
     return <div className={css.body}>
         <div className={`${css.row} ${css.content}`}>
             <Grid className={css.grid} state={gridState}>
+                <ellipse
+                  cx={1.3345311198605432}
+                  cy={2.8430120216925644e-16}
+                  rx={2.362476333635918}
+                  ry={2.8207141903440474}
+                  fillOpacity={0.3}
+                  fill={"green"}
+                />
+                <circle cx={0} cy={0} r={1} />
+
                 <path
                     d={`${containerPath} ${subregions.map(([ path ]) => path).join(" ")}`}
                     fillRule={"evenodd"}
