@@ -134,7 +134,7 @@ There's also a partial [Scala.js] implementation in [this repo's @scala branch](
 
 ![](public/img/mpower.png)
 
-https://pubmed.ncbi.nlm.nih.gov/35190375/ (supplement, pg. 13): https://jitc.bmj.com/content/jitc/10/2/e003027.full.pdf
+https://pubmed.ncbi.nlm.nih.gov/35190375/ ([supplement][mpower supplement], pg. 13): "Clinical efficacy of atezolizumab plus bevacizumab and chemotherapy in KRAS- mutated non-small cell lung cancer with STK11, KEAP1, or TP53 comutations: subgroup results from the phase III IMpower150 trial."
 
 ### combinatorics.org Survey <a id="survey"></a>
 https://www.combinatorics.org/files/Surveys/ds5/ds5v3-2005/VennEJC.html
@@ -200,3 +200,4 @@ Core code is from a [web solver](http://www.akiti.ca/Quad4Deg.html) written by [
 [apvd issues]: https://github.com/runsascoded/apvd/issues
 [shapes issues]: https://github.com/runsascoded/shapes/issues
 [Scala.js]: https://www.scala-js.org/
+[mpower supplement]: https://jitc.bmj.com/content/jitc/10/2/e003027.full.pdf?with-ds=yes

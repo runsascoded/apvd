@@ -157,7 +157,7 @@ export function TargetsTable(
             {
                 showTargetCurCol &&
                 <td className={css.val}>{
-                    err ? (err.actual_frac.v * totalTargetArea).toPrecision(3) : ''
+                    err ? (err.actual_frac * totalTargetArea).toPrecision(3) : ''
                 }</td>
             }
             {SparkNum(err && err.error.v * totalTargetArea)}

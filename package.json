@@ -1,5 +1,5 @@
 {
-    "name": "apvd",
+    "name": "apvd.js",
     "version": "0.1.0",
     "description": "Area-Proportional Venn Diagrams",
     "author": {
@@ -7,7 +7,7 @@
         "email": "ryan@runsascoded.com"
     },
     "dependencies": {
-        "apvd": "https://gitpkg.now.sh/runsascoded/shapes?9928b7c",
+        "apvd": "https://gitpkg.now.sh/runsascoded/shapes?36ca2f8",
         "bootstrap": "^5.3.1",
         "buffer": "^6.0.3",
         "lodash": "^4.17.21",

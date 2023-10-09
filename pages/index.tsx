@@ -20,7 +20,7 @@ import {getMidpoint, getPointAndDirectionAtTheta, getRegionCenter} from "../src/
 import {BoundingBox, getRadii, mapShape, S, Shape, shapeBox, Shapes, shapesParam, shapeStrJS, shapeStrJSON, shapeStrRust} from "../src/lib/shape";
 import {TargetsTable} from "../src/components/tables/targets";
 import {makeTargets, Target, Targets, targetsParam} from "../src/lib/targets";
-import {Disjoint, Ellipses4, Ellipses4t, InitialLayout, CirclesFlexible, toShape, CirclesFixed, Nested} from "../src/lib/layout";
+import { Disjoint, Ellipses4, Ellipses4t, InitialLayout, CirclesFlexible, toShape, CirclesFixed, Nested, MPowerBug } from "../src/lib/layout";
 import {VarsTable} from "../src/components/tables/vars";
 import {SparkLineProps} from "../src/components/spark-lines";
 import {CircleCoords, Coord, makeVars, Vars, XYRRCoords, XYRRTCoords} from "../src/lib/vars";
@@ -115,6 +115,31 @@ const VariantCallers: Target[] = [
     [ "0-23",   0 ],
     [ "-123",   9 ],
     [ "0123",  36 ],
+]
+
+const MPowerPaperHref = "https://pubmed.ncbi.nlm.nih.gov/35190375/"
+const MPowerSupplementHref = "https://jitc.bmj.com/content/jitc/10/2/e003027.full.pdf?with-ds=yes"
+// https://pubmed.ncbi.nlm.nih.gov/35190375/ (supplement, pg. 13): https://jitc.bmj.com/content/jitc/10/2/e003027.full.pdf?with-ds=yes
+// 0: KRAS
+// 1: STK11
+// 2: KEAP1
+// 3: TP53
+const MPower: Target[] = [
+    [ "0---",  42 ],
+    [ "-1--",  15 ],
+    [ "--2-",  10 ],
+    [ "---3", 182 ],
+    [ "01--",  16 ],
+    [ "0-2-",  10 ],
+    [ "0--3",  60 ],
+    [ "-12-",  12 ],
+    [ "-1-3",  23 ],
+    [ "--23",  44 ],
+    [ "012-",  25 ],
+    [ "01-3",  13 ],
+    [ "0-23",  13 ],
+    [ "-123",  18 ],
+    [ "0123",  11 ],
 ]
 
 const BenFredCircles: Target[] = [
@@ -302,7 +327,8 @@ export function Body() {
             // { name: "3 symmetric sets", val: ThreeEqualCircles, description: <>Simple test case, 3 circles, one starts slightly off-center from the other two, "target" ratios require the 3 circles to be in perfectly symmetric position with each other.</> },
             { name: "Variant callers", val: VariantCallers, description: <>Values from {VariantCallersPaperLink}, "A comparative analysis of algorithms for somatic SNV detection
                     in cancer," Fig. 3</>},
-            { name: "\"Venn Diagrams with D3.js\" example", val: BenFredCircles, description: <>Example from Ben Frederickson's blog post, <A href={"https://www.benfrederickson.com/venn-diagrams-with-d3.js/"}>"Venn Diagrams with D3.js"</A>.</> },
+            { name: "MPower", val: MPower, description: <>Values from "Clinical efficacy of atezolizumab plus bevacizumab and chemotherapy in KRAS-mutated non-small cell lung cancer with STK11, KEAP1, or TP53 comutations: subgroup results from the phase III IMpower150 trial", <A href={MPowerSupplementHref}>supplement</A></> },
+            { name: "\"Venn Diagrams with D3.js\"", val: BenFredCircles, description: <>Example from Ben Frederickson's blog post, <A href={"https://www.benfrederickson.com/venn-diagrams-with-d3.js/"}>"Venn Diagrams with D3.js"</A>.</> },
         ].map(({ name, val, description }) => ({ name, val: makeTargets(val), description })),
         []
     )
@@ -376,6 +402,7 @@ export function Body() {
         )
     })
 
+    const [ setNames, setSetNames ] = useSessionStorageState<string[]>("setNames", { defaultValue: [ 'A', 'B', 'C', 'D' ] })
     // Layer of indirection around `rawTargets`, to ensure `initialSets` and `targets` are updated atomically.
     // Otherwise, changing targets / numbers of shapes can result in intermediate renders with inconsistent sizes of
     // shape- and target-arrays.
@@ -388,9 +415,10 @@ export function Body() {
                     .slice(0, numShapes)
                     .map((s, idx) => {
                         const shape = toShape(s)
+                        const name = setNames[idx] || String.fromCharCode('A'.charCodeAt(0) + idx)
                         return {
                             idx,
-                            name: String.fromCharCode('A'.charCodeAt(0) + idx),
+                            name,
                             color: colors[idx],
                             shape: shape,
                         }
@@ -399,7 +427,7 @@ export function Body() {
             console.log("updated targets block:", numShapes, targets, initialSets, "layout:", initialLayout.length, "hash:", window.location.hash)
             return { targets, initialSets, }
         },
-        [ rawTargets.all, rawTargets.numShapes, initialShapes ]
+        [ rawTargets.all, rawTargets.numShapes, initialShapes, setNames ]
     )
 
     const router = useRouter()
@@ -956,13 +984,13 @@ export function Body() {
                         key={`${componentIdx}-${pointIdx}`}
                         overlay={
                             <Tooltip>
-                                <div>x: {x.v.toPrecision(4)}</div>
-                                <div>y: {y.v.toPrecision(4)}</div>
+                                <div>x: {x.toPrecision(4)}</div>
+                                <div>y: {y.toPrecision(4)}</div>
                             </Tooltip>
                         }>
                         <circle
-                            cx={x.v}
-                            cy={y.v}
+                            cx={x}
+                            cy={y}
                             r={0.05}
                             stroke={"black"}
                             strokeWidth={1 / scale}
@@ -1008,7 +1036,7 @@ export function Body() {
                 if (!(key in regionAreas)) {
                     regionAreas[key] = 0
                 }
-                regionAreas[key] += area.v
+                regionAreas[key] += area
             }))
             return regionAreas
         },
@@ -1020,7 +1048,7 @@ export function Body() {
             const largestRegions: { [key: string]: Region } = {}
             curStep && sets && curStep.regions.forEach(region => {
                 const { key, area } = region;
-                if (!(key in largestRegions) || largestRegions[key].area.v < area.v) {
+                if (!(key in largestRegions) || largestRegions[key].area < area) {
                     largestRegions[key] = region
                 }
             })
@@ -1243,6 +1271,8 @@ export function Body() {
             }</g>,
         [ curStep, scale, hoveredRegion, ],
     )
+
+    const [ showShapesMetadata, setShowShapesMetadata ] = useSessionStorageState("showShapesMetadata", { defaultValue: false })
 
     const shapesStr = useCallback(
         (fn: (shape: Shape<number>) => string) => {
@@ -1567,11 +1597,19 @@ export function Body() {
                                 vars &&
                                 <ShapesTable
                                     sets={sets || []}
+                                    showShapesMetadata={showShapesMetadata}
                                     setShape={(idx, shape) => {
                                         if (!shapes) return
                                         const newShapes = shapes.map((s, i) => i == idx ? shape : s)
                                         setInitialShapes(newShapes)
                                         setUrlFragmentShapes({ shapes: newShapes, precisionSchemeId: urlShapesPrecisionScheme })
+                                    }}
+                                    setSetName={(idx, name) => {
+                                        setSetNames(names => {
+                                            const newNames = names.slice()
+                                            newNames[idx] = name
+                                            return newNames
+                                        })
                                     }}
                                     vars={vars}
                                 />
@@ -1591,6 +1629,11 @@ export function Body() {
                                     )
                                     return `${window.location.origin}${window.location.pathname}${hash}`
                                 }} wrap={true} />
+                            </div>
+                            <div>
+                                <span className={css.toggleShapesMetadata} onClick={() => setShowShapesMetadata(!showShapesMetadata)}>{
+                                    showShapesMetadata ? "Show shape coords" : "Edit shapes' metadata"}
+                                </span>
                             </div>
                         </DetailsSection>
                         <DetailsSection

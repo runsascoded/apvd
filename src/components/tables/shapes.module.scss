@@ -7,6 +7,13 @@
     max-width: 4em;
     overflow: hidden;
   }
+  .shapeName {
+    max-width: 3em;
+    border: 0;
+  }
+  .selectShapeType {
+    max-width: 5em;
+  }
   th {
     .math {
       font-weight: bold;

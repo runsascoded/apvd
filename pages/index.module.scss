@@ -9,6 +9,9 @@
     max-width: 80em;
   }
 }
+.toggleShapesMetadata {
+  cursor: pointer;
+}
 
 .body {
   width: 100%;
@@ -87,7 +90,7 @@
         }
       }
       summary {
-        margin-left: -1.3em;
+        //margin-left: -1.3em;
         &::marker {
           //margin-right: 0.5em;
         }

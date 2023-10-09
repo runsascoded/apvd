@@ -1,16 +1,18 @@
 import {getRadii, mapShape, S, Shape} from "../../lib/shape";
-import React, {ReactNode} from "react";
+import React, { ReactNode, useState } from "react";
 import {Vars} from "../../lib/vars";
 import css from "./shapes.module.scss"
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
 import dynamic from "next/dynamic";
-import {sqrt} from "../../lib/math";
+import { deg, round, sqrt } from "../../lib/math";
 const StaticMathField = dynamic(() => import("react-mathquill").then(m => { m.addStyles(); return m.StaticMathField }), { ssr: false })
 
 export type Props = {
     sets: S[]
+    showShapesMetadata: boolean
     setShape: (idx: number, shape: Shape<number>) => void
+    setSetName: (idx: number, name: string) => void
     vars: Vars
     precision?: number
 }
@@ -31,38 +33,53 @@ export function VarCell({ skipped, className, children }: { skipped: boolean, cl
 export function Math({ children }: { children: string }) {
     return <StaticMathField className={css.math}>{children}</StaticMathField>
 }
-export function ShapesTable({ sets, setShape, vars, precision = 4 }: Props) {
+export function ShapesTable({ sets, showShapesMetadata, setShape, setSetName, vars, precision = 4 }: Props) {
     const hasDoubleRadii = sets.some(({shape}) => shape.kind === "XYRR" || shape.kind === "XYRRT")
     const hasXYRRT = sets.some(({shape}) => shape.kind === "XYRRT")
+    const [ editingName, setEditingName ] = useState<[ number, string ] | null>(null)
+    const headerRow = showShapesMetadata
+        ? <tr>
+            <th>Name</th>
+            <th>
+                <OverlayTrigger overlay={<Tooltip>Abbreviated name: one character, used in Targets table</Tooltip>}>
+                    <span>Abb.</span>
+                </OverlayTrigger>
+            </th>
+            <th>Color</th>
+            <th>
+                <OverlayTrigger
+                    overlay={<Tooltip>Circle, XYRR (aligned ellipse), or XYRRT (unaligned ellipse)</Tooltip>}
+                >
+                    <span>Type</span>
+                </OverlayTrigger>
+            </th>
+        </tr> : <tr>
+            <th>Name</th>
+            <th><Math>c_x</Math></th>
+            <th><Math>c_y</Math></th>
+            {
+                hasDoubleRadii
+                    ? <>
+                        <th><Math>r_x</Math></th>
+                        <th><Math>r_y</Math></th>
+                    </>
+                    : <th><Math>r</Math></th>
+            }
+            {
+                hasXYRRT && <th>
+                    <OverlayTrigger overlay={<Tooltip>Angle of rotation (counter-clockwise)</Tooltip>}>
+                        <span><Math>\theta</Math></span>
+                    </OverlayTrigger>
+                </th>
+            }
+        </tr>
     return (
         <table className={css.shapesTable}>
             <thead>
-            <tr>
-                <th>Name</th>
-                <th><Math>c_x</Math></th>
-                <th><Math>c_y</Math></th>
-                {
-                    hasDoubleRadii
-                        ? <>
-                            <th><Math>r_x</Math></th>
-                            <th><Math>r_y</Math></th>
-                        </>
-                        : <th><Math>r</Math></th>
-                }
-                {
-                    hasXYRRT ? <th><Math>\theta</Math></th> : null
-                }
-                <th>
-                    <OverlayTrigger
-                        overlay={<Tooltip>Circle, XYRR (aligned ellipse), or XYRRT (unaligned ellipse)</Tooltip>}
-                    >
-                        <span>Type</span>
-                    </OverlayTrigger>
-                </th>
-            </tr>
+            {headerRow}
             </thead>
             <tbody>{
-                sets.map(({ idx, name, shape }) => {
+                sets.map(({ idx, name, color, shape }) => {
                     const skippedVars = vars.skipVars[idx] || []
                     const c = shape.c
                     const [ rx, ry ] = getRadii(shape)
@@ -76,8 +93,26 @@ export function ShapesTable({ sets, setShape, vars, precision = 4 }: Props) {
                         },
                         e => [ skippedVars.includes("rx"), skippedVars.includes("ry") ],
                     )
-                    return <tr key={idx}>
-                        <td style={{ textAlign: "right", }}>{name}</td>
+                    const editingNameStr = editingName && editingName[0] == idx ? editingName[1] : name
+                    const cols = showShapesMetadata ? <>
+                        <td>{name[0]}</td>
+                        <td>{color}</td>
+                        <td>
+                            <select className={css.selectShapeType} value={shape.kind} onChange={e => {
+                                if (e.target.value === shape.kind) return
+                                const r = { x: rx, y: ry }
+                                switch (e.target.value) {
+                                    case "Circle": setShape(idx, { kind: "Circle", c, r: sqrt(rx * ry) }); break
+                                    case "XYRR": setShape(idx, { kind: "XYRR", c, r }); break
+                                    case "XYRRT": setShape(idx, { kind: "XYRRT", c, r, t: 0 }); break
+                                }
+                            }}>
+                                <option value={"Circle"}>Circle</option>
+                                <option value={"XYRR"}>Ellipase (aligned)</option>
+                                <option value={"XYRRT"}>Ellipse</option>
+                            </select>
+                        </td>
+                    </> : <>
                         <VarCell skipped={skipCx}>{c.x.toPrecision(precision)}</VarCell>
                         <VarCell skipped={skipCy}>{c.y.toPrecision(precision)}</VarCell>
                         <VarCell skipped={skipRx}>{ rx.toPrecision(precision)}</VarCell>
@@ -89,25 +124,33 @@ export function ShapesTable({ sets, setShape, vars, precision = 4 }: Props) {
                                     shape,
                                     () => "",
                                     () => "",
-                                    e => e.t.toPrecision(precision)
+                                    e => `${round(deg(e.t))}°`
                                 )
                             }</VarCell>
                         }
-                        <td>
-                            <select value={shape.kind} onChange={e => {
-                                if (e.target.value === shape.kind) return
-                                const r = { x: rx, y: ry }
-                                switch (e.target.value) {
-                                    case "Circle": setShape(idx, { kind: "Circle", c, r: sqrt(rx * ry) }); break
-                                    case "XYRR": setShape(idx, { kind: "XYRR", c, r }); break
-                                    case "XYRRT": setShape(idx, { kind: "XYRRT", c, r, t: 0 }); break
-                                }
-                            }}>
-                                <option value={"Circle"}>Circle</option>
-                                <option value={"XYRR"}>XYRR</option>
-                                <option value={"XYRRT"}>XYRRT</option>
-                            </select>
+                    </>
+                    return <tr key={idx}>
+                        <td style={{ textAlign: "right", }}>
+                            <input
+                                className={css.shapeName}
+                                type={"text"}
+                                value={editingNameStr}
+                                onFocus={e => {
+                                    setEditingName([ idx, name ])
+                                }}
+                                onBlur={e => {
+                                    setEditingName(null)
+                                }}
+                                onChange={e => {
+                                    const newName = e.target.value
+                                    console.log(`shape ${idx} name changed from ${name} to ${newName}`)
+                                    if (newName === name) return
+                                    if (!newName) return
+                                    setSetName(idx, newName)
+                                    setEditingName([ idx, newName ])
+                                }}/>
                         </td>
+                        {cols}
                     </tr>
                 })
             }</tbody>
