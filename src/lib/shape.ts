@@ -2,7 +2,6 @@ import {R2} from "apvd";
 import {abs, cos, max, sin} from "./math";
 import {Param} from "next-utils/params";
 import ShapesBuffer, {Opts, ShapesParam} from "./shapes-buffer";
-import {Component} from "./regions";
 
 export interface Circle<D> {
     kind: 'Circle'
@@ -26,12 +25,23 @@ export interface XYRRT<D> {
 export type Shape<D> = Circle<D> | XYRR<D> | XYRRT<D>
 export type Shapes = Shape<number>[]
 
+export type SetMetadata = {
+    name: string
+    abbrev: string
+    color: string
+}
+
+export const DefaultSetMetadata = [
+    { name: "A", abbrev: "A", color: '#f99'  , },  // red
+    { name: "B", abbrev: "B", color: 'green' , },
+    { name: "C", abbrev: "C", color: 'orange', },
+    { name: "D", abbrev: "D", color: '#99f'  , },  // blue
+]
+
 export type Set = {
     idx: number
-    name: string
-    color: string
     shape: Shape<number>
-}
+} & SetMetadata
 export type S = Set
 
 export function rotate(p: R2<number>, theta: number): R2<number> {

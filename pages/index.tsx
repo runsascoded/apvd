@@ -17,10 +17,10 @@ import {getSliderValue} from "../src/components/inputs";
 import {cos, max, min, PI, pi2, round, sin, sq3, sqrt} from "../src/lib/math";
 import Apvd, {LogLevel} from "../src/components/apvd";
 import {getMidpoint, getPointAndDirectionAtTheta, getRegionCenter} from "../src/lib/region";
-import {BoundingBox, getRadii, mapShape, S, Shape, shapeBox, Shapes, shapesParam, shapeStrJS, shapeStrJSON, shapeStrRust} from "../src/lib/shape";
+import { BoundingBox, DefaultSetMetadata, getRadii, mapShape, S, SetMetadata, Shape, shapeBox, Shapes, shapesParam, shapeStrJS, shapeStrJSON, shapeStrRust } from "../src/lib/shape";
 import {TargetsTable} from "../src/components/tables/targets";
 import {makeTargets, Target, Targets, targetsParam} from "../src/lib/targets";
-import { Disjoint, Ellipses4, Ellipses4t, InitialLayout, CirclesFlexible, toShape, CirclesFixed, Nested, MPowerBug } from "../src/lib/layout";
+import { Disjoint, Ellipses4, Ellipses4t, InitialLayout, CirclesFlexible, toShape, CirclesFixed, Nested } from "../src/lib/layout";
 import {VarsTable} from "../src/components/tables/vars";
 import {SparkLineProps} from "../src/components/spark-lines";
 import {CircleCoords, Coord, makeVars, Vars, XYRRCoords, XYRRTCoords} from "../src/lib/vars";
@@ -35,13 +35,6 @@ import Link from "next/link";
 import useSessionStorageState from "use-session-storage-state";
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false })
-
-export const colors = [
-    '#f99',  // red
-    'green',
-    'orange',
-    '#99f',  // blue
-]
 
 const ThreeEqualCircles: Target[] = [
     [ "0**", PI ],
@@ -287,7 +280,6 @@ const layouts: LinkItem<InitialLayout>[] = [
     { name: "Variant callers (alternate)", val: "#s=MzC1VAFocttl2gbaDkR1obVIOSo-npdk8mfAn4j0s68wpq4FE4o0YIptFI5hupi525mqCJLTS0BbLsnqcJ0oFOtaun28Afy9HfyAHhdHhtsAsLO8mNdyKFNwt4op_97d4DXguxY3S4k7RxPbNbPIu_2XIvm5qJ0NJn5qsgeVxEhvcgoRO8FFnpU&t=633,618,112,187,0,14,1,319,13,55,17,21,0,9,36", description: <>Another layout for the "variant callers" example, from {VariantCallersPaperLink}. ≈20,000 steps beginning from the "Ellipses" layout above, error ≈2.27%.</>}
     // { name: "CircleLattice", layout: SymmetricCircleLattice, description: "4 circles centered at (0,0), (0,1), (1,0), (1,1)", },
 ]
-const layoutsMap = new Map(layouts.map(({ name, val }) => [ name, val ]))
 
 export type Params = {
     s: Param<ShapesParam | null>
@@ -402,7 +394,7 @@ export function Body() {
         )
     })
 
-    const [ setNames, setSetNames ] = useSessionStorageState<string[]>("setNames", { defaultValue: [ 'A', 'B', 'C', 'D' ] })
+    const [ setMetadata, setSetMetadata ] = useSessionStorageState<SetMetadata[]>("setMetadata", { defaultValue: DefaultSetMetadata })
     // Layer of indirection around `rawTargets`, to ensure `initialSets` and `targets` are updated atomically.
     // Otherwise, changing targets / numbers of shapes can result in intermediate renders with inconsistent sizes of
     // shape- and target-arrays.
@@ -415,11 +407,10 @@ export function Body() {
                     .slice(0, numShapes)
                     .map((s, idx) => {
                         const shape = toShape(s)
-                        const name = setNames[idx] || String.fromCharCode('A'.charCodeAt(0) + idx)
+                        let setMetadatum = setMetadata[idx] || DefaultSetMetadata[idx]
                         return {
                             idx,
-                            name,
-                            color: colors[idx],
+                            ...setMetadatum,
                             shape: shape,
                         }
                     })
@@ -427,7 +418,7 @@ export function Body() {
             console.log("updated targets block:", numShapes, targets, initialSets, "layout:", initialLayout.length, "hash:", window.location.hash)
             return { targets, initialSets, }
         },
-        [ rawTargets.all, rawTargets.numShapes, initialShapes, setNames ]
+        [ rawTargets.all, rawTargets.numShapes, initialShapes, setMetadata ]
     )
 
     const router = useRouter()
@@ -1530,7 +1521,7 @@ export function Body() {
                             {
                                 model && curStep && targets && error && sparkLineCellProps &&
                                 <TargetsTable
-                                    initialShapes={initialSets}
+                                    initialSets={initialSets}
                                     targets={rawTargets}
                                     setTargets={newTargets => {
                                         setTargets(newTargets)
@@ -1604,11 +1595,11 @@ export function Body() {
                                         setInitialShapes(newShapes)
                                         setUrlFragmentShapes({ shapes: newShapes, precisionSchemeId: urlShapesPrecisionScheme })
                                     }}
-                                    setSetName={(idx, name) => {
-                                        setSetNames(names => {
-                                            const newNames = names.slice()
-                                            newNames[idx] = name
-                                            return newNames
+                                    updateSetMetadatum={(idx, newMetadatum) => {
+                                        setSetMetadata(setMetadata => {
+                                            const newMetadata = setMetadata.slice()
+                                            newMetadata[idx] = { ...newMetadata[idx], ...newMetadatum }
+                                            return newMetadata
                                         })
                                     }}
                                     vars={vars}

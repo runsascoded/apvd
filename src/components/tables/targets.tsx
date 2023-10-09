@@ -25,8 +25,8 @@ export function getNegativeEntries(targets: Targets): Map<string, number> {
 }
 
 export function TargetsTable(
-    { initialShapes, targets, setTargets, showDisjointSets, model, curStep, error, stepIdx, hoveredRegion, ...sparkLineProps }: {
-        initialShapes: S[]
+    { initialSets, targets, setTargets, showDisjointSets, model, curStep, error, stepIdx, hoveredRegion, ...sparkLineProps }: {
+        initialSets: S[]
         targets: Targets
         setTargets: Dispatch<Targets>
         showDisjointSets: boolean
@@ -44,11 +44,11 @@ export function TargetsTable(
         (key: string) =>
             key.split('').map((ch: string, idx: number) => {
                 // console.log("initialShapes:", initialShapes, "idx:", idx)
-                if (idx >= initialShapes.length) {
-                    console.warn("targetName: idx >= initialShapes.length", idx, initialShapes.length)
+                if (idx >= initialSets.length) {
+                    console.warn("targetName: idx >= initialShapes.length", idx, initialSets.length)
                     return
                 }
-                const name = initialShapes[idx].name
+                const name = initialSets[idx].abbrev
                 // console.log("targetName:", ch, idx, circle, initialCircles)
                 if (ch === '*') {
                     return <span key={idx}>*</span>
@@ -58,7 +58,7 @@ export function TargetsTable(
                     return <span key={idx}>{name}</span>
                 }
             }),
-        [ initialShapes, ],
+        [ initialSets, ],
     )
 
     const { inclusive, exclusive, } = targets
