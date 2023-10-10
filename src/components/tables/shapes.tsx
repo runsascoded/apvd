@@ -1,4 +1,4 @@
-import { getRadii, mapShape, S, SetMetadata, Shape } from "../../lib/shape";
+import { getRadii, mapShape, S, SetMetadatum, Shape } from "../../lib/shape";
 import React, { ReactNode, useState } from "react";
 import {Vars} from "../../lib/vars";
 import css from "./shapes.module.scss"
@@ -14,7 +14,7 @@ export type Props = {
     sets: S[]
     showShapesMetadata: boolean
     setShape: (idx: number, shape: Shape<number>) => void
-    updateSetMetadatum: (idx: number, newMetadatum: Partial<SetMetadata>) => void
+    updateSetMetadatum: (idx: number, newMetadatum: Partial<SetMetadatum>) => void
     vars: Vars
     precision?: number
 }
@@ -66,8 +66,8 @@ export function ShapesTable({ sets, showShapesMetadata, setShape, updateSetMetad
     const headerRow = showShapesMetadata
         ? <tr>
             <th>Name</th>
-            <th>
-                <OverlayTrigger overlay={<Tooltip>Abbreviated name: one character, used in Targets table</Tooltip>}>
+            <th className={css.abbrevCol}>
+                <OverlayTrigger overlay={<Tooltip>Abbreviated name: one character, used in "Targets" table</Tooltip>}>
                     <span>Key</span>
                 </OverlayTrigger>
             </th>
@@ -134,14 +134,14 @@ export function ShapesTable({ sets, showShapesMetadata, setShape, updateSetMetad
                         </td>
                         {
                             showShapesMetadata ? <>
-                                <td>
+                                <td className={css.abbrevCol}>
                                     <EditableText
-                                        className={css.shapeName}
+                                        className={css.shapeAbbrev}
                                         defaultValue={abbrev}
                                         onChange={newAbbrev => {
                                             console.log(`shape ${idx} abbrev changed from ${name} to ${newAbbrev}`)
                                             if (!newAbbrev) return
-                                            let newChar = newAbbrev.split('').find((ch, idx) => ch != abbrev[idx])
+                                            let newChar = newAbbrev.split('').find((ch, idx) => idx >= abbrev.length || ch != abbrev[idx])
                                             if (newChar) {
                                                 updateSetMetadatum(idx, { abbrev: newChar })
                                                 return newChar

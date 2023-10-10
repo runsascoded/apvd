@@ -1,7 +1,7 @@
 'use client'
 
 import Grid, {GridState} from "../src/components/grid"
-import React, {DetailedHTMLProps, Dispatch, HTMLAttributes, ReactNode, useCallback, useEffect, useMemo, useRef, useState} from "react"
+import React, { DetailedHTMLProps, Dispatch, Fragment, HTMLAttributes, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import * as apvd from "apvd"
 import {train, update_log_level} from "apvd"
 import {makeModel, Model, Region, regionPath, Step} from "../src/lib/regions"
@@ -14,10 +14,10 @@ import OverlayTrigger from 'react-bootstrap/OverlayTrigger'
 import Tooltip from 'react-bootstrap/Tooltip'
 import {entries, mapEntries, values} from "next-utils/objs";
 import {getSliderValue} from "../src/components/inputs";
-import {cos, max, min, PI, pi2, round, sin, sq3, sqrt} from "../src/lib/math";
+import { cos, degStr, max, min, PI, pi2, round, sin, sq3, sqrt } from "../src/lib/math";
 import Apvd, {LogLevel} from "../src/components/apvd";
 import { getLabelAttrs, getMidpoint, getPointAndDirectionAtTheta, getRegionCenter, LabelAttrs } from "../src/lib/region";
-import { BoundingBox, DefaultSetMetadata, getRadii, mapShape, S, SetMetadata, Shape, shapeBox, Shapes, shapesParam, shapeStrJS, shapeStrJSON, shapeStrRust } from "../src/lib/shape";
+import { BoundingBox, DefaultSetMetadata, getRadii, mapShape, S, SetMetadatum, setMetadataParam, Shape, shapeBox, Shapes, shapesParam, shapeStrJS, shapeStrJSON, shapeStrRust, SetMetadata } from "../src/lib/shape";
 import {TargetsTable} from "../src/components/tables/targets";
 import {makeTargets, Target, Targets, targetsParam} from "../src/lib/targets";
 import { Disjoint, Ellipses4, Ellipses4t, InitialLayout, CirclesFlexible, toShape, CirclesFixed, Nested } from "../src/lib/layout";
@@ -112,6 +112,7 @@ const VariantCallers: Target[] = [
 
 const MPowerPaperHref = "https://pubmed.ncbi.nlm.nih.gov/35190375/"
 const MPowerSupplementHref = "https://jitc.bmj.com/content/jitc/10/2/e003027.full.pdf?with-ds=yes"
+const MPowerLink = <A href={MPowerSupplementHref}>West HJ et al (2022)</A>
 // https://pubmed.ncbi.nlm.nih.gov/35190375/ (supplement, pg. 13): https://jitc.bmj.com/content/jitc/10/2/e003027.full.pdf?with-ds=yes
 // 0: KRAS
 // 1: STK11
@@ -147,7 +148,7 @@ const BenFredCircles: Target[] = [
 
 export type RunningState = "none" | "fwd" | "rev"
 
-export type LabelPoint = Point & LabelAttrs
+export type LabelPoint = Point & LabelAttrs & { point: Point }
 
 export function Details({ open, toggle, summary, className, children, }: {
     open: boolean
@@ -268,6 +269,7 @@ declare var window: any;
 export const initialLayoutKey = "initialLayout"
 export const shapesKey = "shapes"
 export const targetsKey = "targets"
+export const setMetadataKey = "setMetadata"
 
 export const VariantCallersPaperLink = <A href={"https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3753564/pdf/btt375.pdf"}>Roberts et al (2013)</A>
 
@@ -278,29 +280,34 @@ const layouts: LinkItem<InitialLayout>[] = [
     { name: "Circles (fixed)", val: CirclesFixed, description: "4 circles, initialized in a diamond as in \"Circles (flexible)\" above, but these are fixed as circles (rx and ry remain constant, rotation is immaterial)", },
     { name: "Disjoint", val: Disjoint, description: "4 disjoint circles. When two (or more) sets are supposed to intersect, but don't, a synthetic penalty is added to the error computation, which is proportional to: 1) each involved set's distance to the centroid of the centers of the sets that are supposed to intersect, as well as 2) the size of the target subset. This \"disjoint\" initial layout serves demonstrate/test this behavior. More sophisticated heuristics would be useful here, as the current scheme is generally insufficient to coerce all sets into intersecting as they should." },
     { name: "Nested", val: Nested, description: "4 nested circles, stresses disjoint/contained region handling, which has known issues!" },
-    { name: "Variant callers (best)", val: "#s=Mzxv4Cc95664TAhIgtTaZ1wTbpB32hca6RnYrxzN5QRgbF4oaXr5MStC6KxNYYZy5g5IuzaS1moF4lLWtIXXY-VOO2f8wNvsQk9Jqqfg0B-RDkXMZTCTpTaymPnuwF-vswFGRVwFE4hgScC1ofXRaBdnvzm84fjZ8wtEkWHaqiifUM4TVEtIbh8&t=633,618,112,187,0,14,1,319,13,55,17,21,0,9,36", description: <>Best computed layout for the "variant callers" example, from {VariantCallersPaperLink}. ≈50,000 steps beginning from the "Circles" layout above, error &lt;0.176%.</>},
-    { name: "Variant callers (alternate)", val: "#s=MzC1VAFocttl2gbaDkR1obVIOSo-npdk8mfAn4j0s68wpq4FE4o0YIptFI5hupi525mqCJLTS0BbLsnqcJ0oFOtaun28Afy9HfyAHhdHhtsAsLO8mNdyKFNwt4op_97d4DXguxY3S4k7RxPbNbPIu_2XIvm5qJ0NJn5qsgeVxEhvcgoRO8FFnpU&t=633,618,112,187,0,14,1,319,13,55,17,21,0,9,36", description: <>Another layout for the "variant callers" example, from {VariantCallersPaperLink}. ≈20,000 steps beginning from the "Ellipses" layout above, error ≈2.27%.</>}
+    { name: "Variant callers (best)", val: "#s=Mzx868wSrqe62oBeRfH2WUHakKB1OeVQltXVsxzG7xr1hF4oblIulnX_D1OLV6jNkgSlDvFN0OqgyD3OUuvX_X_5HhRUwN1mnF1uXKhW4bbNv4zNby2cxv2iiFbpHovsstMTrteKR4hgh43U5qPl9TqywzTQ4efn1ARs8VrIS_u6Ew57sD7lVHg&t=633,618,112,187,0,14,1,319,13,55,17,21,0,9,36&n=VarScan,SomaticSniper,Strelka=T,JSM2", description: <>Best computed layout for the "variant callers" example, from {VariantCallersPaperLink}. Began from the "Circles" layout above, error &lt;0.2%.</>},
+    { name: "Variant callers (alternate)", val: "#s=MzEOcnhY9s9kC2f-JWn9DEAaFwgxn04jvWga_AJdtC0TEE4FzMJScNEF9NAZEn8Ot55yGBNG_yCFbyMRhWsnXmDD3NB0AfWb84bjF1dC86fR4vy5SYlvSjZ0twWEG0q5AHF5wuXyz4kfgcBCfyzIoPLQrPjvqQ74Ko38-g0evm65AopJLGJTEg0&t=633,618,112,187,0,14,1,319,13,55,17,21,0,9,36&n=VarScan,SomaticSniper,Strelka=T,JSM2", description: <>Another layout for the "variant callers" example, from {VariantCallersPaperLink}. Began from the "Ellipses" layout above, error ≈2.68%.</>},
+    { name: "MPower (best)", val: "#t=42,15,16,10,10,12,25,182,60,23,13,44,13,18,11&n=KRAS,STK11,KEAP1=P,TP53&s=MBbGoBXe24AO3CfO5s1MSGMtHsRH48MauiaAM3YLNre7ka4EAyifrNz7EH3Sxa4bC5qmStZR42vF4sMWoboDe-Q5Xyc8A1wyfegNmRc-NPpPrx1LXnXSL6WhvukxcEmSxKSrm9CeY4xRN553ryPCpN8tIU47k_eAqK1xWk-LApR29kzboNlxCdg", description: <>Best computed layout for the "MPower" example, from {MPowerLink}. Began from the "Ellipses" layout above, ≈5% error</>},
     // { name: "CircleLattice", layout: SymmetricCircleLattice, description: "4 circles centered at (0,0), (0,1), (1,0), (1,1)", },
 ]
 
 export type Params = {
     s: Param<ShapesParam | null>
     t: Param<Targets | null>
+    n: Param<SetMetadata | null>
 }
 
 export type ParsedParams = {
     s: ParsedParam<ShapesParam | null>
     t: ParsedParam<Targets | null>
+    n: ParsedParam<SetMetadata | null>
 }
 
 export type HashMap = {
     s: HashMapVal<ShapesParam>
     t: HashMapVal<Targets>
+    n: HashMapVal<SetMetadata>
 }
 
 export type HistoryState = {
     s: ShapesParam
     t: Targets
+    n: SetMetadata
 }
 
 function usePreviousValue<T>(value: T) {
@@ -319,11 +326,15 @@ export function Body() {
             { name: "Fizz Buzz Bazz", val: FizzBuzzBazz, description: <>Extended version of {fizzBuzzLink} above, with 3 sets, representing integers divisible by 3, 5, or 7. This is impossible to model accurately with 3 circles, but possible with ellipses.</> },
             { name: "Fizz Buzz Bazz Qux", val: FizzBuzzBazzQux, description: <>Extended version of {fizzBuzzLink} above, with 4 sets, representing integers divisible by 2, 3, 5, or 7. Impossible to model exactly even with 4 ellipses (AFAIK!), but gradient descent gets as close as it can.</> },
             // { name: "3 symmetric sets", val: ThreeEqualCircles, description: <>Simple test case, 3 circles, one starts slightly off-center from the other two, "target" ratios require the 3 circles to be in perfectly symmetric position with each other.</> },
-            { name: "Variant callers", val: VariantCallers, description: <>Values from {VariantCallersPaperLink}, "A comparative analysis of algorithms for somatic SNV detection
+            { name: "Variant callers", val: /*VariantCallers*/ "#t=633,618,112,187,0,14,1,319,13,55,17,21,0,9,36&n=VarScan,SomaticSniper,Strelka=T,JSM2", description: <>Values from {VariantCallersPaperLink}, "A comparative analysis of algorithms for somatic SNV detection
                     in cancer," Fig. 3</>},
-            { name: "MPower", val: MPower, description: <>Values from "Clinical efficacy of atezolizumab plus bevacizumab and chemotherapy in KRAS-mutated non-small cell lung cancer with STK11, KEAP1, or TP53 comutations: subgroup results from the phase III IMpower150 trial", <A href={MPowerSupplementHref}>supplement</A></> },
+            { name: "MPower", val: "#t=42,15,16,10,10,12,25,182,60,23,13,44,13,18,11&n=KRAS,STK11,KEAP1=P,TP53", description: <>Values from "Clinical efficacy of atezolizumab plus bevacizumab and chemotherapy in KRAS-mutated non-small cell lung cancer with STK11, KEAP1, or TP53 comutations: subgroup results from the phase III IMpower150 trial", {MPowerLink}</> },
             { name: "\"Venn Diagrams with D3.js\"", val: BenFredCircles, description: <>Example from Ben Frederickson's blog post, <A href={"https://www.benfrederickson.com/venn-diagrams-with-d3.js/"}>"Venn Diagrams with D3.js"</A>.</> },
-        ].map(({ name, val, description }) => ({ name, val: makeTargets(val), description })),
+        ].map(({ name, val, description }) => ({
+            name,
+            val: typeof val === 'string' ? val : makeTargets(val),
+            description
+        })),
         []
     )
 
@@ -351,6 +362,7 @@ export function Body() {
     const params: Params = {
         s: shapesParam({ precisionSchemeId: 1 }),
         t: targetsParam,
+        n: setMetadataParam,
     }
 
     const [ stateInUrlFragment, setStateInUrlFragment ] = useSessionStorageState<boolean>("shapesInUrlFragment", { defaultValue: true })
@@ -358,6 +370,7 @@ export function Body() {
     const {
         s: [ urlFragmentShapes, setUrlFragmentShapes ],
         t: [ urlFragmentTargets, setUrlFragmentTargets ],
+        n: [ urlSetMetadata, setUrlSetMetadata ],
     }: ParsedParams = parseHashParams({ params })
 
     const [ initialShapes, setInitialShapes ] = useState<Shapes>(() => {
@@ -371,8 +384,9 @@ export function Body() {
             console.log("no urlFragmentShapes found")
         }
         const str = sessionStorage.getItem(shapesKey)
-        if (!str) return initialLayout.map(s => toShape(s))
-        return JSON.parse(str)
+        return str
+            ? JSON.parse(str)
+            : initialLayout.map(s => toShape(s))
     })
 
     const [ rawTargets, setTargets ] = useState<Targets>(() => {
@@ -396,7 +410,17 @@ export function Body() {
         )
     })
 
-    const [ setMetadata, setSetMetadata ] = useSessionStorageState<SetMetadata[]>("setMetadata", { defaultValue: DefaultSetMetadata })
+    const [ setMetadata, setSetMetadata ] = useState<SetMetadata>(() => {
+        if (urlSetMetadata) {
+            console.log("found urlSetMetadata:", urlSetMetadata)
+            setUrlSetMetadata(null)
+            return urlSetMetadata
+        }
+        const str = sessionStorage.getItem(setMetadataKey)
+        return str
+            ? JSON.parse(str)
+            : DefaultSetMetadata
+    })
     // Layer of indirection around `rawTargets`, to ensure `initialSets` and `targets` are updated atomically.
     // Otherwise, changing targets / numbers of shapes can result in intermediate renders with inconsistent sizes of
     // shape- and target-arrays.
@@ -478,15 +502,15 @@ export function Body() {
 
     const historyLog = false
     const pushHistoryState = useCallback(
-        (shapes: Shapes, targets: Targets, push: boolean) => {
+        ({ shapes, newTargets, newSetMetadata, push }: { shapes: Shapes, newTargets?: Targets, newSetMetadata?: SetMetadata, push?: boolean }) => {
             if (stateInUrlFragment) {
                 const param = { shapes, precisionSchemeId: urlShapesPrecisionScheme }
-                const newHashMap = { s: param, t: targets, }
-                if (historyLog) console.log(`history push (${push ? "push" : "replace"}, ${targets.numShapes}, ${shapes.length}`, newHashMap)
+                const newHashMap = { s: param, t: newTargets || targets, n: newSetMetadata || setMetadata, }
+                if (historyLog) console.log(`history push (${push ? "push" : "replace"}, ${targets.numShapes}, ${newHashMap.s.shapes.length}`, newHashMap)
                 updateHashParams(params, newHashMap, { push, log: historyLog })
             }
         },
-        [ stateInUrlFragment, urlShapesPrecisionScheme, ]
+        [ stateInUrlFragment, targets, setMetadata, urlShapesPrecisionScheme, ]
     )
 
     const [ curStep, sets, shapes, ] = useMemo(
@@ -504,7 +528,7 @@ export function Body() {
 
             if (stateInUrlFragment) {
                 if (targets.numShapes == shapes.length) {
-                    pushHistoryState(shapes, targets, false)
+                    pushHistoryState({ shapes, newTargets: targets })
                 } else {
                     console.warn("skipping updateUrl push: targets.numShapes != shapes.length", targets.numShapes, shapes.length)
                 }
@@ -521,6 +545,14 @@ export function Body() {
             sessionStorage.setItem(targetsKey, JSON.stringify(givenInclusive ? inclusive : exclusive))
         },
         [ rawTargets, ]
+    )
+
+    useEffect(
+        () => {
+            console.log("Writing setMetadata to sessionStorage:", setMetadata)
+            sessionStorage.setItem(setMetadataKey, JSON.stringify(setMetadata))
+        },
+        [ setMetadata ]
     )
 
     // Save latest `model` to `window`, for debugging
@@ -548,7 +580,7 @@ export function Body() {
                     console.warn(`no hash in history state url ${history.state.url} or as ${history.state.as}`)
                     return
                 }
-                const { s, t } = getHistoryState(hash)
+                const { s, t, n } = getHistoryState(hash)
                 if (s) {
                     console.log("setting shapes from history state:", s)
                     setInitialShapes(s.shapes)
@@ -561,6 +593,12 @@ export function Body() {
                     setTargets(t)
                 } else {
                     console.warn("no targets in history state")
+                }
+                if (n) {
+                    console.log("setting setMetadata from history state:", n)
+                    setSetMetadata(n)
+                } else {
+                    console.warn("no setMetadata in history state")
                 }
             }
             const hashChangeFn = (e: HashChangeEvent) => {
@@ -1090,11 +1128,12 @@ export function Body() {
                     const [ point, direction] = getPointAndDirectionAtTheta(edge.set.shape, theta)
                     const normal = direction - pi2
                     const { textAnchor, dominantBaseline } = getLabelAttrs(normal)
+                    // console.log(`set ${name}: normal ${degStr(normal)}`, textAnchor, dominantBaseline)
                     const r = setLabelDistance
                     const x = point.x + r * cos(normal)
                     const y = point.y + r * sin(normal)
                     // console.log(name, edge, point, degStr(direction), degStr(normal))
-                    setLabelPoints[name] = { x, y, textAnchor, dominantBaseline, }
+                    setLabelPoints[name] = { x, y, point, textAnchor, dominantBaseline, }
                 })
             return setLabelPoints
         },
@@ -1102,17 +1141,19 @@ export function Body() {
     )
     const setLabels = useMemo(
         () => setLabelPoints && <g id={"setLabels"}>{
-            entries(setLabelPoints).map(([ label, { x, y, textAnchor, dominantBaseline } ]) => {
-                return (
+            entries(setLabelPoints).map(([ label, { x, y, point, textAnchor, dominantBaseline } ]) => {
+                return (<Fragment key={label}>
+                    {/*<circle cx={point.x} cy={point.y} r={0.05} stroke={"black"} strokeWidth={1 / scale} fill={"black"} fillOpacity={0.5} />*/}
+                    {/*<circle cx={x} cy={y} r={0.05} stroke={"red"} strokeWidth={1 / scale} fill={"red"} fillOpacity={0.5} />*/}
                     <text
-                        key={label}
+                        // key={label}
                         transform={`translate(${x}, ${y}) scale(1, -1)`}
                         textAnchor={textAnchor}
                         dominantBaseline={dominantBaseline}
                         className={css.setLabel}
                         fontSize={setLabelSize / scale}
                     >{label}</text>
-                )
+                </Fragment>)
             })
         }</g>,
         [ setLabelPoints, setLabelDistance, ]
@@ -1326,15 +1367,29 @@ export function Body() {
 
     const setHash = useCallback(
         (hash: string) => {
-            const { s, t } = getHistoryState(hash)
-            if (!s) { console.warn(`no s in hash ${hash}`); return }
-            if (!t) { console.warn(`no t in hash ${hash}`); return }
-            console.log(`setting shapes and targets from hash ${hash}:`, s.shapes, `(${s.precisionSchemeId})`, t)
-            setInitialShapes(s.shapes)
-            setUrlShapesPrecisionScheme(s.precisionSchemeId)
-            setTargets(t)
+            const { s, t, n, } = getHistoryState(hash)
+            if (s) {
+                console.log(`setting shapes from hash ${hash}:`, s.shapes, `(${s.precisionSchemeId})`)
+                setInitialShapes(s.shapes)
+                setUrlShapesPrecisionScheme(s.precisionSchemeId)
+            } else {
+                console.warn(`no s in hash ${hash}`)
+            }
+            if (t) {
+                console.log(`setting targets from hash ${hash}:`, t)
+                setTargets(t)
+                if (!s) {
+                    setInitialShapes(initialLayout.slice(0, t.numShapes).map(s => toShape(s)))
+                }
+            } else {
+                console.warn(`no t in hash ${hash}`)
+            }
+            if (n) {
+                console.log(`setting setMetadata from hash ${hash}:`, n)
+                setSetMetadata(n)
+            }
         },
-        [ params, setInitialShapes, setTargets, ]
+        [ params, setInitialShapes, setTargets, initialLayout, setSetMetadata, ]
     )
     const [ clearExampleTooltip, exampleLinks ] = Links({
         links: exampleTargets,
@@ -1344,7 +1399,7 @@ export function Body() {
             const newShapes = initialLayout.slice(0, newTargets.numShapes).map(s => toShape(s))
             console.log(`target link: setting ${newTargets.numShapes} shapes:`, newShapes)
             setInitialShapes(newShapes)
-            pushHistoryState(newShapes, newTargets, true)
+            pushHistoryState({ shapes: newShapes, newTargets, push: true })
         },
         setHash,
     })
@@ -1355,7 +1410,7 @@ export function Body() {
             setInitialLayout(v)
             const newShapes = v.slice(0, targets.numShapes).map(s => toShape(s))
             setInitialShapes(newShapes)
-            pushHistoryState(newShapes, targets, true)
+            pushHistoryState({ shapes: newShapes, newTargets: targets, push: true })
         },
         setHash,
     })
@@ -1367,10 +1422,11 @@ export function Body() {
                 console.log("clearing UrlFragmentShapes")
                 setUrlFragmentShapes(null)
                 setUrlFragmentTargets(null)
+                setUrlSetMetadata(null)
                 return
             }
         },
-        [ stateInUrlFragment, setUrlFragmentShapes, setUrlFragmentTargets, ]
+        [ stateInUrlFragment, setUrlFragmentShapes, setUrlFragmentTargets, setUrlSetMetadata, ]
     )
 
     // Maintain a body `click` listener that catches un-suppressed click events, e.g. for clearing some tooltips that
@@ -1498,7 +1554,6 @@ export function Body() {
                                         e.stopPropagation()
                                         if (!shapes) return
                                         // Synchronously update window.location.hash
-                                        const shapesParam = { shapes, precisionSchemeId: urlShapesPrecisionScheme }
                                         const href = window.location.href
                                         if (navigator.clipboard) {
                                             console.log("Copying:", href)
@@ -1506,8 +1561,10 @@ export function Body() {
                                         } else {
                                             console.warn("No navigator.clipboard found")
                                         }
+                                        const shapesParam = { shapes, precisionSchemeId: urlShapesPrecisionScheme }
                                         setUrlFragmentShapes(shapesParam)
                                         setUrlFragmentTargets(rawTargets)
+                                        setUrlSetMetadata(setMetadata)
                                         // console.log("setting UrlFragmentShapes:", shapes, "current hash:", window.location.hash)
                                     }}>🔗</span>
                                 </OverlayTrigger>
@@ -1577,7 +1634,7 @@ export function Body() {
                                     setTargets={newTargets => {
                                         setTargets(newTargets)
                                         setUrlFragmentTargets(newTargets)
-                                        pushHistoryState(shapes, newTargets, false)
+                                        pushHistoryState({ shapes, newTargets })
                                     }}
                                     showDisjointSets={!rawTargets.givenInclusive}
                                     curStep={curStep}
@@ -1648,9 +1705,16 @@ export function Body() {
                                     }}
                                     updateSetMetadatum={(idx, newMetadatum) => {
                                         setSetMetadata(setMetadata => {
-                                            const newMetadata = setMetadata.slice()
-                                            newMetadata[idx] = { ...newMetadata[idx], ...newMetadatum }
-                                            return newMetadata
+                                            const newSetMetadata = setMetadata.slice()
+                                            const cur = newSetMetadata[idx] || DefaultSetMetadata[idx]
+                                            console.log(`Updating setMetadata:`, setMetadata, `newMetadata[${idx}]:`, newSetMetadata[idx], newMetadatum)
+                                            newSetMetadata[idx] = { ...cur, ...newMetadatum }
+                                            console.log("setUrlSetMetadata:", newSetMetadata)
+                                            setUrlSetMetadata(newSetMetadata)
+                                            if (shapes) {
+                                                pushHistoryState( { shapes, newTargets: targets, newSetMetadata })
+                                            }
+                                            return newSetMetadata
                                         })
                                     }}
                                     vars={vars}

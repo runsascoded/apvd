@@ -3,7 +3,6 @@ import React, {useState} from "react";
 import css from "./index.module.scss"
 import {XYRR} from "apvd";
 import Apvd from "../src/components/apvd";
-import {colors} from "./index";
 
 export default function Page() {
     return <Apvd>{() => <Body />}</Apvd>

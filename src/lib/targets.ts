@@ -28,6 +28,7 @@ export const exclusiveKeyCmp = makeSortKeys('-')
 
 export function makeTargets(given: Target[]): Targets {
     const numShapes = given[0][0].length
+    // console.log("apvd.expand_targets:", given)
     const all = apvd.expand_targets(given).all as Map<string, number>
     const noneKey = '-'.repeat(numShapes)
     const allKey = '*'.repeat(numShapes)

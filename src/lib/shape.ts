@@ -25,11 +25,12 @@ export interface XYRRT<D> {
 export type Shape<D> = Circle<D> | XYRR<D> | XYRRT<D>
 export type Shapes = Shape<number>[]
 
-export type SetMetadata = {
+export type SetMetadatum = {
     name: string
     abbrev: string
     color: string
 }
+export type SetMetadata = SetMetadatum[]
 
 export const DefaultSetMetadata = [
     { name: "A", abbrev: "A", color: '#f99'  , },  // red
@@ -38,10 +39,48 @@ export const DefaultSetMetadata = [
     { name: "D", abbrev: "D", color: '#99f'  , },  // blue
 ]
 
+export const setMetadataParam: Param<SetMetadata | null> = {
+    encode(metadata: SetMetadata | null): string | undefined {
+        if (!metadata) return undefined
+        const s = metadata.map(({ name, abbrev, color }, idx) => {
+            const defaults = DefaultSetMetadata[idx]
+            // console.log("encoding, defaults:", defaults)
+            let s = encodeURIComponent(name == defaults.name ? '' : name)
+            if (abbrev != name[0].toUpperCase()) {
+                s += `=${abbrev}`
+            }
+            if (color != defaults.color) {
+                s += `@${color}`
+            }
+            return s
+        }).join(',')
+        return s.match(/^,+$/) ? undefined : s
+    },
+    decode(v: string | undefined): SetMetadata | null {
+        // console.log("decoding setMetadata:", v)
+        if (!v) return null
+        return v.split(',').map((s, idx) => {
+            const defaults = DefaultSetMetadata[idx]
+            if (!s) return defaults
+            // console.log("decoding, defaults:", defaults)
+            const m = s.match(/(?<name>[^=@]+)(?:=(?<abbrev>[^@]))?(?:@(?<color>.*))?/)
+            if (!m) {
+                console.warn("Failed to parse set metadata:", s)
+                return defaults
+            }
+            let { name, abbrev, color } = m.groups!
+            name = name || defaults.name
+            abbrev = abbrev || name[0].toUpperCase()
+            color = color || defaults.color
+            return { name, abbrev, color }
+        })
+    }
+}
+
 export type Set = {
     idx: number
     shape: Shape<number>
-} & SetMetadata
+} & SetMetadatum
 export type S = Set
 
 export function rotate(p: R2<number>, theta: number): R2<number> {

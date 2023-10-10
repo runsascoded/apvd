@@ -89,15 +89,41 @@ export const getRegionCenter = ({ segments }: Region, fs: number[]) => {
     }
 }
 
+export type TextAnchor = "start" | "middle" | "end"
+export type DominantBaseline = "middle" | "auto" | "hanging"
 export type LabelAttrs = {
-    textAnchor: "start" | "middle" | "end"
-    dominantBaseline: "middle" | "auto" | "hanging"
+    textAnchor: TextAnchor
+    dominantBaseline: DominantBaseline
 }
 
 export function getLabelAttrs(theta: number): LabelAttrs {
     // Normal direction from label to edge of region
     const degrees = (deg(theta) + 540) % 360
-    const textAnchor = degrees < 45 ? 'end' : degrees < 135 ? 'middle' : degrees < 225 ? 'start' : degrees < 315 ? 'middle' : 'end'
-    const dominantBaseline = degrees < 45 ? 'middle' : degrees < 135 ? 'hanging' : degrees < 225 ? 'middle' : degrees < 315 ? 'auto' : 'middle'
+    let textAnchor: TextAnchor = 'end'
+    const textAnchorCutoffs: [ number, TextAnchor ][] = [
+        [  67.5,    'end' ],
+        [ 112.5, 'middle' ],
+        [ 247.5,  'start' ],
+        [ 292.5, 'middle' ],
+    ]
+    for (let [ k, v ] of textAnchorCutoffs) {
+        if (degrees < k) {
+            textAnchor = v
+            break
+        }
+    }
+    let dominantBaseline: DominantBaseline = 'middle'
+    const dominantBaselineCutoffs: [ number, DominantBaseline ][] = [
+        [  22.5,  'middle' ],
+        [ 157.5, 'hanging' ],
+        [ 202.5,  'middle' ],
+        [ 337.5,    'auto' ],
+    ]
+    for (let [ k, v ] of dominantBaselineCutoffs) {
+        if (degrees < k) {
+            dominantBaseline = v
+            break
+        }
+    }
     return { textAnchor, dominantBaseline }
 }
