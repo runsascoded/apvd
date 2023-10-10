@@ -75,6 +75,7 @@ export type Props = {
     children: ReactNode
     outerChildren?: ReactNode
     className?: string
+    resizableNodeClassName?: string
     svgClassName?: string
 }
 
@@ -88,7 +89,7 @@ export type OffsetEvent = {
     offsetY: number
 }
 
-export default function Grid({ handleMouseDown, handleMouseMove, handleDrag, handleMouseUp, resizableBottom, state, children, outerChildren, className, svgClassName, }: Props) {
+export default function Grid({ handleMouseDown, handleMouseMove, handleDrag, handleMouseUp, resizableBottom, state, children, outerChildren, className, resizableNodeClassName, svgClassName, }: Props) {
     const svg = useRef<SVGSVGElement>(null)
     const {
         center: [ center, setCenter ],
@@ -303,6 +304,7 @@ export default function Grid({ handleMouseDown, handleMouseMove, handleDrag, han
             <ResizableBox
                 height={height}
                 axis={'y'}
+                className={resizableNodeClassName}
                 onResizeStart={e => {
                     console.log("resize start: height", height, "scale", scale)
                     setResizeStartHeight({ height, scale })

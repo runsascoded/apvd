@@ -129,7 +129,11 @@
       background-color: #fcc;
     }
 
+    .svgContainer {
+      padding: 0;
+    }
     .grid {
+      max-width: 100vw;
       .setLabel {
         user-select: none;
       }

@@ -8,6 +8,8 @@ import dynamic from "next/dynamic";
 import { deg, round, sqrt } from "../../lib/math";
 const StaticMathField = dynamic(() => import("react-mathquill").then(m => { m.addStyles(); return m.StaticMathField }), { ssr: false })
 
+export type CopyCoordinatesType = "JS" | "Rust" | "JSON" | "URL"
+
 export type Props = {
     sets: S[]
     showShapesMetadata: boolean

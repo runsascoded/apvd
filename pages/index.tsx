@@ -24,7 +24,7 @@ import { Disjoint, Ellipses4, Ellipses4t, InitialLayout, CirclesFlexible, toShap
 import {VarsTable} from "../src/components/tables/vars";
 import {SparkLineProps} from "../src/components/spark-lines";
 import {CircleCoords, Coord, makeVars, Vars, XYRRCoords, XYRRTCoords} from "../src/lib/vars";
-import {ShapesTable} from "../src/components/tables/shapes";
+import { CopyCoordinatesType, ShapesTable } from "../src/components/tables/shapes";
 import _ from "lodash"
 import {getHashMap, getHistoryStateHash, HashMapVal, Param, ParsedParam, parseHashParams, updatedHash, updateHashParams} from "next-utils/params";
 import CopyLayout from "../src/components/copy-layout"
@@ -1270,8 +1270,6 @@ export function Body() {
         [ curStep, scale, hoveredRegion, ],
     )
 
-    const [ showShapesMetadata, setShowShapesMetadata ] = useSessionStorageState("showShapesMetadata", { defaultValue: false })
-
     const shapesStr = useCallback(
         (fn: (shape: Shape<number>) => string) => {
             if (!shapes) return
@@ -1280,6 +1278,51 @@ export function Body() {
         },
         [ shapes ]
     )
+
+    const urlStr = useCallback(
+        () => {
+            if (!shapes || !targets) return undefined
+            const hash = updatedHash(
+                params, {
+                    s: { shapes, precisionSchemeId: urlShapesPrecisionScheme },
+                    t: targets,
+                }
+            )
+            return `${window.location.origin}${window.location.pathname}#${hash}`
+        },
+        [ shapes, targets, urlShapesPrecisionScheme, ]
+    )
+
+    const [ copyCoordinatesType, setCopyCoordinatesType ] = useSessionStorageState<CopyCoordinatesType>("copyCoordinatesType", { defaultValue: "JSON" })
+    const [ canCopyCoordinates, setCanCopyCoordinates ] = useState(false)
+    const copyCoordinates = useCallback(
+        (copyCoordinatesType: CopyCoordinatesType) => {
+            if (!canCopyCoordinates) {
+                console.warn("Can't copy coordinates yet")
+                return
+            }
+            const shapeText =
+                copyCoordinatesType == "JS" ? shapesStr(shapeStrJS) :
+                copyCoordinatesType == "Rust" ? shapesStr(shapeStrRust) :
+                copyCoordinatesType == "JSON" ? shapesStr(shapeStrJSON) :
+                urlStr()
+            if (shapeText) {
+                if (navigator.clipboard) {
+                    navigator.clipboard?.writeText(shapeText)
+                    console.log("Copied:", shapeText)
+                } else {
+                    // "This requires a secure origin — either HTTPS or localhost"
+                    // https://stackoverflow.com/a/51823007
+                    console.warn("No navigator.clipboard found:", shapeText)
+                }
+            } else {
+                console.warn("No shapeText to copy")
+            }
+        },
+        [ shapesStr, shapeStrJS, shapeStrRust, shapeStrJSON, urlStr, canCopyCoordinates ]
+    )
+
+    const [ showShapesMetadata, setShowShapesMetadata ] = useSessionStorageState("showShapesMetadata", { defaultValue: true })
 
     const setHash = useCallback(
         (hash: string) => {
@@ -1355,6 +1398,7 @@ export function Body() {
             <div className={`${css.row} ${css.content}`}>
                 <Grid
                     className={"row"}
+                    resizableNodeClassName={css.svgContainer}
                     svgClassName={css.grid}
                     state={gridState}
                     resizableBottom={true}
@@ -1613,25 +1657,41 @@ export function Body() {
                                 />
                             }
                             <div>
-                                Copy as{' '}
-                                <CopyLayout label={"JS"} shapesTextFn={() => shapesStr(shapeStrJS)} />,{' '}
-                                <CopyLayout label={"Rust"} shapesTextFn={() => shapesStr(shapeStrRust)} />,{' '}
-                                <CopyLayout label={"JSON"} shapesTextFn={() => shapesStr(shapeStrJSON)} />,{' '}
-                                <CopyLayout label={"URL"} shapesTextFn={() => {
-                                    if (!shapes || !targets) return undefined
-                                    const hash = updatedHash(
-                                        params, {
-                                            s: { shapes, precisionSchemeId: urlShapesPrecisionScheme },
-                                            t: targets,
-                                        }
-                                    )
-                                    return `${window.location.origin}${window.location.pathname}${hash}`
-                                }} wrap={true} />
+                                <select
+                                    className={css.toggleShapesMetadata}
+                                    onChange={e => setShowShapesMetadata(e.target.value == "metadata")}
+                                    value={showShapesMetadata ? "metadata" : "coords"}
+                                >
+                                    <option value={"coords"}>Show coordinates</option>
+                                    <option value={"metadata"}>Show editable metadata</option>
+                                </select>
                             </div>
                             <div>
-                                <span className={css.toggleShapesMetadata} onClick={() => setShowShapesMetadata(!showShapesMetadata)}>{
-                                    showShapesMetadata ? "Show shape coords" : "Edit shapes' metadata"}
-                                </span>
+                                <input
+                                    type={"button"}
+                                    value={"Copy coordinates"}
+                                    onClick={() => copyCoordinates(copyCoordinatesType)}
+                                /> as{' '}
+                                <select
+                                    value={copyCoordinatesType}
+                                    onClick={() => {
+                                        if (!canCopyCoordinates) {
+                                            console.log("Enabling copy coordinates")
+                                            setCanCopyCoordinates(true)
+                                        }
+                                    }}
+                                    onChange={e => {
+                                        const newCopyCoordinatesType = e.target.value as CopyCoordinatesType
+                                        console.log("newCopyCoordinatesType:", newCopyCoordinatesType)
+                                        setCopyCoordinatesType(newCopyCoordinatesType)
+                                        copyCoordinates(newCopyCoordinatesType)
+                                    }}
+                                >
+                                    <option value={"JS"}>JS</option>
+                                    <option value={"Rust"}>Rust</option>
+                                    <option value={"JSON"}>JSON</option>
+                                    <option value={"URL"}>URL</option>
+                                </select>
                             </div>
                         </DetailsSection>
                         <DetailsSection
