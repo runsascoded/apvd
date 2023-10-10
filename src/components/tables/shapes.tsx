@@ -66,7 +66,7 @@ export function ShapesTable({ sets, showShapesMetadata, setShape, updateSetMetad
             <th>Name</th>
             <th>
                 <OverlayTrigger overlay={<Tooltip>Abbreviated name: one character, used in Targets table</Tooltip>}>
-                    <span>Abb.</span>
+                    <span>Key</span>
                 </OverlayTrigger>
             </th>
             <th>Color</th>
@@ -147,7 +147,18 @@ export function ShapesTable({ sets, showShapesMetadata, setShape, updateSetMetad
                                         }}
                                     />
                                 </td>
-                                <td>{color}</td>
+                                <td>
+                                    <EditableText
+                                        className={css.shapeName}
+                                        defaultValue={color}
+                                        onChange={newColor => {
+                                            if (!newColor) return
+                                            if (CSS.supports("color", newColor)) {
+                                                updateSetMetadatum(idx, { color: newColor })
+                                            }
+                                        }}
+                                    />
+                                </td>
                                 <td>
                                     <select className={css.selectShapeType} value={shape.kind} onChange={e => {
                                         if (e.target.value === shape.kind) return
@@ -159,7 +170,7 @@ export function ShapesTable({ sets, showShapesMetadata, setShape, updateSetMetad
                                         }
                                     }}>
                                         <option value={"Circle"}>Circle</option>
-                                        <option value={"XYRR"}>Ellipase (aligned)</option>
+                                        <option value={"XYRR"}>Ellipse (aligned)</option>
                                         <option value={"XYRRT"}>Ellipse</option>
                                     </select>
                                 </td>

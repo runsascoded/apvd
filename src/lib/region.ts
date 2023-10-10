@@ -1,6 +1,6 @@
 import {R2} from "apvd";
 import {Edge, Region} from "./regions";
-import {atan2, cos, sin, sqrt} from "./math";
+import { atan2, cos, deg, sin, sqrt } from "./math";
 import {getRadii, level, rotate, Shape} from "./shape";
 
 export const getPointAtTheta = (shape: Shape<number>, theta: number): R2<number> => {
@@ -87,4 +87,17 @@ export const getRegionCenter = ({ segments }: Region, fs: number[]) => {
         x: points.map(({ point: { x }, weight }) => weight * x).reduce((a,b)=>a+b) / totalWeight,
         y: points.map(({ point: { y }, weight }) => weight * y).reduce((a,b)=>a+b) / totalWeight,
     }
+}
+
+export type LabelAttrs = {
+    textAnchor: "start" | "middle" | "end"
+    dominantBaseline: "middle" | "auto" | "hanging"
+}
+
+export function getLabelAttrs(theta: number): LabelAttrs {
+    // Normal direction from label to edge of region
+    const degrees = (deg(theta) + 540) % 360
+    const textAnchor = degrees < 45 ? 'end' : degrees < 135 ? 'middle' : degrees < 225 ? 'start' : degrees < 315 ? 'middle' : 'end'
+    const dominantBaseline = degrees < 45 ? 'middle' : degrees < 135 ? 'hanging' : degrees < 225 ? 'middle' : degrees < 315 ? 'auto' : 'middle'
+    return { textAnchor, dominantBaseline }
 }

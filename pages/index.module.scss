@@ -12,7 +12,15 @@
 .toggleShapesMetadata {
   cursor: pointer;
 }
-
+.regionTooltip {
+  div:has(.regionTooltipLabel) {
+    max-width: 20em;
+  }
+  .regionTooltipLabel {
+    margin-bottom: 0;
+    padding-bottom: 0;
+  }
+}
 .body {
   width: 100%;
   padding: 0 0.8em;

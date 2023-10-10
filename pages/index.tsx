@@ -16,7 +16,7 @@ import {entries, mapEntries, values} from "next-utils/objs";
 import {getSliderValue} from "../src/components/inputs";
 import {cos, max, min, PI, pi2, round, sin, sq3, sqrt} from "../src/lib/math";
 import Apvd, {LogLevel} from "../src/components/apvd";
-import {getMidpoint, getPointAndDirectionAtTheta, getRegionCenter} from "../src/lib/region";
+import { getLabelAttrs, getMidpoint, getPointAndDirectionAtTheta, getRegionCenter, LabelAttrs } from "../src/lib/region";
 import { BoundingBox, DefaultSetMetadata, getRadii, mapShape, S, SetMetadata, Shape, shapeBox, Shapes, shapesParam, shapeStrJS, shapeStrJSON, shapeStrRust } from "../src/lib/shape";
 import {TargetsTable} from "../src/components/tables/targets";
 import {makeTargets, Target, Targets, targetsParam} from "../src/lib/targets";
@@ -146,6 +146,8 @@ const BenFredCircles: Target[] = [
 ]
 
 export type RunningState = "none" | "fwd" | "rev"
+
+export type LabelPoint = Point & LabelAttrs
 
 export function Details({ open, toggle, summary, className, children, }: {
     open: boolean
@@ -1072,7 +1074,7 @@ export function Body() {
     const setLabelPoints = useMemo(
         () => {
             if (!exteriorRegions) return
-            const setLabelPoints: { [name: string]: Point } = {}
+            const setLabelPoints: { [name: string]: LabelPoint } = {}
             entries(exteriorRegions)
                 .forEach(([ name, { setIdx, region: { segments, } } ]) => {
                     const boundarySegments = segments.filter(({edge}) => edge.isComponentBoundary && edge.set.idx == setIdx)
@@ -1087,11 +1089,12 @@ export function Body() {
                     const theta = (theta0 + theta1) / 2
                     const [ point, direction] = getPointAndDirectionAtTheta(edge.set.shape, theta)
                     const normal = direction - pi2
+                    const { textAnchor, dominantBaseline } = getLabelAttrs(normal)
                     const r = setLabelDistance
                     const x = point.x + r * cos(normal)
                     const y = point.y + r * sin(normal)
                     // console.log(name, edge, point, degStr(direction), degStr(normal))
-                    setLabelPoints[name] = { x, y }
+                    setLabelPoints[name] = { x, y, textAnchor, dominantBaseline, }
                 })
             return setLabelPoints
         },
@@ -1099,13 +1102,13 @@ export function Body() {
     )
     const setLabels = useMemo(
         () => setLabelPoints && <g id={"setLabels"}>{
-            entries(setLabelPoints).map(([ label, { x, y } ]) => {
+            entries(setLabelPoints).map(([ label, { x, y, textAnchor, dominantBaseline } ]) => {
                 return (
                     <text
                         key={label}
                         transform={`translate(${x}, ${y}) scale(1, -1)`}
-                        textAnchor={"middle"}
-                        dominantBaseline={"middle"}
+                        textAnchor={textAnchor}
+                        dominantBaseline={dominantBaseline}
                         className={css.setLabel}
                         fontSize={setLabelSize / scale}
                     >{label}</text>
@@ -1211,14 +1214,18 @@ export function Body() {
                     const center = getRegionCenter(region, fs)
                     const containerIdxs = containers.map(set => set.idx)
                     containerIdxs.sort()
-                    const label = containerIdxs.map(idx => sets[idx].name).join('')
+                    const label = `{ ${containerIdxs.map(idx => sets[idx].name).join(', ')} }`
                     const area = totalRegionAreas && totalRegionAreas[key] || 0
                     const target = targets.all.get(key) || 0
-                    const tooltip = `${label}: ${(area / curStep.total_area.v * curStep.targets.total_area).toPrecision(3)} ${target.toPrecision(3)}`
                     // console.log("key:", key, "hoveredRegion:", hoveredRegion)
                     return (
-                        <OverlayTrigger key={`${regionIdx}-${key}`} show={key == hoveredRegion} overlay={<Tooltip
-                            onMouseOver={() => setHoveredRegion(key)}>{tooltip}</Tooltip>}>
+                        <OverlayTrigger
+                            key={`${regionIdx}-${key}`}
+                            show={key == hoveredRegion}
+                            overlay={<Tooltip className={css.regionTooltip} onMouseOver={() => setHoveredRegion(key)}>
+                                <p className={css.regionTooltipLabel}>{label}</p>
+                                {target.toPrecision(3)} → {(area / curStep.total_area.v * curStep.targets.total_area).toPrecision(3)}
+                            </Tooltip>}>
                             <text
                                 transform={`translate(${center.x}, ${center.y}) scale(1, -1)`}
                                 textAnchor={"middle"}
