@@ -33,6 +33,8 @@ import {Checkbox, Number, Select} from "../src/components/controls";
 import {useRouter} from "next/router";
 import Link from "next/link";
 import useSessionStorageState from "use-session-storage-state";
+import ClipboardSvg from "../src/components/clipboard-svg";
+import { fmt } from "../src/lib/utils";
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false })
 
@@ -322,14 +324,16 @@ export function Body() {
     const fizzBuzzLink = <A href={"https://en.wikipedia.org/wiki/Fizz_buzz"}>Fizz Buzz</A>
     const exampleTargets: LinkItem<Targets>[] = useMemo(
         () => [
-            { name: "Fizz Buzz", val: FizzBuzz, description: <>2 circles, of size 1/3 and 1/5, representing integers divisible by 3 and by 5. Inspired by {fizzBuzzLink}.</> },
-            { name: "Fizz Buzz Bazz", val: FizzBuzzBazz, description: <>Extended version of {fizzBuzzLink} above, with 3 sets, representing integers divisible by 3, 5, or 7. This is impossible to model accurately with 3 circles, but possible with ellipses.</> },
-            { name: "Fizz Buzz Bazz Qux", val: FizzBuzzBazzQux, description: <>Extended version of {fizzBuzzLink} above, with 4 sets, representing integers divisible by 2, 3, 5, or 7. Impossible to model exactly even with 4 ellipses (AFAIK!), but gradient descent gets as close as it can.</> },
+            { name: "Naturals divisible by 3 or 5", val: "#t=i5,3,1&s=0zg00002004000004i00000g00w00000&n=Divisible+by+3=3,Divisible+by+5=5", description: <>2 circles, of size 1/3 and 1/5, representing integers divisible by 3 and by 5. Inspired by {fizzBuzzLink}.</> },
+            // Converged: #t=i35,21,7,15,5,3,1&s=0zjHy6C2eF4RZ05I4g6Q82kg_YooD__EwBF-4yGGy6YuvOv&n=Divisible+by+3=3,Divisible+by+5=5,Divisible+by+7=7
+            { name: "Naturals divisible by 3, 5, or 7", val: "#t=i35,21,7,15,5,3,1&n=Divisible+by+3=3,Divisible+by+5=5,Divisible+by+7=7&s=0zg00002004000004g006Xqg00w00000yg0000200400000", description: <>Extended version of {fizzBuzzLink} above, with 3 sets, representing integers divisible by 3, 5, or 7. This is impossible to model accurately with 3 circles, but possible with ellipses.</> },
+            { name: "Naturals divisible by 2, 3, 5, or 7", val: "#t=i105,70,35,42,21,14,7,30,15,10,5,6,3,2,1&n=Divisible+by+2=2,Divisible+by+3=3,Divisible+by+5=5,Divisible+by+7=7&s=0zg00002004000004g006Xqg00w00000yg00002004000004g00mXqg00w00000", description: <>Extended version of {fizzBuzzLink} above, with 4 sets, representing integers divisible by 2, 3, 5, or 7. Impossible to model exactly even with 4 ellipses (AFAIK!), but gradient descent gets as close as it can.</> },
+            // #t=i105,70,35,42,21,14,7,30,15,10,5,6,3,2,1&s=0BaOs1ny0rxZj_cs4oDa6n2hoczDDWYMynp-5w14V5RH_Tq40N4s1QgDwYPc4vo&n=Divisible+by+2=2,Divisible+by+3=3,Divisible+by+5=5,Divisible+by+7=7
             // { name: "3 symmetric sets", val: ThreeEqualCircles, description: <>Simple test case, 3 circles, one starts slightly off-center from the other two, "target" ratios require the 3 circles to be in perfectly symmetric position with each other.</> },
             { name: "Variant callers", val: /*VariantCallers*/ "#t=633,618,112,187,0,14,1,319,13,55,17,21,0,9,36&n=VarScan,SomaticSniper,Strelka=T,JSM2", description: <>Values from {VariantCallersPaperLink}, "A comparative analysis of algorithms for somatic SNV detection
                     in cancer," Fig. 3</>},
             { name: "MPower", val: "#t=42,15,16,10,10,12,25,182,60,23,13,44,13,18,11&n=KRAS,STK11,KEAP1=P,TP53", description: <>Values from "Clinical efficacy of atezolizumab plus bevacizumab and chemotherapy in KRAS-mutated non-small cell lung cancer with STK11, KEAP1, or TP53 comutations: subgroup results from the phase III IMpower150 trial", {MPowerLink}</> },
-            { name: "\"Venn Diagrams with D3.js\"", val: BenFredCircles, description: <>Example from Ben Frederickson's blog post, <A href={"https://www.benfrederickson.com/venn-diagrams-with-d3.js/"}>"Venn Diagrams with D3.js"</A>.</> },
+            { name: "\"Venn Diagrams with D3.js\"", val: "#t=i16,16,4,12,4,3,2&s=5zg0000200b4001KSA00i900000800g00&n=,,", description: <>Example from Ben Frederickson's blog post, <A href={"https://www.benfrederickson.com/venn-diagrams-with-d3.js/"}>"Venn Diagrams with D3.js"</A>.</> },
         ].map(({ name, val, description }) => ({
             name,
             val: typeof val === 'string' ? val : makeTargets(val),
@@ -476,6 +480,7 @@ export function Body() {
     const [ maxErrorRatioStepSize, setMaxErrorRatioStepSize ] = useSessionStorageState("maxErrorRatioStepSize", { defaultValue: 0.5 })
     const [ maxSteps, setMaxSteps ] = useSessionStorageState("maxSteps", { defaultValue: 10000 })
     const [ stepBatchSize, setStepBatchSize ] = useSessionStorageState("stepBatchSize", { defaultValue: 10 })
+    const [ showRegionSizes, setShowRegionSizes ] = useSessionStorageState("showRegionSizes", { defaultValue: false })
 
     const [ model, setModel ] = useState<Model | null>(null)
     const [ modelStepIdx, setModelStepIdx ] = useState<number | null>(null)
@@ -703,15 +708,16 @@ export function Body() {
             const [ min_idx, min_error ] = (batchMinStep.error.v < modelMinStep.error.v) ?
                 [ batch.min_idx + model.raw.steps.length - 1, batchMinStep.error.v ] :
                 [ model.min_idx, model.raw.min_error ]
+            const repeat_idx = batch.repeat_idx !== null ? batch.repeat_idx + model.raw.steps.length - 1 : null
             const newRawModel: apvd.Model = {
                 steps: model.raw.steps.concat(batch.raw.steps.slice(1)),
-                repeat_idx: batch.repeat_idx ? batch.repeat_idx + model.raw.steps.length - 1 : null,
+                repeat_idx,
                 min_idx,
                 min_error,
             }
             const newModel: Model = {
                 steps,
-                repeat_idx: batch.repeat_idx ? batch.repeat_idx + model.raw.steps.length - 1 : null,
+                repeat_idx,
                 min_idx,
                 min_error,
                 lastStep: batch.lastStep,
@@ -944,8 +950,9 @@ export function Body() {
         }) => {
             title = `${title} (${hotkey})`
             return <OverlayTrigger overlay={<Tooltip>{title}</Tooltip>}>
-                <span>
+                <span className={css.playbackControlButtonContainer}>
                     <Button
+                        className={css.playbackControlButton}
                         title={title}
                         onTouchEnd={e => {
                             // console.log("onTouchEnd")
@@ -1246,7 +1253,6 @@ export function Body() {
         },
         [ vStepIdx, autoCenter ]
     )
-
     const regionTooltips = useMemo(
         () =>
             curStep && sets && <g id={"regionLabels"}>{
@@ -1256,7 +1262,9 @@ export function Body() {
                     const containerIdxs = containers.map(set => set.idx)
                     containerIdxs.sort()
                     const label = `{ ${containerIdxs.map(idx => sets[idx].name).join(', ')} }`
-                    const area = totalRegionAreas && totalRegionAreas[key] || 0
+                    const gridArea = totalRegionAreas && totalRegionAreas[key] || 0
+                    const area = gridArea / curStep.total_area.v * curStep.targets.total_area
+                    const areaLabel = fmt(area)
                     const target = targets.all.get(key) || 0
                     // console.log("key:", key, "hoveredRegion:", hoveredRegion)
                     return (
@@ -1265,7 +1273,7 @@ export function Body() {
                             show={key == hoveredRegion}
                             overlay={<Tooltip className={css.regionTooltip} onMouseOver={() => setHoveredRegion(key)}>
                                 <p className={css.regionTooltipLabel}>{label}</p>
-                                {target.toPrecision(3)} → {(area / curStep.total_area.v * curStep.targets.total_area).toPrecision(3)}
+                                {fmt(target)} → {areaLabel}
                             </Tooltip>}>
                             <text
                                 transform={`translate(${center.x}, ${center.y}) scale(1, -1)`}
@@ -1275,13 +1283,13 @@ export function Body() {
                                 // Need non-empty text content in order for tooltips to appear correctly positioned in
                                 // Firefox (otherwise they end up off the screen somewhere).
                                 // TODO: file issue: https://github.com/react-bootstrap/react-bootstrap/issues
-                                opacity={0}
-                            >{label}</text>
+                                opacity={showRegionSizes ? 1 : 0}
+                            >{areaLabel}</text>
                         </OverlayTrigger>
                     )
                 })
             }</g>,
-        [ curStep, scale, hoveredRegion, totalRegionAreas, ],
+        [ curStep, scale, hoveredRegion, totalRegionAreas, showRegionSizes ],
     )
 
     const regionPaths = useMemo(
@@ -1336,6 +1344,13 @@ export function Body() {
 
     const [ copyCoordinatesType, setCopyCoordinatesType ] = useSessionStorageState<CopyCoordinatesType>("copyCoordinatesType", { defaultValue: "JSON" })
     const [ canCopyCoordinates, setCanCopyCoordinates ] = useState(false)
+    useEffect(
+        () => {
+            console.log("Enabling copy coordinates")
+            setCanCopyCoordinates(true)
+        },
+        []
+    )
     const copyCoordinates = useCallback(
         (copyCoordinatesType: CopyCoordinatesType) => {
             if (!canCopyCoordinates) {
@@ -1362,8 +1377,6 @@ export function Body() {
         },
         [ shapesStr, shapeStrJS, shapeStrRust, shapeStrJSON, urlStr, canCopyCoordinates ]
     )
-
-    const [ showShapesMetadata, setShowShapesMetadata ] = useSessionStorageState("showShapesMetadata", { defaultValue: true })
 
     const setHash = useCallback(
         (hash: string) => {
@@ -1449,6 +1462,61 @@ export function Body() {
         []
     )
 
+    const setMetadataIsDefault = useMemo(
+        () => _.isEqual(DefaultSetMetadata.slice(setMetadata.length), setMetadata),
+        [ setMetadata ]
+    )
+
+    const FastForwardButton = useCallback(
+        () => (
+            <PlaybackControl
+                title={runningState == "fwd" ? "Pause animation" : "Animate forward"}
+                hotkey={"␣"}
+                onClick={() => setRunningState(runningState == "fwd" ? "none" : "fwd")}
+                disabled={cantAdvance}
+                animating={true}
+            >{
+                runningState == "fwd" ? "⏸️" : "⏩"
+            }</PlaybackControl>
+        ),
+        [ runningState, setRunningState, cantAdvance ]
+    )
+
+    const CopyCurrentURL = useCallback(
+        () => (
+            <OverlayTrigger overlay={<Tooltip>Copy current layout to clipboard</Tooltip>}>
+                <span className={css.link} onClick={e => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    if (!shapes) return
+                    // Synchronously update window.location.hash
+                    const href = window.location.href
+                    if (navigator.clipboard) {
+                        console.log("Copying:", href)
+                        navigator.clipboard.writeText(href)
+                    } else {
+                        console.warn("No navigator.clipboard found")
+                    }
+                    const shapesParam = { shapes, precisionSchemeId: urlShapesPrecisionScheme }
+                    setUrlFragmentShapes(shapesParam)
+                    setUrlFragmentTargets(rawTargets)
+                    setUrlSetMetadata(setMetadata)
+                    // console.log("setting UrlFragmentShapes:", shapes, "current hash:", window.location.hash)
+                }}>🔗</span>
+            </OverlayTrigger>
+        ),
+        [ shapes, urlShapesPrecisionScheme, rawTargets, setMetadata, ]
+    )
+
+    const SettingsGear = useCallback(
+        (props: { onClick?: () => void }) => (
+            <OverlayTrigger overlay={<Tooltip>Click to {settingsShown ? "hide" : "show"} settings</Tooltip>}>
+                <span className={css.settingsIcon} {...props}>⚙️</span>
+            </OverlayTrigger>
+        ),
+        [ settingsShown ]
+    )
+
     return (
         <div className={css.body}>
             <div className={`${css.row} ${css.content}`}>
@@ -1496,7 +1564,7 @@ export function Body() {
                                 <PlaybackControl title={"Rewind"} hotkey={"⇧␣"} onClick={() => setRunningState(runningState == "rev" ? "none" : "rev")} disabled={cantReverse} animating={true}>{runningState == "rev" ? "⏸️" : "⏪️"}</PlaybackControl>
                                 <PlaybackControl title={"Reverse one step"} hotkey={"←"} onClick={() => revStep()} disabled={cantReverse}>⬅️</PlaybackControl>
                                 <PlaybackControl title={`Advance one ${stepIdx !== null && model && stepIdx + 1 == model.steps.length ? `batch (${stepBatchSize} steps)` : "step"}`} hotkey={"→"} onClick={() => fwdStep()} disabled={cantAdvance || stepIdx == maxSteps}>➡️</PlaybackControl>
-                                <PlaybackControl title={"Animate forward"} hotkey={"␣"} onClick={() => setRunningState(runningState == "fwd" ? "none" : "fwd")} disabled={cantAdvance} animating={true}>{runningState == "fwd" ? "⏸️" : "⏩"}</PlaybackControl>
+                                <FastForwardButton />
                                 <PlaybackControl title={"Jump to last computed step"} hotkey={"⌘→"} onClick={() => {
                                     if (!model) return
                                     setStepIdx(model.steps.length - 1)
@@ -1548,29 +1616,8 @@ export function Body() {
                             open={settingsShown}
                             toggle={setSettingsShown}
                             summary={<>
-                                <OverlayTrigger overlay={<Tooltip>Copy current layout to clipboard</Tooltip>}>
-                                    <span className={css.link} onClick={e => {
-                                        e.preventDefault()
-                                        e.stopPropagation()
-                                        if (!shapes) return
-                                        // Synchronously update window.location.hash
-                                        const href = window.location.href
-                                        if (navigator.clipboard) {
-                                            console.log("Copying:", href)
-                                            navigator.clipboard.writeText(href)
-                                        } else {
-                                            console.warn("No navigator.clipboard found")
-                                        }
-                                        const shapesParam = { shapes, precisionSchemeId: urlShapesPrecisionScheme }
-                                        setUrlFragmentShapes(shapesParam)
-                                        setUrlFragmentTargets(rawTargets)
-                                        setUrlSetMetadata(setMetadata)
-                                        // console.log("setting UrlFragmentShapes:", shapes, "current hash:", window.location.hash)
-                                    }}>🔗</span>
-                                </OverlayTrigger>
-                                <OverlayTrigger overlay={<Tooltip>Click to {settingsShown ? "hide" : "show"} settings</Tooltip>}>
-                                    <span className={css.settingsIcon}>⚙️</span>
-                                </OverlayTrigger>
+                                <CopyCurrentURL />
+                                <SettingsGear />
                             </>}
                         >
                             <Number
@@ -1586,9 +1633,13 @@ export function Body() {
                             {/*<Checkbox label={"Edge points"} checked={showEdgePoints} setChecked={setShowEdgePoints} />*/}
                             <Checkbox label={"Auto-center"} checked={autoCenter} setChecked={setAutoCenter} />
                             <Checkbox label={"State in URL"} checked={stateInUrlFragment} setChecked={setStateInUrlFragment} />
+                            <Checkbox label={"Region sizes"} checked={showRegionSizes} setChecked={setShowRegionSizes} />
                             <Select
                                 label={"URL shapes precision"}
-                                tooltip={"Number of bits of precision to use for each shape's coordinates in URL: <mantissa>e<exponent>"}
+                                tooltip={<>
+                                    <p>{"Number of bits of precision to use for each shape's coordinates in URL: <mantissa>e<exponent>"}</p>
+                                    <p>Enables trading off some precision for shorter URLs</p>
+                                </>}
                                 value={urlShapesPrecisionScheme}
                                 setValue={setUrlShapesPrecisionScheme}>{
                                 precisionSchemes.map(({id, mantBits, expBits}, idx) =>
@@ -1672,21 +1723,6 @@ export function Body() {
                     </div>
                     <div className={col5}>
                         <DetailsSection
-                            title={"Vars"}
-                            open={varsShown}
-                            toggle={setVarsShown}
-                            tooltip={"Shapes' coordinates: raw values, and overall error gradient with respect to each coordinate"}
-                        >{
-                            curStep && vars && sets && error && sparkLineCellProps &&
-                            <VarsTable
-                                vars={vars}
-                                sets={sets}
-                                curStep={curStep}
-                                error={error}
-                                {...sparkLineCellProps}
-                            />
-                        }</DetailsSection>
-                        <DetailsSection
                             title={"Shapes"}
                             open={shapesShown}
                             toggle={setShapesShown}
@@ -1696,7 +1732,6 @@ export function Body() {
                                 vars &&
                                 <ShapesTable
                                     sets={sets || []}
-                                    showShapesMetadata={showShapesMetadata}
                                     setShape={(idx, shape) => {
                                         if (!shapes) return
                                         const newShapes = shapes.map((s, i) => i == idx ? shape : s)
@@ -1721,29 +1756,14 @@ export function Body() {
                                 />
                             }
                             <div>
-                                <select
-                                    className={css.toggleShapesMetadata}
-                                    onChange={e => setShowShapesMetadata(e.target.value == "metadata")}
-                                    value={showShapesMetadata ? "metadata" : "coords"}
-                                >
-                                    <option value={"coords"}>Show coordinates</option>
-                                    <option value={"metadata"}>Show editable metadata</option>
-                                </select>
-                            </div>
-                            <div>
-                                <input
-                                    type={"button"}
-                                    value={"Copy coordinates"}
-                                    onClick={() => copyCoordinates(copyCoordinatesType)}
-                                /> as{' '}
+                                <OverlayTrigger overlay={<Tooltip>Copy current layout to clipboard</Tooltip>}>
+                                    <span>
+                                        <ClipboardSvg className={css.clipboardSvg} onClick={() => copyCoordinates(copyCoordinatesType)}/>
+                                    </span>
+                                </OverlayTrigger>
+                                as{' '}
                                 <select
                                     value={copyCoordinatesType}
-                                    onClick={() => {
-                                        if (!canCopyCoordinates) {
-                                            console.log("Enabling copy coordinates")
-                                            setCanCopyCoordinates(true)
-                                        }
-                                    }}
                                     onChange={e => {
                                         const newCopyCoordinatesType = e.target.value as CopyCoordinatesType
                                         console.log("newCopyCoordinatesType:", newCopyCoordinatesType)
@@ -1756,6 +1776,22 @@ export function Body() {
                                     <option value={"JSON"}>JSON</option>
                                     <option value={"URL"}>URL</option>
                                 </select>
+                                {' '}
+                                <OverlayTrigger overlay={<Tooltip>
+                                    Reset shapes' metadata (names, abbreviations, colors) to default values
+                                </Tooltip>}>
+                                    <span
+                                        className={setMetadataIsDefault ? css.resetMetadataDisabled : css.resetMetadata}
+                                        onClick={() => {
+                                            if (setMetadataIsDefault) return
+                                            setSetMetadata(DefaultSetMetadata.slice())
+                                            setUrlSetMetadata(DefaultSetMetadata.slice())
+                                            if (shapes) {
+                                                pushHistoryState({ shapes, newTargets: targets, newSetMetadata: DefaultSetMetadata.slice() })
+                                            }
+                                        }}
+                                    >🗑️</span>
+                                </OverlayTrigger>
                             </div>
                         </DetailsSection>
                         <DetailsSection
@@ -1765,6 +1801,21 @@ export function Body() {
                             tooltip={"Example shape arrangements (to start gradient descent from)"}
                         >{
                             layoutLinks
+                        }</DetailsSection>
+                        <DetailsSection
+                            title={"Vars"}
+                            open={varsShown}
+                            toggle={setVarsShown}
+                            tooltip={"Shapes' coordinates: raw values, and overall error gradient with respect to each coordinate"}
+                        >{
+                            curStep && vars && sets && error && sparkLineCellProps &&
+                            <VarsTable
+                                vars={vars}
+                                sets={sets}
+                                curStep={curStep}
+                                error={error}
+                                {...sparkLineCellProps}
+                            />
                         }</DetailsSection>
                     </div>
                 </div>
@@ -1779,10 +1830,34 @@ export function Body() {
                             <li>Compute intersections and areas (using "<A href={"https://en.wikipedia.org/wiki/Dual_number"}>dual numbers</A>" to preserve derivatives)</li>
                             <li>Gradient-descend shapes' coordinates (against overall error) until areas match targets</li>
                         </ul>
-                        <h4>See also</h4>
+                        <h3>Usage</h3>
+                        <ul>
+                            <li>Click <FastForwardButton /> to continuously adjust the shapes to overlap closer to the desired values</li>
+                            <li>
+                                Inspect and edit sections:
+                                <ul>
+                                    <li><strong>Targets</strong>: current target values (editable)</li>
+                                    <li><strong>Examples</strong>: sample target values</li>
+                                    <li><strong>Error Plot</strong>: overall error over time</li>
+                                    <li><strong>Shapes</strong>: names and colors (editable), view/copy current coordinates</li>
+                                    <li><strong>Layouts</strong>: sample arrangements</li>
+                                    <li><strong>Vars</strong>: shape coordinates and gradients</li>
+                                </ul>
+                            </li>
+                            <li>
+                                Inspect and edit gradient-descent parameters and other settings under
+                                <span
+                                    className={css.settingsGearInline}
+                                    onClick={() => setSettingsShown(!settingsShown)}
+                                >
+                                    <SettingsGear />
+                                </span>
+                            </li>
+                        </ul>
+                        <h3>See also</h3>
                         <ul>
                             <li><A href={"https://github.com/runsascoded/shapes"}>runsascoded/shapes</A>: differentiable shape-intersections in Rust (compiled to WASM for use here)</li>
-                            <li><A href={"https://github.com/runsascoded/apvd"}>runsascoded/apvd</A>: this app</li>
+                            <li><A href={"https://github.com/runsascoded/apvd"}>runsascoded/apvd</A>: repository for this app</li>
                             <li><A href={"/ellipses"}>Ellipse-intersection demo</A> (earlier version, draggable but non-differentiable)</li>
                         </ul>
                     </div>

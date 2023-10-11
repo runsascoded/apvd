@@ -105,3 +105,5 @@ export const spaces = (n: number) => {
 }
 
 export type State<T> = [T, Dispatch<SetStateAction<T>>]
+
+export const fmt = (value: number, n: number = 3) => value.toPrecision(n).replace(/\.?0+$/, '')

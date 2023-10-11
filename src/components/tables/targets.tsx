@@ -6,6 +6,7 @@ import {SparkLineCell, SparkLineProps, SparkNum} from "../spark-lines";
 import {S} from "../../lib/shape";
 import {abs} from "../../lib/math";
 import {makeTargets, Target, Targets} from "../../lib/targets";
+import { fmt } from "../../lib/utils";
 
 export function getNegativeEntries(targets: Targets): Map<string, number> {
     const entries: Target[] = []
@@ -112,7 +113,7 @@ export function TargetsTable(
         const valueStr =
             editingValue && editingValue[0] == key
                 ? editingValue[1]
-                : value.toPrecision(3).replace(/\.?0+$/, '')
+                : fmt(value)
         return <tr className={className} key={key}>
             <td className={`${css.val} ${negativeKey}`}>{name}</td>
             <td className={`${css.val} ${css.targetVal}`}>

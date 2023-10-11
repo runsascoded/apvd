@@ -21,6 +21,37 @@
     padding-bottom: 0;
   }
 }
+.clipboardSvg {
+  cursor: pointer;
+  margin: 2px;
+}
+.resetMetadata {
+  cursor: pointer;
+}
+.resetMetadataDisabled {
+  opacity: 0.5;
+}
+.playbackControlButtonContainer {
+  vertical-align: text-bottom;
+  .playbackControlButton {
+    padding: 0;
+    border: 0;
+    line-height: 1em;
+    background-color: transparent;
+    font-family: "Twemoji Mozilla",
+    "Apple Color Emoji",
+    "Segoe UI Emoji",
+    "Segoe UI Symbol",
+    "Noto Color Emoji",
+    "EmojiOne Color",
+    "Android Emoji",
+    sans-serif;
+  }
+}
+.settingsGearInline {
+  cursor: pointer;
+  margin: 0 0.2em;
+}
 .body {
   width: 100%;
   padding: 0 0.8em;
@@ -198,19 +229,6 @@
 
             button {
               font-size: 2em;
-              line-height: 1em;
-
-              padding: 0;
-              border: 0;
-              background-color: transparent;
-              font-family: "Twemoji Mozilla",
-              "Apple Color Emoji",
-              "Segoe UI Emoji",
-              "Segoe UI Symbol",
-              "Noto Color Emoji",
-              "EmojiOne Color",
-              "Android Emoji",
-              sans-serif;
             }
           }
         }

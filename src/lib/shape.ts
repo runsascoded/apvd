@@ -45,7 +45,7 @@ export const setMetadataParam: Param<SetMetadata | null> = {
         const s = metadata.map(({ name, abbrev, color }, idx) => {
             const defaults = DefaultSetMetadata[idx]
             // console.log("encoding, defaults:", defaults)
-            let s = encodeURIComponent(name == defaults.name ? '' : name)
+            let s = encodeURIComponent(name == defaults.name ? '' : name).replaceAll('%20', '+')
             if (abbrev != name[0].toUpperCase()) {
                 s += `=${abbrev}`
             }
@@ -70,6 +70,7 @@ export const setMetadataParam: Param<SetMetadata | null> = {
             }
             let { name, abbrev, color } = m.groups!
             name = name || defaults.name
+            name = decodeURIComponent(name.replaceAll('+', '%20'))
             abbrev = abbrev || name[0].toUpperCase()
             color = color || defaults.color
             return { name, abbrev, color }
