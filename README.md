@@ -29,24 +29,26 @@ Area-Proportional Venn Diagram generator (WIP)
 
 https://github.com/runsascoded/apvd/assets/465045/87b3c520-3413-41a1-9ea6-c2281c2fc68c
 
-- Live demo: [runsascoded.com/apvd]
-- "Targets" and initial layout can be configured via the "Examples" and "Layouts" drop-downs
-- Uses [runsascoded/shapes] to compute intersections + areas, in terms of circle's center/radius gradients, and gradient-descend to target proportions
+Live app: [runsascoded.com/apvd]:
+- "Targets" and "Layouts" allow configuring the target region sizes and initial layout
+- Uses [runsascoded/shapes] to compute intersections + areas, in terms of ellipses' center/radius/rotation gradients, and gradient-descend to target proportions
+- Up to 4 ellipses are supported (including rotations)
 
 ## Background <a id="background"></a>
-Years ago, I saw this plot in [a genomics paper](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3753564/pdf/btt375.pdf):
+Years ago, I saw this plot in [a genomics paper][Roberts 2013]:
 
 <img alt="Venn Diagram comprised of 4 ellipses" src="public/img/4-ellipses.png" width="500" />
 
-I thought:
-1. It's neat that 4 ellipses can intersect to form all 15 ($2^4-1$) possible regions (that's impossible with 4 circles)
-2. It's weird that the areas are wildly disproportionate to the numbers they represent (e.g. there's a region labeled "1" that's larger than an adjacent "112")
+I hadn't realized that 4 ellipses can intersect to form all 15 ($2^4-1$) possible regions (that's impossible with 4 circles); neat!
 
-I was curious whether the areas could be made to be _proportional_ to the numbers they represent.
-After reading up on it, it seemed that generating **"area-proportional Venn diagrams"** was essentially an open problem.
+The areas were wildly disproportionate, though. For example, there's a region labeled "1" that's larger than an adjacent "112" and smaller than an adjacent "0".
 
-### Prior art <a id="prior-art"></a>
-[Ben Frederickson] made a [circle-based generator][benfred generator] in 2013-2015 that seemed to be the state of the art:
+It turns out there are low-hanging open problems related to generating **"area-proportional Venn diagrams"**. I believe this library pushes the state of the art forward a bit (e.g. by allowing for 4 ellipses).
+
+## Prior art <a id="prior-art"></a>
+
+### "Venn Diagrams with D3.js" <a id="benfred"></a>
+[Ben Frederickson] made a [circle-based generator][benfred generator] in 2013-2015:
 
 <img alt="Venn Diagram comprised of 3 circles, with region areas displayed" src="public/img/3-circles.png" width="500" />
 
@@ -55,6 +57,19 @@ However, many inputs are impossible to model using circles, including the exampl
 https://github.com/runsascoded/apvd/assets/465045/b9dce3e3-04b2-4bf2-bdbf-ec6605be24ce
 
 *([initial layout](https://runsascoded.com/apvd#s=dzg0000002000b40001KSuQ000m900000008000&t=i16,16,4,12,4,3,2), [best approximation](https://runsascoded.com/apvd#s=dzkLaS9NJi2a9X40RLai8lAdzUS2yypU-VNeqvq&t=i16,16,4,12,4,3,2); the reported "7.36%" error is "[earth-mover distance](https://en.wikipedia.org/wiki/Earth_mover%27s_distance)", as a percentage of the overall diagram size)*
+
+Just allowing one set to be an ellipse (even "aligned" to the axes, with no rotation) is enough for this diagram to [converge][benfred example one ellipse convergence]:
+
+![](public/img/benfred%20solution%201%20aligned%20ellipse.png)
+
+### eulerAPE <a id="euler-ape"></a>
+Java applet that models up to 3 sets, using ellipses: http://www.eulerdiagrams.org/eulerAPE/
+
+Here is its solution to the example above:
+
+![](public/img/eulerAPE%20benfred.png)
+
+[Their paper][eulerAPE paper] is a great reference, and includes many examples from the literature.
 
 ### Into the ellipse <a id="ellipses"></a>
 Generalizing the shapes to be ellipses allows the example above to converge:
@@ -136,6 +151,12 @@ There's also a partial [Scala.js] implementation in [this repo's @scala branch](
 
 https://pubmed.ncbi.nlm.nih.gov/35190375/ ([supplement][mpower supplement], pg. 13): "Clinical efficacy of atezolizumab plus bevacizumab and chemotherapy in KRAS- mutated non-small cell lung cancer with STK11, KEAP1, or TP53 comutations: subgroup results from the phase III IMpower150 trial."
 
+![](public/img/zhang-et-al-2014.jpeg)
+
+Zhang _et al_ 2014
+https://liorpachter.wordpress.com/2017/08/02/how-not-to-perform-a-differential-expression-analysis-or-science/
+https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0103207
+
 ### combinatorics.org Survey <a id="survey"></a>
 https://www.combinatorics.org/files/Surveys/ds5/ds5v3-2005/VennEJC.html
 
@@ -201,3 +222,7 @@ Core code is from a [web solver](http://www.akiti.ca/Quad4Deg.html) written by [
 [shapes issues]: https://github.com/runsascoded/shapes/issues
 [Scala.js]: https://www.scala-js.org/
 [mpower supplement]: https://jitc.bmj.com/content/jitc/10/2/e003027.full.pdf?with-ds=yes
+[benfred example one ellipse convergence]: https://runsascoded.com/apvd#s=dxw86-opKzMOrH2jOCzPEwDxATi9k2QwqTW9HhX8NLe&t=i16,16,4,12,4,3,2
+[eulerAPE paper]: https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0101717
+
+[Roberts 2013]: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3753564/pdf/btt375.pdf
