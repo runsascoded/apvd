@@ -3,13 +3,17 @@ Area-Proportional Venn Diagram generator (WIP)
 
 <!-- toc -->
 - [Demo: gradient descent toward target region sizes](#demo)
+- [Examples](#examples)
+    - [N.D. Roberts et al, 2013Roberts 2013](#roberts-2013)
+    - [West et al, 2013mpower](#mpower)
+    - [Zhang et al, 2014Zhang 2014](#zhang-2014)
 - [Background](#background)
-    - [Prior art](#prior-art)
-    - [Into the ellipse](#ellipses)
-        - [4 sets](#4-sets)
-    - [Future directions](#future-directions)
-        - [Polygons](#polygons)
-        - [Splines](#splines)
+- [Prior art](#prior-art)
+    - ["Venn Diagrams with D3.js"](#benfred)
+    - [eulerAPE](#euler-ape)
+- [Future directions](#future-directions)
+    - [Polygons](#polygons)
+    - [Splines](#splines)
 - [Methods](#methods)
 - [Status](#status)
     - [Earlier versions of apvd](#earlier)
@@ -84,9 +88,9 @@ This one basically [converges][zhang 2014 best], though it took 100k's of steps:
 Lots of room to position the labels better…
 
 ## Background <a id="background"></a>
-Years ago, I saw a few of these diagrams in the wild. I hadn't realized that 4 ellipses can intersect to form all 15 ($2^4-1$) possible regions (that's impossible with 4 circles); neat!
+When I first saw diagrams like this in the wild, I hadn't realized that 4 ellipses can intersect to form all 15 ($2^4-1$) possible regions. I knew it was impossible with 4 circles, but the added power from slightly relaxing the shapes was intriguing!
 
-The wildly disproportionate areas bugged me, though. I looked into it a bit, and found there are relatively low-hanging open problems related to generating **"area-proportional Venn diagrams"**.
+The wildly disproportionate areas bugged me, though. I read up on it a bit, and found some relatively accessible open problems related to generating **"area-proportional Venn diagrams"**.
 
 I believe this library pushes the state of the art forward a bit (e.g. by allowing for 4 ellipses), and hopefully provides a platform for further progress.
 
@@ -97,7 +101,9 @@ I believe this library pushes the state of the art forward a bit (e.g. by allowi
 
 <img alt="Venn Diagram comprised of 3 circles, with region areas displayed" src="public/img/3-circles.png" width="500" />
 
-However, many inputs are impossible to model using circles, including the example above: $|A \cap B \cap C|$ should be equal to $|A \cap B \setminus C|$ and $|A \cap C \setminus B|$, and twice the size of $|B \cap C \setminus A|$, but it's smaller than all three. Running apvd on this input corroborates that three circles can only get within about 7% of these values:
+However, many inputs are impossible to model using circles, including the example above: $|A \cap B \cap C|$ should be equal to $|A \cap B \setminus C|$ and $|A \cap C \setminus B|$, and twice the size of $|B \cap C \setminus A|$, but it's smaller than all three.
+
+∧p∨d corroborates that three circles can only get within about 7% of these values:
 
 https://github.com/runsascoded/apvd/assets/465045/b9dce3e3-04b2-4bf2-bdbf-ec6605be24ce
 
@@ -108,7 +114,7 @@ Allowing just one set to be an ellipse (even "aligned" to the axes, with no rota
 ![](public/img/benfred%20solution%201%20aligned%20ellipse.png)
 
 ### eulerAPE <a id="euler-ape"></a>
-[eulerAPE] is a Java applet that models up to 3 sets, using ellipses:
+[eulerAPE] is a Java applet that models up to 3 sets using ellipses:
 
 Here is its solution to the example above:
 
@@ -189,18 +195,18 @@ https://www.combinatorics.org/files/Surveys/ds5/ds5v3-2005/VennTriangleEJC.html
 https://www.combinatorics.org/files/Surveys/ds5/ds5v3-2005/VennPoly67EJC.html
 
 > Shown below is a 6-Venn diagram formed entirely from curves drawn from axis-aligned edges. It is a minimum-area diagram; that is, each region is composed of a single square of unit area. Note that many edges overlap, so the diagram is [infinitely intersecting](https://www.combinatorics.org/files/Surveys/ds5/ds5v3-2005/VennOtherEJC.html#infinite). As with many other diagrams in these pages, regions are coloured by weight. The diagrams on this page are from \[[CR05](https://www.combinatorics.org/files/Surveys/ds5/ds5v3-2005/VennRefs.html#CR05)\].
-> <img src="public/img/polyvenn6-diag.png" width="300" />
+> <img src="./public/img/polyvenn6-diag.png" width="300" />
 >
 > The six component curves of the diagram, overlaid on a grayed-out version of the entire diagram:
 > <img src="public/img/polyvenn6-curves.png" width="500" />
 >
 > This is a 7-Venn diagram formed entirely from curves drawn from axis-aligned edges. Like the above it is minimum-area and infinitely intersecting.
 >
-> <img src="public/img/polyvenn7-diag.png" width="300" />
+> <img src="./public/img/polyvenn7-diag.png" width="300" />
 >
 > The seven component curves:
 >
-> <img src="public/img/polyvenn7-curves.png" width="300" />
+> <img src="./public/img/polyvenn7-curves.png" width="300" />
 
 ### Related libraries <a id="libs"></a>
 
