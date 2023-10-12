@@ -1,7 +1,7 @@
 import Edge from "./edge";
 import {Point} from "../components/point";
 import {XY} from "./ellipse";
-import {r3} from "./math";
+import { abs, r3 } from "./math";
 import {Dispatch, SetStateAction} from "react";
 
 export const cmp = (a: number, b: number) => a - b;
@@ -106,4 +106,10 @@ export const spaces = (n: number) => {
 
 export type State<T> = [T, Dispatch<SetStateAction<T>>]
 
-export const fmt = (value: number, n: number = 3) => value.toPrecision(n).replace(/\.?0+$/, '')
+export const fmt = (value: number, n?: number) => {
+    if (n === undefined) {
+        // TODO: precision based on max sibling value
+        n = abs(value) >= 1000 ? 4 : 3
+    }
+    return value.toPrecision(n).replace(/\.?0+$/, '')
+}

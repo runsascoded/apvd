@@ -1315,7 +1315,7 @@ export function Body() {
                     const label = `{ ${containerIdxs.map(idx => sets[idx].name).join(', ')} }`
                     const gridArea = totalRegionAreas && totalRegionAreas[key] || 0
                     const area = gridArea / curStep.total_area.v * curStep.targets.total_area
-                    const areaLabel = fmt(area, 4)
+                    const areaLabel = fmt(area)
                     const target = targets.all.get(key) || 0
                     // console.log("key:", key, "hoveredRegion:", hoveredRegion)
                     return (
@@ -1324,7 +1324,7 @@ export function Body() {
                             show={key == hoveredRegion}
                             overlay={<Tooltip className={css.regionTooltip} onMouseOver={() => setHoveredRegion(key)}>
                                 <p className={css.regionTooltipLabel}>{label}</p>
-                                {fmt(target, 4)} → {areaLabel}
+                                {fmt(target)} → {areaLabel}
                             </Tooltip>}>
                             <text
                                 transform={`translate(${center.x}, ${center.y}) scale(1, -1)`}

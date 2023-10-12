@@ -113,7 +113,7 @@ export function TargetsTable(
         const valueStr =
             editingValue && editingValue[0] == key
                 ? editingValue[1]
-                : fmt(value, 4)
+                : fmt(value)
         return <tr className={className} key={key}>
             <td className={`${css.val} ${negativeKey}`}>{name}</td>
             <td className={`${css.val} ${css.targetVal}`}>
