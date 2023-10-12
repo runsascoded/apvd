@@ -10,6 +10,7 @@
         "apvd": "https://gitpkg.now.sh/runsascoded/shapes?6ac234f",
         "bootstrap": "^5.3.1",
         "buffer": "^6.0.3",
+        "d3-svg-to-png": "^0.3.1",
         "lodash": "^4.17.21",
         "next": "^13.2.4",
         "next-utils": "https://gitpkg.now.sh/runsascoded/next-utils/dist?5eb21c0",
@@ -22,6 +23,7 @@
         "react-scroll-wheel-handler": "^2.2.0",
         "react-sparklines": "^1.7.0",
         "sass": "^1.66.1",
+        "save-svg-as-png": "^1.4.17",
         "use-local-storage-state": "^19.1.0",
         "use-session-storage-state": "^18.2.0"
     },

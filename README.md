@@ -27,12 +27,19 @@ Area-Proportional Venn Diagram generator (WIP)
 
 ## Demo: gradient descent toward target region sizes <a id="demo"></a>
 
+Live app: [runsascoded.com/apvd]:
+
 https://github.com/runsascoded/apvd/assets/465045/87b3c520-3413-41a1-9ea6-c2281c2fc68c
 
-Live app: [runsascoded.com/apvd]:
-- "Targets" and "Layouts" allow configuring the target region sizes and initial layout
-- Uses [runsascoded/shapes] to compute intersections + areas, in terms of ellipses' center/radius/rotation gradients, and gradient-descend to target proportions
-- Up to 4 ellipses are supported (including rotations)
+
+The "Targets" and "Layouts" sections allow configuring the target region sizes and type/arrangement of shapes.
+
+It's faily "alpha" (see [/issues][apvd issues]), but afaik it's the first tool to optimize 4 ellipses.
+
+### Examples <a id="examples"></a>
+
+[Roberts 2013]:
+
 
 ## Background <a id="background"></a>
 Years ago, I saw this plot in [a genomics paper][Roberts 2013]:

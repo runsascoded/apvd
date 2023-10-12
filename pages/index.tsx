@@ -1,40 +1,42 @@
 'use client'
 
-import Grid, {GridState} from "../src/components/grid"
+import Grid, { GridState } from "../src/components/grid"
 import React, { DetailedHTMLProps, Dispatch, Fragment, HTMLAttributes, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import * as apvd from "apvd"
-import {train, update_log_level} from "apvd"
-import {makeModel, Model, Region, regionPath, Step} from "../src/lib/regions"
-import {Point} from "../src/components/point"
+import { train, update_log_level } from "apvd"
+import { makeModel, Model, Region, regionPath, Step } from "../src/lib/regions"
+import { Point } from "../src/components/point"
 import css from "./index.module.scss"
 import A from "next-utils/a"
 import dynamic from "next/dynamic"
 import Button from 'react-bootstrap/Button'
-import OverlayTrigger from 'react-bootstrap/OverlayTrigger'
+import OverlayTrigger, { OverlayTriggerProps } from 'react-bootstrap/OverlayTrigger'
 import Tooltip from 'react-bootstrap/Tooltip'
-import {entries, mapEntries, values} from "next-utils/objs";
-import {getSliderValue} from "../src/components/inputs";
-import { cos, degStr, max, min, PI, pi2, round, sin, sq3, sqrt } from "../src/lib/math";
-import Apvd, {LogLevel} from "../src/components/apvd";
+import { entries, mapEntries, values } from "next-utils/objs";
+import { getSliderValue } from "../src/components/inputs";
+import { cos, max, min, PI, pi2, round, sin, sq3, sqrt } from "../src/lib/math";
+import Apvd, { LogLevel } from "../src/components/apvd";
 import { getLabelAttrs, getMidpoint, getPointAndDirectionAtTheta, getRegionCenter, LabelAttrs } from "../src/lib/region";
-import { BoundingBox, DefaultSetMetadata, getRadii, mapShape, S, SetMetadatum, setMetadataParam, Shape, shapeBox, Shapes, shapesParam, shapeStrJS, shapeStrJSON, shapeStrRust, SetMetadata } from "../src/lib/shape";
-import {TargetsTable} from "../src/components/tables/targets";
-import {makeTargets, Target, Targets, targetsParam} from "../src/lib/targets";
-import { Disjoint, Ellipses4, Ellipses4t, InitialLayout, CirclesFlexible, toShape, CirclesFixed, Nested } from "../src/lib/layout";
-import {VarsTable} from "../src/components/tables/vars";
-import {SparkLineProps} from "../src/components/spark-lines";
-import {CircleCoords, Coord, makeVars, Vars, XYRRCoords, XYRRTCoords} from "../src/lib/vars";
+import { BoundingBox, DefaultSetMetadata, getRadii, mapShape, S, SetMetadata, setMetadataParam, Shape, shapeBox, Shapes, shapesParam, shapeStrJS, shapeStrJSON, shapeStrRust } from "../src/lib/shape";
+import { TargetsTable } from "../src/components/tables/targets";
+import { makeTargets, Target, Targets, targetsParam } from "../src/lib/targets";
+import { CirclesFixed, CirclesFlexible, Disjoint, Ellipses4, Ellipses4t, InitialLayout, Nested, toShape } from "../src/lib/layout";
+import { VarsTable } from "../src/components/tables/vars";
+import { SparkLineProps } from "../src/components/spark-lines";
+import { CircleCoords, Coord, makeVars, Vars, XYRRCoords, XYRRTCoords } from "../src/lib/vars";
 import { CopyCoordinatesType, ShapesTable } from "../src/components/tables/shapes";
 import _ from "lodash"
-import {getHashMap, getHistoryStateHash, HashMapVal, Param, ParsedParam, parseHashParams, updatedHash, updateHashParams} from "next-utils/params";
-import CopyLayout from "../src/components/copy-layout"
-import {precisionSchemes, ShapesParam} from "../src/lib/shapes-buffer";
-import {Checkbox, Number, Select} from "../src/components/controls";
-import {useRouter} from "next/router";
+import { getHashMap, getHistoryStateHash, HashMapVal, Param, ParsedParam, parseHashParams, updatedHash, updateHashParams } from "next-utils/params";
+import { precisionSchemes, ShapesParam } from "../src/lib/shapes-buffer";
+import { Checkbox, Number, Select } from "../src/components/controls";
+import { useRouter } from "next/router";
 import Link from "next/link";
 import useSessionStorageState from "use-session-storage-state";
 import ClipboardSvg from "../src/components/clipboard-svg";
 import { fmt } from "../src/lib/utils";
+import { useDeepCmp } from "../src/lib/use-deep-cmp-memo";
+import d3ToPng from "d3-svg-to-png"
+import { Popover } from "react-bootstrap";
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false })
 
@@ -150,7 +152,7 @@ const BenFredCircles: Target[] = [
 
 export type RunningState = "none" | "fwd" | "rev"
 
-export type LabelPoint = Point & LabelAttrs & { point: Point }
+export type LabelPoint = Point & LabelAttrs & { setIdx: number, point: Point }
 
 export function Details({ open, toggle, summary, className, children, }: {
     open: boolean
@@ -262,6 +264,8 @@ export function Links<Val>({ links, cur, setVal, setHash, }: {
     ]
 }
 
+export const GridId = "grid"
+
 export default function Page() {
     return <Apvd>{() => <Body />}</Apvd>
 }
@@ -319,6 +323,8 @@ function usePreviousValue<T>(value: T) {
     });
     return ref.current;
 }
+
+export const MaxNumShapes = 5
 
 export function Body() {
     const fizzBuzzLink = <A href={"https://en.wikipedia.org/wiki/Fizz_buzz"}>Fizz Buzz</A>
@@ -488,7 +494,6 @@ export function Body() {
     const [ runningState, setRunningState ] = useState<RunningState>("none")
     const [ frameLen, setFrameLen ] = useState(0)
     const [ autoCenter, setAutoCenter ] = useSessionStorageState("autoCenter", { defaultValue: true })
-    const [ autoCenterInterpRate, setAutoCenterInterpRate ] = useState(1)
     const [ setLabelDistance, setSetLabelDistance ] = useState(0.15)
     const [ setLabelSize, setSetLabelSize ] = useState(20)
 
@@ -521,6 +526,7 @@ export function Body() {
     const [ curStep, sets, shapes, ] = useMemo(
         () => {
             if (!model || stepIdx === null) return [ null, null ]
+            // console.log("recomputing curStep")
             if (stepIdx >= model.steps.length) {
                 console.warn("stepIdx >= model.steps.length", stepIdx, model.steps.length)
                 return [ null, null ]
@@ -1140,20 +1146,27 @@ export function Body() {
                     const x = point.x + r * cos(normal)
                     const y = point.y + r * sin(normal)
                     // console.log(name, edge, point, degStr(direction), degStr(normal))
-                    setLabelPoints[name] = { x, y, point, textAnchor, dominantBaseline, }
+                    setLabelPoints[name] = { setIdx, x, y, point, textAnchor, dominantBaseline, }
                 })
+            // console.log("new setLabelPoints:", setLabelPoints)
             return setLabelPoints
         },
         [ exteriorRegions, setLabelDistance, ]
     )
+    const allSetLabelStates = new Array(MaxNumShapes).fill(0).map(() => useState<SVGTextElement | null>(null))
+    const allSetLabelRefs = allSetLabelStates.map(([ ref ]) => ref)
     const setLabels = useMemo(
         () => setLabelPoints && <g id={"setLabels"}>{
-            entries(setLabelPoints).map(([ label, { x, y, point, textAnchor, dominantBaseline } ]) => {
+            entries(setLabelPoints).map(([ label, { setIdx, x, y, point, textAnchor, dominantBaseline } ]) => {
                 return (<Fragment key={label}>
                     {/*<circle cx={point.x} cy={point.y} r={0.05} stroke={"black"} strokeWidth={1 / scale} fill={"black"} fillOpacity={0.5} />*/}
                     {/*<circle cx={x} cy={y} r={0.05} stroke={"red"} strokeWidth={1 / scale} fill={"red"} fillOpacity={0.5} />*/}
                     <text
                         // key={label}
+                        ref={e => {
+                            // console.log(`New textnode ref #${setIdx}:`, e)
+                            allSetLabelStates[setIdx][1](e)
+                        }}
                         transform={`translate(${x}, ${y}) scale(1, -1)`}
                         textAnchor={textAnchor}
                         dominantBaseline={dominantBaseline}
@@ -1164,6 +1177,35 @@ export function Body() {
             })
         }</g>,
         [ setLabelPoints, setLabelDistance, ]
+    )
+    const labelBoxes = useMemo(
+        () => {
+            if (!curStep || !setLabelPoints) return
+            const setLabelRefs = allSetLabelRefs.slice(0, curStep.targets.n)
+            // console.log(`Including ${setLabelRefs.length} text ref bounding boxes:`, setLabelRefs)
+            // console.log("setLabelPoints:", setLabelPoints)
+            const labelBoxes = setLabelRefs.map((textNode, idx) => {
+                const setLabelPoint = values(setLabelPoints).find(({ setIdx }) => setIdx == idx)
+                if (!setLabelPoint) {
+                    console.warn(`No setLabelPoint found for setIdx ${idx}`)
+                    return null
+                }
+                const point = { x: setLabelPoint.x, y: setLabelPoint.y }
+                // console.log(`textNode ${idx}:`, textNode)
+                if (!textNode) return null
+                const textBox = textNode.getBBox()
+                const { x, y, width, height } = textBox
+                let lo = { x: point.x + x, y: point.y + y, }
+                let hi = { x: lo.x + width, y: lo.y + height }
+                return [ lo, hi ]
+                // const box = [ lo, hi, ]
+                // console.log(`box${idx}:`, ...box)
+                // return box
+            })
+            // console.log("recomputed labelBoxes:", ...([] as BoundingBox<number>[]).concat(...labelBoxes))
+            return labelBoxes
+        },
+        [ curStep, setLabelPoints, useDeepCmp(allSetLabelRefs.map(r => !!r)), ]
     )
     const boundingBox = useMemo(
         () => {
@@ -1182,31 +1224,40 @@ export function Body() {
                             }
                         ]
                     )
-            return setLabelPoints ? values(setLabelPoints).reduce<BoundingBox<number>>(
-                (box, { x, y }) => [
-                    { x: min(x, box[0].x), y: min(y, box[0].y), },
-                    { x: max(x, box[1].x), y: max(y, box[1].y), },
-                ],
+            // console.log("recomputing boundingBox:", ...shapesBox)
+            if (!labelBoxes) return shapesBox
+            const expandedBox = labelBoxes.reduce<BoundingBox<number>>(
+                (curBox, textBox, idx) => {
+                    if (!textBox) return curBox
+                    // console.log(`textBox${idx}:`, ...textBox)
+                    return [
+                        { x: min(curBox[0].x, textBox[0].x), y: min(curBox[0].y, textBox[0].y), },
+                        { x: max(curBox[1].x, textBox[1].x), y: max(curBox[1].y, textBox[1].y), },
+                    ]
+                },
                 shapesBox
-            ) : shapesBox
+            )
+            // console.log("expandedBox:", ...expandedBox)
+            return expandedBox
         },
-        [ curStep, setLabelPoints, ]
+        [ curStep, shapes, useDeepCmp(labelBoxes), ]
     )
 
     const panZoom = useCallback(
-        (interp: number) => {
-            if (!boundingBox || !interp) return
+        () => {
+            if (!boundingBox) return
             const [ lo, hi ] = boundingBox
             const sceneCenter = { x: (lo.x + hi.x) / 2, y: (lo.y + hi.y) / 2, }
             const width = hi.x - lo.x
             const height = hi.y - lo.y
             const sceneScale = min(gridWidth / width, gridHeight / height) * 0.9
             const newCenter = {
-                x: gridCenter.x + (sceneCenter.x - gridCenter.x) * interp,
-                y: gridCenter.y + (sceneCenter.y - gridCenter.y) * interp,
+                x: sceneCenter.x,
+                y: sceneCenter.y,
             }
-            const newScale = scale + (sceneScale - scale) * interp
+            const newScale = sceneScale
             if (newScale !== scale) {
+                // console.log("updating gridScale:", scale, newScale)
                 setScale(newScale)
             }
             if (!_.isEqual(newCenter, gridCenter)) {
@@ -1217,26 +1268,22 @@ export function Body() {
         [ boundingBox, gridWidth, gridHeight, gridCenter, scale ]
     )
 
-    // Adjust pan/zoom toward fitting scene bounding-box, by `autoCenterInterpRate` per update
-    // NOTE: this is broken with autoCenterInterpRate < 1, each `panZoom` call updates grid params that invalidate
-    // `panZoom`, which re-triggers this effect, causing a "Zeno's paradox"-style infinite render loop (with each render
-    // moving closer to the end goal by a fixed fraction, never reaching the goal).
+    // Pan/Zoom to fit scene bounding-box
     useEffect(
         () => {
             if (!autoCenter) return
             if (runningState == 'none') return
-            // console.log(`panZoom(${autoCenterInterpRate}): autoCenter`)
-            panZoom(autoCenterInterpRate)
+            panZoom()
         },
-        [ curStep, stepIdx, runningState, autoCenterInterpRate, autoCenter, panZoom ]
+        [ curStep, stepIdx, runningState, autoCenter, panZoom ]
     )
 
     const prevBoundingBox = usePreviousValue(boundingBox)
     useEffect(
         () => {
             if (stepIdx == 0 && !_.isEqual(prevBoundingBox, boundingBox)) {
-                console.log("stepIdx == 0 + new bounding box: panZoom(1)")
-                panZoom(1)
+                console.log("stepIdx == 0 + new bounding box: panZoom(); prev:", ...(prevBoundingBox ? prevBoundingBox : [null]), "new:", ...(boundingBox ? boundingBox : [null]))
+                panZoom()
             }
         },
         [ boundingBox, prevBoundingBox, stepIdx, panZoom ]
@@ -1248,8 +1295,8 @@ export function Body() {
             // "Warp" to current scene bounding-box in response to a "virtual" stepIdx change (e.g. mousing over history
             // slider or error plot)
             if (!autoCenter) return
-            // console.log("setDoPanZoom(1): vStepIdx warp", vStepIdx)
-            panZoom(1)
+            // console.log("setDopanZoom(): vStepIdx warp", vStepIdx)
+            panZoom()
         },
         [ vStepIdx, autoCenter ]
     )
@@ -1442,26 +1489,6 @@ export function Body() {
         [ stateInUrlFragment, setUrlFragmentShapes, setUrlFragmentTargets, setUrlSetMetadata, ]
     )
 
-    // Maintain a body `click` listener that catches un-suppressed click events, e.g. for clearing some tooltips that
-    // don't close on their own (due to managing their own open/closed state, as part of responding to both touch- and
-    // mouse-events)
-    useEffect(
-        () => {
-            const bodyClickHandler = () => {
-                console.log("body click")
-                clearExampleTooltip()
-                clearLayoutTooltip()
-            }
-            console.log("add bodyClickHandler")
-            document.body.addEventListener('click', bodyClickHandler)
-            return () => {
-                console.log("remove bodyClickHandler")
-                document.body.removeEventListener('click', bodyClickHandler)
-            }
-        },
-        []
-    )
-
     const setMetadataIsDefault = useMemo(
         () => _.isEqual(DefaultSetMetadata.slice(setMetadata.length), setMetadata),
         [ setMetadata ]
@@ -1482,30 +1509,119 @@ export function Body() {
         [ runningState, setRunningState, cantAdvance ]
     )
 
-    const CopyCurrentURL = useCallback(
-        () => (
-            <OverlayTrigger overlay={<Tooltip>Copy current layout to clipboard</Tooltip>}>
-                <span className={css.link} onClick={e => {
+    const copyCurrentURLClick = useCallback(
+        (e: React.MouseEvent) => {
+            e.preventDefault()
+            e.stopPropagation()
+            if (!shapes) return
+            // Synchronously update window.location.hash
+            const href = window.location.href
+            if (navigator.clipboard) {
+                console.log("Copying:", href)
+                navigator.clipboard.writeText(href)
+            } else {
+                console.warn("No navigator.clipboard found")
+            }
+            const shapesParam = { shapes, precisionSchemeId: urlShapesPrecisionScheme }
+            setUrlFragmentShapes(shapesParam)
+            setUrlFragmentTargets(rawTargets)
+            setUrlSetMetadata(setMetadata)
+            // console.log("setting UrlFragmentShapes:", shapes, "current hash:", window.location.hash)
+        },
+        [ shapes, urlShapesPrecisionScheme, rawTargets, setMetadata, ]
+    )
+
+    const svgRef = useRef<SVGSVGElement | null>(null)
+    const [ svgBackgroundColor, setSvgBackgroundColor ] = useSessionStorageState<string>("svgBackgroundColor", { defaultValue: "white" })
+    const [ showSaveModal, setShowSaveModal ] = useState(false)
+    const savePngButton = useRef()
+    const saveSvgButton = useRef()
+    const SaveButton = useCallback(
+        () => {
+            // const showProps: Partial<OverlayTriggerProps> = showSaveModal ? { show: true, placement: "left" } : {}
+            const showProps = {}
+            return (
+                <OverlayTrigger show={showSaveModal} {...showProps} overlay={<Tooltip onClick={e => {
+                    console.log("showSaveModal tooltip click")
                     e.preventDefault()
                     e.stopPropagation()
-                    if (!shapes) return
-                    // Synchronously update window.location.hash
-                    const href = window.location.href
-                    if (navigator.clipboard) {
-                        console.log("Copying:", href)
-                        navigator.clipboard.writeText(href)
-                    } else {
-                        console.warn("No navigator.clipboard found")
-                    }
-                    const shapesParam = { shapes, precisionSchemeId: urlShapesPrecisionScheme }
-                    setUrlFragmentShapes(shapesParam)
-                    setUrlFragmentTargets(rawTargets)
-                    setUrlSetMetadata(setMetadata)
-                    // console.log("setting UrlFragmentShapes:", shapes, "current hash:", window.location.hash)
-                }}>🔗</span>
-            </OverlayTrigger>
-        ),
-        [ shapes, urlShapesPrecisionScheme, rawTargets, setMetadata, ]
+                }}>{
+                    showSaveModal
+                        ? <div onClick={e => {
+                            console.log("showSaveModal div container click")
+                            e.preventDefault()
+                            e.stopPropagation()
+                        }}>
+                            <input
+                                ref={savePngButton}
+                                type={"button"}
+                                value={"PNG"}
+                                onMouseDown={e => {
+                                    console.log("PNG mousedown")
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                }}
+                                onMouseUp={e => {
+                                    console.log("PNG mouseup")
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                }}
+                                onSubmit={e => {
+                                    console.log("PNG submit")
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                }}
+                                onClick={e => {
+                                    // d3ToPng(`#${GridId}`, 'plot', {
+                                    //     background: svgBackgroundColor,
+                                    // });
+                                    console.log("called png download")
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                }}
+                            />
+                            <input
+                                ref={saveSvgButton}
+                                type={"button"}
+                                value={"SVG"}
+                                onClick={e => {
+                                    const svg = svgRef.current
+                                    if (svg) {
+                                        console.log("svg:", svg)
+                                        const svgData = new XMLSerializer().serializeToString(svg)
+                                        console.log("svgData:", svgData)
+                                        const svgBlob = new Blob([svgData], { "type": "image/svg+xml;charset=utf-8" })
+                                        const svgUrl = URL.createObjectURL(svgBlob)
+                                        const downloadLink = document.createElement("a")
+                                        downloadLink.href = svgUrl
+                                        downloadLink.download = "plot.svg"
+                                        document.body.appendChild(downloadLink)
+                                        downloadLink.click()
+                                        document.body.removeChild(downloadLink)
+                                        console.log("called svg download")
+                                        e.preventDefault()
+                                        e.stopPropagation()
+                                    }
+                                }}
+                            />
+                        </div>
+                        : "Save"
+                }</Tooltip>}>
+                    <span className={css.link} onClick={e => {
+                        setShowSaveModal(!showSaveModal)
+                        console.log("setShowSaveModal:", !showSaveModal)
+                        e.preventDefault()
+                        e.stopPropagation()
+                    }}>💾</span>
+                </OverlayTrigger>
+            )},
+        [ showSaveModal, svgBackgroundColor, ]
+    )
+
+    const CopyCurrentURL = () => (
+        <OverlayTrigger overlay={<Tooltip>Copy current layout to clipboard</Tooltip>}>
+            <span className={css.link} onClick={copyCurrentURLClick}>🔗</span>
+        </OverlayTrigger>
     )
 
     const SettingsGear = useCallback(
@@ -1517,11 +1633,42 @@ export function Body() {
         [ settingsShown ]
     )
 
+    // Maintain a body `click` listener that catches un-suppressed click events, e.g. for clearing some tooltips that
+    // don't close on their own (due to managing their own open/closed state, as part of responding to both touch- and
+    // mouse-events)
+    useEffect(
+        () => {
+            const bodyClickHandler = (e: React.MouseEvent) => {
+                console.log("body click:", e, e.target)
+                clearExampleTooltip()
+                clearLayoutTooltip()
+                if (e.target === savePngButton.current || e.target === saveSvgButton.current) {
+                    console.log("body received save-button click, passing along")
+                } else {
+                    if (showSaveModal) {
+                        console.log(`body click closing save modal (${showSaveModal})`)
+                    }
+                    setShowSaveModal(false)
+                }
+            }
+            console.log("add bodyClickHandler")
+            document.body.addEventListener('click', bodyClickHandler)
+            return () => {
+                console.log("remove bodyClickHandler")
+                document.body.removeEventListener('click', bodyClickHandler)
+            }
+        },
+        []
+    )
+
     return (
         <div className={css.body}>
             <div className={`${css.row} ${css.content}`}>
                 <Grid
+                    id={GridId}
                     className={"row"}
+                    style={{ backgroundColor: svgBackgroundColor, }}
+                    svgRef={svgRef}
                     resizableNodeClassName={css.svgContainer}
                     svgClassName={css.grid}
                     state={gridState}
@@ -1568,8 +1715,8 @@ export function Body() {
                                 <PlaybackControl title={"Jump to last computed step"} hotkey={"⌘→"} onClick={() => {
                                     if (!model) return
                                     setStepIdx(model.steps.length - 1)
-                                    // console.log("setDoPanZoom(1): warp to end")
-                                    panZoom(1)
+                                    // console.log("setDopanZoom(): warp to end")
+                                    panZoom()
                                 }} disabled={!model || stepIdx === null || stepIdx + 1 == model.steps.length}>⏭️</PlaybackControl>
                             </div>
                             <div className={css.stepStats}>
@@ -1616,6 +1763,7 @@ export function Body() {
                             open={settingsShown}
                             toggle={setSettingsShown}
                             summary={<>
+                                <SaveButton />
                                 <CopyCurrentURL />
                                 <SettingsGear />
                             </>}
@@ -1822,7 +1970,7 @@ export function Body() {
                 <hr />
                 <div className={`row`}>
                     <div className={col12}>
-                        <h2><span style={{fontWeight: "bold"}}>∧</span>p<span style={{fontWeight: "bold"}}>∨</span>d</h2>
+                        <h2 id={"readme"}><span style={{fontWeight: "bold"}}>∧</span>p<span style={{fontWeight: "bold"}}>∨</span>d</h2>
                         <p>Area-Proportional Venn-Diagrams</p>
                         <p>Given "target" values (desired sizes for up to 4 sets, and all possible subsets):</p>
                         <ul>
@@ -1830,7 +1978,7 @@ export function Body() {
                             <li>Compute intersections and areas (using "<A href={"https://en.wikipedia.org/wiki/Dual_number"}>dual numbers</A>" to preserve derivatives)</li>
                             <li>Gradient-descend shapes' coordinates (against overall error) until areas match targets</li>
                         </ul>
-                        <h3>Usage</h3>
+                        <h3 id={"usage"}>Usage</h3>
                         <ul>
                             <li>Click <FastForwardButton /> to continuously adjust the shapes to overlap closer to the desired values</li>
                             <li>

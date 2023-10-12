@@ -1,4 +1,4 @@
-import React, {MouseEvent, ReactNode, useCallback, useEffect, useMemo, useRef, useState} from "react";
+import React, { MouseEvent, MutableRefObject, ReactNode, SVGProps, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {ResizableBox} from 'react-resizable';
 import {Point} from "./point";
 import {State} from "../lib/utils";
@@ -72,6 +72,7 @@ export type Props = {
     handleMouseUp?: () => void
     resizableBottom?: boolean
     state: GridState
+    svgRef?: MutableRefObject<SVGSVGElement | null>
     children: ReactNode
     outerChildren?: ReactNode
     className?: string
@@ -89,8 +90,24 @@ export type OffsetEvent = {
     offsetY: number
 }
 
-export default function Grid({ handleMouseDown, handleMouseMove, handleDrag, handleMouseUp, resizableBottom, state, children, outerChildren, className, resizableNodeClassName, svgClassName, }: Props) {
-    const svg = useRef<SVGSVGElement>(null)
+export default function Grid(
+    {
+        handleMouseDown,
+        handleMouseMove,
+        handleDrag,
+        handleMouseUp,
+        resizableBottom,
+        state,
+        svgRef,
+        children,
+        outerChildren,
+        className,
+        resizableNodeClassName,
+        svgClassName,
+        ...svgProps
+    }: Props & SVGProps<SVGSVGElement>
+) {
+    const svg = svgRef || useRef<SVGSVGElement>(null)
     const {
         center: [ center, setCenter ],
         scale: [ scale, setScale ],
@@ -276,6 +293,7 @@ export default function Grid({ handleMouseDown, handleMouseMove, handleDrag, han
     // console.log("Grid:", width, height, scale, center)
     const svgNode = (
         <svg
+            {...svgProps}
             ref={svg}
             viewBox={`0 0 ${width} ${height}`}
             className={`${css.grid || ''} ${svgClassName || ''}`}
