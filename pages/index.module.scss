@@ -90,7 +90,7 @@
     margin-right: 0.2em;
   }
   .content {
-    max-width: 50em;
+    max-width: 80em;
     margin: 0 auto;
 
     p, h1, h2, h3, h4 {
@@ -177,7 +177,7 @@
       padding: 0;
     }
     .grid {
-      max-width: 100vw;
+      width: 100%;
       .setLabel {
         user-select: none;
       }

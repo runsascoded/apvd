@@ -141,6 +141,8 @@ const MPower: Target[] = [
     [ "0123",  11 ],
 ]
 
+const Zhang2014Href = "https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0103207"
+
 const BenFredCircles: Target[] = [
     [ "0**", 16 ],
     [ "*1*", 16 ],
@@ -287,9 +289,10 @@ const layouts: LinkItem<InitialLayout>[] = [
     { name: "Circles (fixed)", val: CirclesFixed, description: "4 circles, initialized in a diamond as in \"Circles (flexible)\" above, but these are fixed as circles (rx and ry remain constant, rotation is immaterial)", },
     { name: "Disjoint", val: Disjoint, description: "4 disjoint circles. When two (or more) sets are supposed to intersect, but don't, a synthetic penalty is added to the error computation, which is proportional to: 1) each involved set's distance to the centroid of the centers of the sets that are supposed to intersect, as well as 2) the size of the target subset. This \"disjoint\" initial layout serves demonstrate/test this behavior. More sophisticated heuristics would be useful here, as the current scheme is generally insufficient to coerce all sets into intersecting as they should." },
     { name: "Nested", val: Nested, description: "4 nested circles, stresses disjoint/contained region handling, which has known issues!" },
-    { name: "Variant callers (best)", val: "#s=Mzx868wSrqe62oBeRfH2WUHakKB1OeVQltXVsxzG7xr1hF4oblIulnX_D1OLV6jNkgSlDvFN0OqgyD3OUuvX_X_5HhRUwN1mnF1uXKhW4bbNv4zNby2cxv2iiFbpHovsstMTrteKR4hgh43U5qPl9TqywzTQ4efn1ARs8VrIS_u6Ew57sD7lVHg&t=633,618,112,187,0,14,1,319,13,55,17,21,0,9,36&n=VarScan,SomaticSniper,Strelka=T,JSM2", description: <>Best computed layout for the "variant callers" example, from {VariantCallersPaperLink}. Began from the "Circles" layout above, &lt;0.2% error.</>},
+    { name: "Variant callers (best)", val: "#s=Mzx868wSrqe62oBeRfH2WUHakKB1OeVQltXVsxzG7xr1hF4oblIulnX_D1OLV6jNkgSlDvFN0OqgyD3OUuvX_X_5HhRUwN1mnF1uXKhW4bbNv4zNby2cxv2iiFbpHovsstMTrteKR4hgh43U5qPl9TqywzTQ4efn1ARs8VrIS_u6Ew57sD7lVHg&t=633,618,112,187,0,14,1,319,13,55,17,21,0,9,36&n=VarScan,SomaticSniper,Strelka=T@#99f,JSM2@orange", description: <>Best computed layout for the "variant callers" example, from {VariantCallersPaperLink}. Began from the "Circles" layout above, &lt;0.2% error.</>},
     { name: "Variant callers (alternate)", val: "#s=MzFmMoDEjiFlaI75RLiVGFWa1LWsCUZLElD3k4Wb9MRcPZ4Fw55rJqHuFPEoGcVXr5715dyHmMD0m4hk-wsnCM54MAUEAfBJyiqu65c_DPWx0s25v7G0iFUMtLj_ah4HAMHHWffJ64khARnNgfQcpLLtcjrsqSnqPDSxMgczCQdjXopIpMOz7hg&t=633,618,112,187,0,14,1,319,13,55,17,21,0,9,36&n=VarScan,SomaticSniper,Strelka=T,JSM2", description: <>Another layout for the "variant callers" example, from {VariantCallersPaperLink}. Began from the "Ellipses" layout above, &lt;2% error.</>},
     { name: "MPower (best)", val: "#t=42,15,16,10,10,12,25,182,60,23,13,44,13,18,11&n=KRAS,STK11,KEAP1=P,TP53&s=MBa-DFxenUIPbbiY5zWUS75Sq6I_AoND3lCDN4c5cpbpL14Esh6Saq4ZExG4o8gjJ5dU0BbxsOy7d-X6u50CMd2V366UA1Ds8GIODVbI8YXEowhIyWjyf6ehH6Rv7XRt1FQ7iPZML4xDayY-CF36Azp1g3lboFO9072ceizTenkvUwA4t0T4bSM", description: <>Best computed layout for the "MPower" example, from {MPowerLink}. Began from the "Ellipses" layout above, ≈4.64% error</>},
+    { name: "Zhang et al (2014)", val: "#t=7,798,0,35,0,197,0,1097,1,569,4,303,0,3177,65&n=Microarray@#99f,Cuffdiff2,DESeq@#f99,edgeR@orange&s=MzmgfBAxbC1rTMiZ8kYE4nuXozGiSiZq1vd4lAmuwDbbwa4woSFRTlIoFpRjjCy13cZArg2sd-wZO14W8u4tasrCJm18A1j-m3flEl4G2lDGVE9Tcc15eLziQcAsMFEqzt5r4x2dg4wRGxM0Qec7ezo9XBFJgWF8nyHbSrn-Gpo5j8t9ejFU6b0", description: <>Best computed layout for <A href={Zhang2014Href}>Zhang <i>et al</i> 2014</A></>}
     // { name: "CircleLattice", layout: SymmetricCircleLattice, description: "4 circles centered at (0,0), (0,1), (1,0), (1,1)", },
 ]
 
@@ -1312,7 +1315,7 @@ export function Body() {
                     const label = `{ ${containerIdxs.map(idx => sets[idx].name).join(', ')} }`
                     const gridArea = totalRegionAreas && totalRegionAreas[key] || 0
                     const area = gridArea / curStep.total_area.v * curStep.targets.total_area
-                    const areaLabel = fmt(area)
+                    const areaLabel = fmt(area, 4)
                     const target = targets.all.get(key) || 0
                     // console.log("key:", key, "hoveredRegion:", hoveredRegion)
                     return (
@@ -1321,7 +1324,7 @@ export function Body() {
                             show={key == hoveredRegion}
                             overlay={<Tooltip className={css.regionTooltip} onMouseOver={() => setHoveredRegion(key)}>
                                 <p className={css.regionTooltipLabel}>{label}</p>
-                                {fmt(target)} → {areaLabel}
+                                {fmt(target, 4)} → {areaLabel}
                             </Tooltip>}>
                             <text
                                 transform={`translate(${center.x}, ${center.y}) scale(1, -1)`}
@@ -1619,7 +1622,7 @@ export function Body() {
     // mouse-events)
     useEffect(
         () => {
-            const bodyClickHandler = (e: React.MouseEvent) => {
+            const bodyClickHandler = (e: MouseEvent) => {
                 console.log("body click:", e, e.target)
                 clearExampleTooltip()
                 clearLayoutTooltip()

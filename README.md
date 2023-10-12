@@ -36,9 +36,47 @@ The "Targets" and "Layouts" sections allow configuring the target region sizes a
 
 It's faily "alpha" (see [/issues][apvd issues]), but afaik it's the first tool to optimize 4 ellipses.
 
-### Examples <a id="examples"></a>
+## Examples <a id="examples"></a>
 
-[Roberts 2013]:
+### [N.D. Roberts et al, 2013][Roberts 2013] <a id="roberts-2013"></a>
+
+<img alt="Venn Diagram comprised of 4 ellipses" src="public/img/4-ellipses.png" width="500" />
+
+[Here's the best layout][Variant callers - best] I've found using ∧p∨d:
+
+![](public/img/variant%20callers%20-%20best.png)
+
+The error is just under 0.2%: about 1/500th of the overall area is in the wrong region.
+
+Here's a closer look at the center, with region-size labels:
+
+![](public/img/variant%20callers%20-%20best%20-%20detail.png)
+
+The "1.86" (Red ∩ Blue ∩ Yellow) should be 0, and there a missing { Red ∩ Green ∩ Yellow } of size 1. I use a rudimentary penalty that moves shapes closer together when a region is missing (the converse happens naturally via gradient descent), but it could definitely be made smarter[^1].
+
+Definitely lots of low-hanging UX improvements as well!
+
+### [West et al, 2013][mpower] <a id="mpower"></a>
+From [the supplement][mpower supplement]:
+
+![](public/img/mpower.png)
+
+∧p∨d struggles a bit with this one:
+
+![](public/img/mpower%20best.png)
+
+Error is 22.9 (4.64%); half of that is { Red ∩ Yellow ∩ Blue }, which is 1.56 instead of 12. Incorporating each region's relative error would likely produce more intuitive results[^2].
+
+(Also, the "182" for "TP53 only" is on the { TP53 ∩ STK11 } region; TODO!)
+
+[//]: # ( &#40;[supplement][mpower supplement], pg. 13&#41;: "Clinical efficacy of atezolizumab plus bevacizumab and chemotherapy in KRAS- mutated non-small cell lung cancer with STK11, KEAP1, or TP53 comutations: subgroup results from the phase III IMpower150 trial.")
+
+### [Zhang et al, 2014][Zhang 2014] <a id="zhang-2014"></a>
+
+Also [discussed by Lior Pachter][lior pachter zhang 2014]:
+
+![](public/img/zhang-et-al-2014.jpeg)
+
 
 
 ## Background <a id="background"></a>
@@ -152,18 +190,6 @@ There's also a partial [Scala.js] implementation in [this repo's @scala branch](
 
 ## Other references <a id="misc"></a>
 
-### Venn Diagrams in the wild <a id="wild"></a>
-
-![](public/img/mpower.png)
-
-https://pubmed.ncbi.nlm.nih.gov/35190375/ ([supplement][mpower supplement], pg. 13): "Clinical efficacy of atezolizumab plus bevacizumab and chemotherapy in KRAS- mutated non-small cell lung cancer with STK11, KEAP1, or TP53 comutations: subgroup results from the phase III IMpower150 trial."
-
-![](public/img/zhang-et-al-2014.jpeg)
-
-Zhang _et al_ 2014
-https://liorpachter.wordpress.com/2017/08/02/how-not-to-perform-a-differential-expression-analysis-or-science/
-https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0103207
-
 ### combinatorics.org Survey <a id="survey"></a>
 https://www.combinatorics.org/files/Surveys/ds5/ds5v3-2005/VennEJC.html
 
@@ -219,6 +245,10 @@ Dual / Autodiff libraries:
 [quartic.js](https://www.npmjs.com/package/quartic) (last release 2008)
 Core code is from a [web solver](http://www.akiti.ca/Quad4Deg.html) written by [David Binner](http://www.akiti.ca/ContactPage.html)
 
+[^1]: The "missing region penalty" should be proportional to the distance each shape is from the required region existing. This would allow shapes to rotate to get closer, whereas currently I just move their centers closer together, which often ends up thrashing against added error in other regions.
+
+[^2]: Currently, absolute difference between target and actual region sizes is all that is considered. Incorporating relative error is appealing, but it raises questions about what to do with missing or erroneous (shouldn't exist but do) regions. A mix of absolute and relative may be most intuitive/aesthetic; maybe a region with target 1 but size 2 is "as bad as" a target 10 that's actually 12 (twice the absolute error, but smaller relative error)…   
+
 [runsascoded/shapes]: https://github.com/runsascoded/shapes
 [Ben Frederickson]: https://github.com/benfred
 [benfred generator]: https://www.benfrederickson.com/venn-diagrams-with-d3.js/
@@ -228,8 +258,12 @@ Core code is from a [web solver](http://www.akiti.ca/Quad4Deg.html) written by [
 [apvd issues]: https://github.com/runsascoded/apvd/issues
 [shapes issues]: https://github.com/runsascoded/shapes/issues
 [Scala.js]: https://www.scala-js.org/
+[mpower]: https://pubmed.ncbi.nlm.nih.gov/35190375/
 [mpower supplement]: https://jitc.bmj.com/content/jitc/10/2/e003027.full.pdf?with-ds=yes
 [benfred example one ellipse convergence]: https://runsascoded.com/apvd#s=dxw86-opKzMOrH2jOCzPEwDxATi9k2QwqTW9HhX8NLe&t=i16,16,4,12,4,3,2
 [eulerAPE paper]: https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0101717
 
 [Roberts 2013]: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3753564/pdf/btt375.pdf
+[Variant callers - best]: https://runsascoded.com/apvd#s=Mzx868wSrqe62oBeRfH2WUHakKB1OeVQltXVsxzG7xr1hF4oblIulnX_D1OLV6jNkgSlDvFN0OqgyD3OUuvX_X_5HhRUwN1mnF1uXKhW4bbNv4zNby2cxv2iiFbpHovsstMTrteKR4hgh43U5qPl9TqywzTQ4efn1ARs8VrIS_u6Ew57sD7lVHg&t=633,618,112,187,0,14,1,319,13,55,17,21,0,9,36&n=VarScan,SomaticSniper,Strelka=T@#99f,JSM2@orange
+[lior pachter zhang 2014]: https://liorpachter.wordpress.com/2017/08/02/how-not-to-perform-a-differential-expression-analysis-or-science/
+[Zhang 2014]: https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0103207
