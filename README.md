@@ -61,7 +61,7 @@ From [the supplement][mpower supplement]:
 
 ![](public/img/mpower.png)
 
-∧p∨d struggles a bit with this one:
+∧p∨d [struggles a bit][mpower best] with this one:
 
 ![](public/img/mpower%20best.png)
 
@@ -77,23 +77,23 @@ Also [discussed by Lior Pachter][lior pachter zhang 2014]:
 
 ![](public/img/zhang-et-al-2014.jpeg)
 
+This one basically [converges][zhang 2014 best], though it took 100k's of steps:
 
+![](public/img/zhang%20et%20al%202014%20best.png)
+
+Lots of room to position the labels better…
 
 ## Background <a id="background"></a>
-Years ago, I saw this plot in [a genomics paper][Roberts 2013]:
+Years ago, I saw a few of these diagrams in the wild. I hadn't realized that 4 ellipses can intersect to form all 15 ($2^4-1$) possible regions (that's impossible with 4 circles); neat!
 
-<img alt="Venn Diagram comprised of 4 ellipses" src="public/img/4-ellipses.png" width="500" />
+The wildly disproportionate areas bugged me, though. I looked into it a bit, and found there are relatively low-hanging open problems related to generating **"area-proportional Venn diagrams"**.
 
-I hadn't realized that 4 ellipses can intersect to form all 15 ($2^4-1$) possible regions (that's impossible with 4 circles); neat!
-
-The areas were wildly disproportionate, though. For example, there's a region labeled "1" that's larger than an adjacent "112" and smaller than an adjacent "0".
-
-It turns out there are low-hanging open problems related to generating **"area-proportional Venn diagrams"**. I believe this library pushes the state of the art forward a bit (e.g. by allowing for 4 ellipses).
+I believe this library pushes the state of the art forward a bit (e.g. by allowing for 4 ellipses), and hopefully provides a platform for further progress.
 
 ## Prior art <a id="prior-art"></a>
 
 ### "Venn Diagrams with D3.js" <a id="benfred"></a>
-[Ben Frederickson] made a [circle-based generator][benfred generator] in 2013-2015:
+[Ben Frederickson] made a cool [circle-based generator][benfred generator] in 2013-2015:
 
 <img alt="Venn Diagram comprised of 3 circles, with region areas displayed" src="public/img/3-circles.png" width="500" />
 
@@ -103,44 +103,22 @@ https://github.com/runsascoded/apvd/assets/465045/b9dce3e3-04b2-4bf2-bdbf-ec6605
 
 *([initial layout](https://runsascoded.com/apvd#s=dzg0000002000b40001KSuQ000m900000008000&t=i16,16,4,12,4,3,2), [best approximation](https://runsascoded.com/apvd#s=dzkLaS9NJi2a9X40RLai8lAdzUS2yypU-VNeqvq&t=i16,16,4,12,4,3,2); the reported "7.36%" error is "[earth-mover distance](https://en.wikipedia.org/wiki/Earth_mover%27s_distance)", as a percentage of the overall diagram size)*
 
-Just allowing one set to be an ellipse (even "aligned" to the axes, with no rotation) is enough for this diagram to [converge][benfred example one ellipse convergence]:
+Allowing just one set to be an ellipse (even "aligned" to the axes, with no rotation) is enough for this diagram to [converge][benfred example one ellipse convergence]:
 
 ![](public/img/benfred%20solution%201%20aligned%20ellipse.png)
 
 ### eulerAPE <a id="euler-ape"></a>
-Java applet that models up to 3 sets, using ellipses: http://www.eulerdiagrams.org/eulerAPE/
+[eulerAPE] is a Java applet that models up to 3 sets, using ellipses:
 
 Here is its solution to the example above:
 
 ![](public/img/eulerAPE%20benfred.png)
 
-[Their paper][eulerAPE paper] is a great reference, and includes many examples from the literature.
+[Their paper][eulerAPE paper] is a great reference, and includes many examples from published papers.
 
-### Into the ellipse <a id="ellipses"></a>
-Generalizing the shapes to be ellipses allows the example above to converge:
+## Future directions <a id="future-directions"></a>
 
-https://github.com/runsascoded/apvd/assets/465045/9bc6e73d-bd7c-4795-a0fb-348fa7de6805
-
-*([initial layout](https://runsascoded.com/apvd#s=8zg0000002000400000004g0006XpXg000w0000000yg000000200040000000&t=i16,16,4,12,4,3,2), [converged](https://runsascoded.com/apvd#s=8zj3y26orq6Z8jzNF07Rj4o4yZ8ldsdmTmBm0L_CeMyjDVG4S0O0EDOW8r_LhR&t=i16,16,4,12,4,3,2))*
-
-Each ellipse has 2 more degrees of freedom than a circle (2 radii instead of 1, and a rotation parameter), which allows for representing many more 3- and 4-set inputs than circles can.
-
-#### 4 sets <a id="4-sets"></a>
-As noted [above](#motivation), ellipses allow for meaningfully representing intersections of up to 4 sets.
-
-Here's the best layout I've found for [the "variant callers" example](#motivation):
-
-![](./public/img/screenshots/variant-callers-diamond-best.png)
-
-*([live link](https://runsascoded.com/apvd#s=Mzxv4Cc95664TAhIgtTaZ1wTbpB32hca6RnYrxzN5QRgbF4oaXr5MStC6KxNYYZy5g5IuzaS1moF4lLWtIXXY-VOO2f8wNvsQk9Jqqfg0B-RDkXMZTCTpTaymPnuwF-vswFGRVwFE4hgScC1ofXRaBdnvzm84fjZ8wtEkWHaqiifUM4TVEtIbh8&t=633,618,112,187,0,14,1,319,13,55,17,21,0,9,36))*
-
-≈0.176% error is pretty good! Less than 1/500th of the diagram above is in the wrong "region" (subset of the 4 top-level sets).
-
-There's various low-hanging [improvements][apvd issues] to be made, but the ability to compute such layouts is an essentially novel capability, afaik.
-
-### Future directions <a id="future-directions"></a>
-
-#### Polygons <a id="polygons"></a>
+### Polygons <a id="polygons"></a>
 My approach should be extensible to arbitrary polygons (including non-convex), which would allow for intersections of 5 (or more?) sets.
 
 I suspect the usefulness of even a perfect layout at that level to be limited, but it would be nice to have the option, and 5-set diagrams [exist in the wild](https://www.hindawi.com/journals/bmri/2015/456479/):
@@ -149,7 +127,7 @@ I suspect the usefulness of even a perfect layout at that level to be limited, b
 
 Polygons with rounded corners should also be doable, and might be more aesthetically pleasing.
 
-#### Splines <a id="splines"></a>
+### Splines <a id="splines"></a>
 Cubic-bezier splines would be ideal, but the math is much harder; I'm not sure how to compute it exactly (using my autodiff-based approach).
 
 [This SO answer](https://stackoverflow.com/a/15845996) quotes a lost forum post outlining how to use [the divergence theorem](https://en.wikipedia.org/wiki/Divergence_theorem) to compute the area of a poly-bezier loop. It's possible that (or some approximation that is nevertheless autodiff-able) would work…
@@ -167,12 +145,14 @@ Several of these steps turn out to be nontrivial, especially:
 - propagating useful gradients through all calculations (requires an autodiff abstraction, and some care to avoid numeric instability)
 
 ## Status <a id="status"></a>
-The demo at [runsascoded.com/apvd] supports up to 4 ellipses (including allowing them to rotate relative to the axes), and arbitrary initial layouts and target region-sizes. It can gradient-descend for 10,000's of steps and converge, or reach negligible error levels, on most examples I've tested it on (several of which are linked under "Examples" in the demo app).
+The demo at [runsascoded.com/apvd] supports up to 4 ellipses (including allowing them to rotate relative to the axes), and arbitrary initial layouts and target region-sizes. It can gradient-descend for 100,000's of steps and converge, or reach negligible error levels, on most [examples](#examples) I've tested it on.
 
 Future work could involve:
 - command-line / server-based version (evolving models from multiple initial layouts in parallel)
 - more shapes (rectangles, polygons, splines)
 - more ability to configure examples, and save and share state
+
+See [/issues][apvd issues] for more info.
 
 ### Earlier versions of apvd <a id="earlier"></a>
 
@@ -258,12 +238,18 @@ Core code is from a [web solver](http://www.akiti.ca/Quad4Deg.html) written by [
 [apvd issues]: https://github.com/runsascoded/apvd/issues
 [shapes issues]: https://github.com/runsascoded/shapes/issues
 [Scala.js]: https://www.scala-js.org/
-[mpower]: https://pubmed.ncbi.nlm.nih.gov/35190375/
-[mpower supplement]: https://jitc.bmj.com/content/jitc/10/2/e003027.full.pdf?with-ds=yes
 [benfred example one ellipse convergence]: https://runsascoded.com/apvd#s=dxw86-opKzMOrH2jOCzPEwDxATi9k2QwqTW9HhX8NLe&t=i16,16,4,12,4,3,2
 [eulerAPE paper]: https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0101717
 
 [Roberts 2013]: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3753564/pdf/btt375.pdf
 [Variant callers - best]: https://runsascoded.com/apvd#s=Mzx868wSrqe62oBeRfH2WUHakKB1OeVQltXVsxzG7xr1hF4oblIulnX_D1OLV6jNkgSlDvFN0OqgyD3OUuvX_X_5HhRUwN1mnF1uXKhW4bbNv4zNby2cxv2iiFbpHovsstMTrteKR4hgh43U5qPl9TqywzTQ4efn1ARs8VrIS_u6Ew57sD7lVHg&t=633,618,112,187,0,14,1,319,13,55,17,21,0,9,36&n=VarScan,SomaticSniper,Strelka=T@#99f,JSM2@orange
+
+[mpower]: https://pubmed.ncbi.nlm.nih.gov/35190375/
+[mpower supplement]: https://jitc.bmj.com/content/jitc/10/2/e003027.full.pdf?with-ds=yes
+[mpower best]: https://runsascoded.com/apvd#t=42,15,16,10,10,12,25,182,60,23,13,44,13,18,11&n=KRAS,STK11,KEAP1=P,TP53&s=MBa-DFxenUIPbbiY5zWUS75Sq6I_AoND3lCDN4c5cpbpL14Esh6Saq4ZExG4o8gjJ5dU0BbxsOy7d-X6u50CMd2V366UA1Ds8GIODVbI8YXEowhIyWjyf6ehH6Rv7XRt1FQ7iPZML4xDayY-CF36Azp1g3lboFO9072ceizTenkvUwA4t0T4bSM
+
 [lior pachter zhang 2014]: https://liorpachter.wordpress.com/2017/08/02/how-not-to-perform-a-differential-expression-analysis-or-science/
 [Zhang 2014]: https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0103207
+[zhang 2014 best]: https://runsascoded.com/apvd#t=7,798,0,35,0,197,0,1097,1,569,4,303,0,3177,65&n=Microarray@#99f,Cuffdiff2,DESeq@#f99,edgeR@orange&s=MzmxcXrZYyppkecbYAfg4H-PdpCaRWiDeq7N44wuiJNlIm4wp8P8cuwA9Bucsmjr2dqn1zPM22wgGd1JSY0rISvxh2mUA2aXH3ag_t6G_89D8KxZnwOU6jB2JskrLQgrA2jCCHogg4hv96qke6qJW22g22WkvD-Ra6KpOXm4rQ50Y4pkpWQmTtE
+
+[eulerAPE]: http://www.eulerdiagrams.org/eulerAPE/
