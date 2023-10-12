@@ -48,13 +48,13 @@ It's faily "alpha" (see [/issues][apvd issues]), but afaik it's the first tool t
 
 [Here's the best layout][Variant callers - best] I've found using ∧p∨d:
 
-![](public/img/variant%20callers%20-%20best.png)
+<img src="public/img/variant%20callers%20-%20best.png" width="500" />
 
 The error is just under 0.2%: about 1/500th of the overall area is in the wrong region.
 
 Here's a closer look at the center, with region-size labels:
 
-![](public/img/variant%20callers%20-%20best%20-%20detail.png)
+<img src="public/img/variant%20callers%20-%20best%20-%20detail.png" width="500" />
 
 The "1.86" (Red ∩ Blue ∩ Yellow) should be 0, and there a missing { Red ∩ Green ∩ Yellow } of size 1. I use a rudimentary penalty that moves shapes closer together when a region is missing (the converse happens naturally via gradient descent), but it could definitely be made smarter[^1].
 
@@ -67,7 +67,7 @@ From [the supplement][mpower supplement]:
 
 ∧p∨d [struggles a bit][mpower best] with this one:
 
-![](public/img/mpower%20best.png)
+<img src="public/img/mpower%20best.png" width="500" />
 
 Error is 22.9 (4.64%); half of that is { Red ∩ Yellow ∩ Blue }, which is 1.56 instead of 12. Incorporating each region's relative error would likely produce more intuitive results[^2].
 
@@ -83,7 +83,7 @@ Also [discussed by Lior Pachter][lior pachter zhang 2014]:
 
 This one basically [converges][zhang 2014 best], though it took 100k's of steps:
 
-![](public/img/zhang%20et%20al%202014%20best.png)
+<img src=public/img/zhang%20et%20al%202014%20best.png width=500 />
 
 Lots of room to position the labels better…
 
@@ -118,7 +118,7 @@ Allowing just one set to be an ellipse (even "aligned" to the axes, with no rota
 
 Here is its solution to the example above:
 
-![](public/img/eulerAPE%20benfred.png)
+<img src=public/img/eulerAPE%20benfred.png width=600 />
 
 [Their paper][eulerAPE paper] is a great reference, and includes many examples from published papers.
 
@@ -195,18 +195,21 @@ https://www.combinatorics.org/files/Surveys/ds5/ds5v3-2005/VennTriangleEJC.html
 https://www.combinatorics.org/files/Surveys/ds5/ds5v3-2005/VennPoly67EJC.html
 
 > Shown below is a 6-Venn diagram formed entirely from curves drawn from axis-aligned edges. It is a minimum-area diagram; that is, each region is composed of a single square of unit area. Note that many edges overlap, so the diagram is [infinitely intersecting](https://www.combinatorics.org/files/Surveys/ds5/ds5v3-2005/VennOtherEJC.html#infinite). As with many other diagrams in these pages, regions are coloured by weight. The diagrams on this page are from \[[CR05](https://www.combinatorics.org/files/Surveys/ds5/ds5v3-2005/VennRefs.html#CR05)\].
+> 
 > <img src="./public/img/polyvenn6-diag.png" width="300" />
 >
 > The six component curves of the diagram, overlaid on a grayed-out version of the entire diagram:
+> 
 > <img src="public/img/polyvenn6-curves.png" width="500" />
 >
 > This is a 7-Venn diagram formed entirely from curves drawn from axis-aligned edges. Like the above it is minimum-area and infinitely intersecting.
 >
-> <img src="./public/img/polyvenn7-diag.png" width="300" />
+> <img src=public/img/polyvenn7-diag.png width=300 />
 >
 > The seven component curves:
 >
 > <img src="./public/img/polyvenn7-curves.png" width="300" />
+>
 
 ### Related libraries <a id="libs"></a>
 
