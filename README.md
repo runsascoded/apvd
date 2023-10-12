@@ -4,29 +4,25 @@ Area-Proportional Venn Diagram generator (WIP)
 <!-- toc -->
 - [Demo: gradient descent toward target region sizes](#demo)
 - [Examples](#examples)
-    - [N.D. Roberts et al, 2013Roberts 2013](#roberts-2013)
-    - [West et al, 2013mpower](#mpower)
-    - [Zhang et al, 2014Zhang 2014](#zhang-2014)
+    - [4 Ellipses](#4-ellipses)
+    - [3 Circles](#3-circles)
 - [Background](#background)
 - [Prior art](#prior-art)
-    - ["Venn Diagrams with D3.js"](#benfred)
-    - [eulerAPE](#euler-ape)
-- [Future directions](#future-directions)
-    - [Polygons](#polygons)
-    - [Splines](#splines)
-- [Methods](#methods)
+    - [Area-proportional + Ellipses](#area-proportional-ellipses)
+    - [Area-proportional + Circles](#area-proportional-circles)
+    - [Non-area-proportional](#non-area-proportional)
 - [Status](#status)
+- [Methods](#methods)
+    - [Quartic equation-solving for ellipse intersections](#quartic)
+    - [Autodiff](#autodiff)
+- [Future directions](#future-directions)
+    - [Better "missing region" penalty](#missing-region-penalty)
+    - [Proportional errors](#proportional-errors)
+    - [More shape types](#shapes)
+- [Other notes/references](#misc)
     - [Earlier versions of apvd](#earlier)
-        - [Draggable ellipses demo](#draggable-ellipses)
-        - [Scala.js port](#scala)
-- [Other references](#misc)
     - [combinatorics.org Survey](#survey)
-        - [5 symmetric triangles](#5-triangles)
-        - [6 triangles](#6-triangles)
-        - [Polyominoes](#polyominoes)
     - [Related libraries](#libs)
-        - [Rust](#rust)
-        - [JS](#js)
 <!-- /toc -->
 
 ## Demo: gradient descent toward target region sizes <a id="demo"></a>
@@ -38,11 +34,13 @@ https://github.com/runsascoded/apvd/assets/465045/87b3c520-3413-41a1-9ea6-c2281c
 
 The "Targets" and "Layouts" sections allow configuring the target region sizes and type/arrangement of shapes.
 
-It's faily "alpha" (see [/issues][apvd issues]), but afaik it's the first tool to optimize 4 ellipses.
+It's faily "alpha" (see [/issues]), but I believe it's "state of the art" at creating area-proportional Venn diagrams using up to 4 ellipses.
 
 ## Examples <a id="examples"></a>
 
-### [N.D. Roberts et al, 2013][Roberts 2013] <a id="roberts-2013"></a>
+### 4 Ellipses <a id="4-ellipses"></a>
+
+#### [N.D. Roberts et al, 2013][Roberts 2013] <a id="roberts-2013"></a>
 
 <img alt="Venn Diagram comprised of 4 ellipses" src="public/img/4-ellipses.png" width="500" />
 
@@ -56,11 +54,11 @@ Here's a closer look at the center, with region-size labels:
 
 <img src="public/img/variant%20callers%20-%20best%20-%20detail.png" width="500" />
 
-The "1.86" (Red ∩ Blue ∩ Yellow) should be 0, and there a missing { Red ∩ Green ∩ Yellow } of size 1. I use a rudimentary penalty that moves shapes closer together when a region is missing (the converse happens naturally via gradient descent), but it could definitely be made smarter[^1].
+The "1.86" (Red ∩ Blue ∩ Yellow) should be 0, and there a missing { Red ∩ Green ∩ Yellow } of size 1. I use a rudimentary penalty that moves shapes closer together when a region is missing (the converse happens naturally via gradient descent), but [it could definitely be made smarter](#missing-region-penalty).
 
 Definitely lots of low-hanging UX improvements as well!
 
-### [West et al, 2013][mpower] <a id="mpower"></a>
+#### [West et al, 2013][mpower] <a id="mpower"></a>
 From [the supplement][mpower supplement]:
 
 ![](public/img/mpower.png)
@@ -69,13 +67,13 @@ From [the supplement][mpower supplement]:
 
 <img src="public/img/mpower%20best.png" width="500" />
 
-Error is 22.9 (4.64%); half of that is { Red ∩ Yellow ∩ Blue }, which is 1.56 instead of 12. Incorporating each region's relative error would likely produce more intuitive results[^2].
+Error is 22.9 (4.64%); half of that is { Red ∩ Yellow ∩ Blue }, which is 1.56 instead of 12. [Incorporating each region's relative error](#proportional-errors) would likely produce more intuitive results.
 
 (Also, the "182" for "TP53 only" is on the { TP53 ∩ STK11 } region; TODO!)
 
 [//]: # ( &#40;[supplement][mpower supplement], pg. 13&#41;: "Clinical efficacy of atezolizumab plus bevacizumab and chemotherapy in KRAS- mutated non-small cell lung cancer with STK11, KEAP1, or TP53 comutations: subgroup results from the phase III IMpower150 trial.")
 
-### [Zhang et al, 2014][Zhang 2014] <a id="zhang-2014"></a>
+#### [Zhang et al, 2014][Zhang 2014] <a id="zhang-2014"></a>
 
 Also [discussed by Lior Pachter][lior pachter zhang 2014]:
 
@@ -85,25 +83,55 @@ This one basically [converges][zhang 2014 best], though it took 100k's of steps:
 
 <img src=public/img/zhang%20et%20al%202014%20best.png width=500 />
 
-Lots of room to position the labels better…
+Clearly there's room to improve the label positioning…
+
+### 3 Circles <a id="3-circles"></a>
+TODO: show ∧p∨d solutions to these…
+
+#### [Mann (2011)] [Mann (2011)] <a id="mann-2011"></a>
+
+![](public/img/mann-2011-a.webp)
+
+#### [Regenbrecht (2008)] <a id="regenbrecht-2008"></a>
+
+![](public/img/regenbrecht-2008.jpg)
+
+#### [Lenz (2006)] <a id="lenz-2006"></a>
+
+![](public/img/lenz-2006-fig5.jpeg)
 
 ## Background <a id="background"></a>
 When I first saw diagrams like this in the wild, I hadn't realized that 4 ellipses can intersect to form all 15 ($2^4-1$) possible regions. I knew it was impossible with 4 circles, but the added power from slightly relaxing the shapes was intriguing!
 
 The wildly disproportionate areas bugged me, though. I read up on it a bit, and found some relatively accessible open problems related to generating **"area-proportional Venn diagrams"**.
 
-I believe this library pushes the state of the art forward a bit (e.g. by allowing for 4 ellipses), and hopefully provides a platform for further progress.
+I believe this library pushes the state of the art forward a bit (e.g. by supporting 4 ellipses), and hopefully provides a platform for further progress.
 
 ## Prior art <a id="prior-art"></a>
 
-### "Venn Diagrams with D3.js" <a id="benfred"></a>
-[Ben Frederickson] made a cool [circle-based generator][benfred generator] in 2013-2015:
+### Area-proportional + Ellipses <a id="area-proportional-ellipses"></a>
 
-<img alt="Venn Diagram comprised of 3 circles, with region areas displayed" src="public/img/3-circles.png" width="500" />
+#### eulerAPE <a id="euler-ape"></a>
+[Java applet][eulerAPE], up to 3 ellipses, area-proportional:
 
-However, many inputs are impossible to model using circles, including the example above: $|A \cap B \cap C|$ should be equal to $|A \cap B \setminus C|$ and $|A \cap C \setminus B|$, and twice the size of $|B \cap C \setminus A|$, but it's smaller than all three.
+Here is its solution to [the example above](#benfred):
 
-∧p∨d corroborates that three circles can only get within about 7% of these values:
+<img src=public/img/eulerAPE%20benfred.png width=600 />
+
+[Their paper][eulerAPE paper] is a great reference, and includes many examples from published papers.
+
+#### [Edeap] <a id="Edeap"></a>
+[Web app][Edeap], "Euler Diagrams Drawn with Ellipses Area-Proportionally (Edeap)":
+
+![](public/img/edeap.png)
+
+The area-proportionality seems pretty imprecise, in this example and others. It seems to use a force-directed algorithm that doesn't actually seek a perfect/converged solutions.
+
+### Area-proportional + Circles <a id="area-proportional-circles"></a>
+
+Several tools generate area-proportional Venn diagrams using circles, but this doesn't allow for modeling most inputs.
+
+For example, here's ∧p∨d trying to fit the first example below using three circles:
 
 https://github.com/runsascoded/apvd/assets/465045/b9dce3e3-04b2-4bf2-bdbf-ec6605be24ce
 
@@ -113,33 +141,82 @@ Allowing just one set to be an ellipse (even "aligned" to the axes, with no rota
 
 ![](public/img/benfred%20solution%201%20aligned%20ellipse.png)
 
-### eulerAPE <a id="euler-ape"></a>
-[eulerAPE] is a Java applet that models up to 3 sets using ellipses:
+#### "Venn Diagrams with D3.js" <a id="benfred"></a>
+[Web app][benfred generator], 3 circles:
 
-Here is its solution to the example above:
+<img alt="Venn Diagram comprised of 3 circles, with region areas displayed" src="public/img/3-circles.png" width="500" />
 
-<img src=public/img/eulerAPE%20benfred.png width=600 />
+Note that the solution above is imprecise: $|A \cap B \cap C|$ should be equal to $|A \cap B \setminus C|$ and $|A \cap C \setminus B|$, and twice the size of $|B \cap C \setminus A|$, but it's smaller than all three. See [discussion above](#area-proportional-circles) about ellipses supporting convergence for this example.
 
-[Their paper][eulerAPE paper] is a great reference, and includes many examples from published papers.
+#### [BioVenn] <a id="biovenn"></a>
+- [Web app][BioVenn], [Python package][BioVenn Python], R package
+- Up to 3 circles
 
-## Future directions <a id="future-directions"></a>
+![](public/img/biovenn-example.png)
 
-### Polygons <a id="polygons"></a>
-My approach should be extensible to arbitrary polygons (including non-convex), which would allow for intersections of 5 (or more?) sets.
+#### [DeepVenn] <a id="deepvenn"></a>
+[Web app][DeepVenn] by the [BioVenn](#biovenn) author, up to 10 sets, circles only:
+![](public/img/deepvenn.png)
 
-I suspect the usefulness of even a perfect layout at that level to be limited, but it would be nice to have the option, and 5-set diagrams [exist in the wild](https://www.hindawi.com/journals/bmri/2015/456479/):
+#### [Venn-Diagram-Plotter] <a id="venn-diagram-plotter"></a>
+Windows executable, 2-3 circles:
 
-<img alt="Venn Diagram comprised of 5 nonconvex blobs" src="public/img/5-blobs.png" width="500" />
+![](public/img/VennDiagramPlotter_ThreeGroups.png)
 
-Polygons with rounded corners should also be doable, and might be more aesthetically pleasing.
+### Non-area-proportional <a id="non-area-proportional"></a>
 
-### Splines <a id="splines"></a>
-Cubic-bezier splines would be ideal, but the math is much harder; I'm not sure how to compute it exactly (using my autodiff-based approach).
+#### [InteractiVenn] <a id="InteractiVenn"></a>
 
-[This SO answer](https://stackoverflow.com/a/15845996) quotes a lost forum post outlining how to use [the divergence theorem](https://en.wikipedia.org/wiki/Divergence_theorem) to compute the area of a poly-bezier loop. It's possible that (or some approximation that is nevertheless autodiff-able) would work…
+Not area-proportional, but will draw up to 6 sets:
+
+![](public/img/interactivenn%204.png)
+
+![](public/img/interactivenn%205.png)
+
+![](public/img/interactivenn%206.png)
+
+#### [Venny] <a id="venny"></a>
+
+[Web app][Venny], up to 4 ellipses, not area-proportional:
+
+![](public/img/venny.png)
+
+#### [Pangloss] <a id="pangloss"></a>
+[Web app][Pangloss], up to 4 rectangles, not area-proportional:
+
+![](public/img/pangloss.png)
+
+#### [ggVennDiagram] <a id="ggvenndiagram"></a>
+
+R package, 2-7 sets, not area-proportional:
+
+![](public/img/ggvenndiagram.png)
+
+![](public/img/ggvenndiagram-2-7.png)
+
+#### [UGent Venn Diagram Generator] <a id="ugent"></a>
+
+[Web app][UGent Venn Diagram Generator], up to 5 sets, not area-proportional:
+
+![](public/img/ugent%204%20symmetric.png)
+![](public/img/ugent%204%20nonsymmetric.png)
+![](public/img/ugent%205%20symmetric.png)
+![](public/img/ugent%205%20nonsymmetric.png)
+
+## Status <a id="status"></a>
+The demo at [runsascoded.com/apvd] supports up to 4 ellipses (including allowing them to rotate relative to the axes), and arbitrary initial layouts and target region-sizes. It can gradient-descend for 100,000's of steps and converge, or reach negligible error levels, on most [examples](#examples) I've tested it on.
+
+Future work could involve:
+- command-line / server-based version (evolving models from multiple initial layouts in parallel)
+- more shapes (rectangles, polygons, splines)
+- more ability to configure examples, and save and share state
+
+See [/issues] for more info.
 
 ## Methods <a id="methods"></a>
-My approach in this library is to:
+This repo is primarily the "frontend" / web app; the interesting computation occurs in [runsascoded/shapes].
+
+The basic approach is to:
 1. model a "scene" with various intersecting shapes
 2. compute intersection points
 3. infer regions and sizes for each subset of the set of shapes
@@ -150,15 +227,58 @@ Several of these steps turn out to be nontrivial, especially:
 - computing intersection points between 2 ellipses (involves solving a quartic equation, as ellipses can intersect in up to 4 points)
 - propagating useful gradients through all calculations (requires an autodiff abstraction, and some care to avoid numeric instability)
 
-## Status <a id="status"></a>
-The demo at [runsascoded.com/apvd] supports up to 4 ellipses (including allowing them to rotate relative to the axes), and arbitrary initial layouts and target region-sizes. It can gradient-descend for 100,000's of steps and converge, or reach negligible error levels, on most [examples](#examples) I've tested it on.
+### Quartic equation-solving for ellipse intersections <a id="quartic"></a>
+Computing ellipse intersections can be represented as solving a system of equations that looks like:
 
-Future work could involve:
-- command-line / server-based version (evolving models from multiple initial layouts in parallel)
-- more shapes (rectangles, polygons, splines)
-- more ability to configure examples, and save and share state
+$$
+A_1x^2 + B_1xy + C_1y^2 + D_1x + E_1y + F_1 = 0 \\
+A_2x^2 + B_2xy + C_2y^2 + D_2x + E_2y + F_2 = 0 \\
+$$
 
-See [/issues][apvd issues] for more info.
+With some algebraic manipulation, this can be represented as a quartic equation. I initially used the Rust [roots] crate, but hit issues ([#29][roots#29], [#30][roots#30]), and wrote [`quartic.rs`] instead.
+
+The [nb/](./nb) folder contains notebooks with relevant math and derivations, especially:
+- [intersect-circles.ipynb](nb/intersect-circles.ipynb)
+- [quartics.ipynb](nb/quartics.ipynb)
+- [cubics.ipynb](nb/cubics.ipynb)
+
+### Autodiff <a id="autodiff"></a>
+Most of the computations related to shapes' intersections and corresponding region areas are differentiable. I use a thin wrapper ([`dual.rs`]) around [`num_dual`]'s [`DualDVec64`] for this. 
+
+[shapes#1] describes moving to statically-sized Duals, which would likely be faster, and make the code much cleaner.
+
+## Future directions <a id="future-directions"></a>
+
+### Better "missing region" penalty <a id="missing-region-penalty"></a>
+The "missing region penalty" should be proportional to the distance each shape is from the required region existing. This would allow shapes to rotate to get closer, whereas currently I just move their centers closer together, which often ends up thrashing against added error in other regions.
+
+More discussion at [shapes#10].
+
+### Proportional errors <a id="proportional-errors"></a>
+Currently, absolute difference between target and actual region sizes is all that is considered. Incorporating relative error is appealing, but it raises questions about what to do with missing or erroneous (shouldn't exist but do) regions.
+
+A mix of absolute and relative may be most intuitive/aesthetic; more discussion on [shapes#9].
+
+### More shape types <a id="shapes"></a>
+See also: [shapes#11].
+
+#### Polygons <a id="polygons"></a>
+My approach should be extensible to arbitrary polygons (including non-convex), which would allow for intersections of 5 (or more?) sets.
+
+I suspect the usefulness of even a perfect layout at that level to be limited, but it would be nice to have the option, and 5-set diagrams [exist in the wild](https://www.hindawi.com/journals/bmri/2015/456479/):
+
+<img alt="Venn Diagram comprised of 5 nonconvex blobs" src="public/img/5-blobs.png" width="500" />
+
+Polygons with rounded corners should also be doable, and might be more aesthetically pleasing.
+
+#### Splines <a id="splines"></a>
+Cubic-bezier splines would be ideal, but the math is much harder; I'm not sure how to compute it exactly (using my autodiff-based approach).
+
+[This SO answer](https://stackoverflow.com/a/15845996) quotes a lost forum post outlining how to use [the divergence theorem](https://en.wikipedia.org/wiki/Divergence_theorem) to compute the area of a poly-bezier loop. It's possible that (or some approximation that is nevertheless autodiff-able) would work…
+
+## Other notes/references <a id="misc"></a>
+- [List of Venn diagram tools for bioinformaticians][dlcompbiobiotech tool list]
+- [RectEuler]: many links to other tools
 
 ### Earlier versions of apvd <a id="earlier"></a>
 
@@ -173,8 +293,6 @@ It's implemented in JS, pre-[shapes][runsascoded/shapes], and computes intersect
 
 #### Scala.js port <a id="scala"></a>
 There's also a partial [Scala.js] implementation in [this repo's @scala branch](https://github.com/runsascoded/apvd/tree/scala), including [cubic](https://github.com/runsascoded/apvd/tree/scala/cubic/shared/src/main/scala/cubic) and [quartic](https://github.com/runsascoded/apvd/tree/scala/quartic/shared/src/main/scala/quartic) equation solvers.
-
-## Other references <a id="misc"></a>
 
 ### combinatorics.org Survey <a id="survey"></a>
 https://www.combinatorics.org/files/Surveys/ds5/ds5v3-2005/VennEJC.html
@@ -234,17 +352,13 @@ Dual / Autodiff libraries:
 [quartic.js](https://www.npmjs.com/package/quartic) (last release 2008)
 Core code is from a [web solver](http://www.akiti.ca/Quad4Deg.html) written by [David Binner](http://www.akiti.ca/ContactPage.html)
 
-[^1]: The "missing region penalty" should be proportional to the distance each shape is from the required region existing. This would allow shapes to rotate to get closer, whereas currently I just move their centers closer together, which often ends up thrashing against added error in other regions.
-
-[^2]: Currently, absolute difference between target and actual region sizes is all that is considered. Incorporating relative error is appealing, but it raises questions about what to do with missing or erroneous (shouldn't exist but do) regions. A mix of absolute and relative may be most intuitive/aesthetic; maybe a region with target 1 but size 2 is "as bad as" a target 10 that's actually 12 (twice the absolute error, but smaller relative error)…   
-
 [runsascoded/shapes]: https://github.com/runsascoded/shapes
 [Ben Frederickson]: https://github.com/benfred
 [benfred generator]: https://www.benfrederickson.com/venn-diagrams-with-d3.js/
 [pages/ellipses.tsx]: https://github.com/runsascoded/apvd/blob/main/pages/ellipses.tsx
 [runsascoded.com/apvd/ellipses]: https://runsascoded.com/apvd/ellipses
 [runsascoded.com/apvd]: https://runsascoded.com/apvd
-[apvd issues]: https://github.com/runsascoded/apvd/issues
+[/issues]: https://github.com/runsascoded/apvd/issues
 [shapes issues]: https://github.com/runsascoded/shapes/issues
 [Scala.js]: https://www.scala-js.org/
 [benfred example one ellipse convergence]: https://runsascoded.com/apvd#s=dxw86-opKzMOrH2jOCzPEwDxATi9k2QwqTW9HhX8NLe&t=i16,16,4,12,4,3,2
@@ -261,4 +375,35 @@ Core code is from a [web solver](http://www.akiti.ca/Quad4Deg.html) written by [
 [Zhang 2014]: https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0103207
 [zhang 2014 best]: https://runsascoded.com/apvd#t=7,798,0,35,0,197,0,1097,1,569,4,303,0,3177,65&n=Microarray@#99f,Cuffdiff2,DESeq@#f99,edgeR@orange&s=MzmxcXrZYyppkecbYAfg4H-PdpCaRWiDeq7N44wuiJNlIm4wp8P8cuwA9Bucsmjr2dqn1zPM22wgGd1JSY0rISvxh2mUA2aXH3ag_t6G_89D8KxZnwOU6jB2JskrLQgrA2jCCHogg4hv96qke6qJW22g22WkvD-Ra6KpOXm4rQ50Y4pkpWQmTtE
 
+[Mann (2011)]: https://proteomesci.biomedcentral.com/articles/10.1186/1477-5956-9-7
+[Regenbrecht (2008)]: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2577110/
+[Lenz (2006)]: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1713248/
+
 [eulerAPE]: http://www.eulerdiagrams.org/eulerAPE/
+[BioVenn]: https://www.biovenn.nl/
+[BioVenn Python]: https://pypi.org/project/BioVenn/
+[BioVenn R]: https://cran.r-project.org/package=BioVenn
+[Venn-Diagram-Plotter]: https://pnnl-comp-mass-spec.github.io/Venn-Diagram-Plotter/
+[DeepVenn]: https://deepvenn.com/
+[Venny]: https://bioinfogp.cnb.csic.es/tools/venny/index.html
+[Venny BioStars]: https://www.biostars.org/p/77362/
+
+[dlcompbiobiotech tool list]: https://www.dlcompbiobiotech.com/2022/01/list-of-venn-diagram-tools-for.html
+[RectEuler]: https://onlinelibrary.wiley.com/doi/10.1111/cgf.14814
+[Edeap]: https://www.eulerdiagrams.org/edeap
+[InteractiVenn]: http://www.interactivenn.net/
+[Pangloss]: http://www.pangloss.com/seidel/Protocols/venn4.cgi
+[ggvenndiagram]: https://github.com/gaospecial/ggVennDiagram
+[UGent Venn Diagram Generator]: https://bioinformatics.psb.ugent.be/webtools/Venn/
+
+[roots]: https://github.com/vorot/roots
+[roots#29]: https://github.com/vorot/roots/issues/29
+[roots#30]: https://github.com/vorot/roots/issues/30
+[`quartic.rs`]: https://github.com/runsascoded/shapes/blob/dev/src/math/quartic.rs
+[`dual.rs`]: https://github.com/runsascoded/shapes/blob/dev/src/dual.rs
+[`num_dual`]: https://docs.rs/num-dual/latest/num_dual/
+[`DualDVec64`]: https://docs.rs/num-dual/latest/num_dual/type.DualDVec64.html
+[shapes#1]: https://github.com/runsascoded/shapes/issues/1
+[shapes#9]: https://github.com/runsascoded/shapes/issues/9
+[shapes#10]: https://github.com/runsascoded/shapes/issues/10
+[shapes#11]: https://github.com/runsascoded/shapes/issues/11

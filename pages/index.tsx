@@ -38,120 +38,9 @@ import { useDeepCmp } from "../src/lib/use-deep-cmp-memo";
 import d3ToPng from "d3-svg-to-png"
 import { Popover } from "react-bootstrap";
 import { EditableText } from "../src/components/editable-text";
+import { FizzBuzzBazz, MPowerLink, Zhang2014Href } from "../src/lib/sample-targets";
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false })
-
-const ThreeEqualCircles: Target[] = [
-    [ "0**", PI ],
-    [ "*1*", PI ],
-    [ "**2", PI ],
-    [ "01*", 2*PI/3 - sqrt(3)/2 ],
-    [ "0*2", 2*PI/3 - sqrt(3)/2 ],
-    [ "*12", 2*PI/3 - sqrt(3)/2 ],
-    [ "012", PI/2 - sqrt(3)/2 ],
-]
-
-const FizzBuzz: Target[] = [
-    [ "0*", 5 ],
-    [ "*1", 3 ],
-    [ "01", 1 ],
-]
-
-const FizzBuzzBazz: Target[] = [ // Fractions scaled up by LCM
-    [ "0**", 35 ],  // 1 / 3
-    [ "*1*", 21 ],  // 1 / 5
-    [ "**2", 15 ],  // 1 / 7
-    [ "01*",  7 ],  // 1 / 15
-    [ "0*2",  5 ],  // 1 / 21
-    [ "*12",  3 ],  // 1 / 35
-    [ "012",  1 ],  // 1 / 105
-]
-
-const FizzBuzzBazzQux: Target[] = [ // Fractions scaled up by LCM
-    [ "0***", 105 ],  // 1 / 2
-    [ "*1**",  70 ],  // 1 / 3
-    [ "**2*",  42 ],  // 1 / 5
-    [ "***3",  30 ],  // 1 / 7
-    [ "01**",  35 ],  // 1 / 6
-    [ "0*2*",  21 ],  // 1 / 10
-    [ "0**3",  15 ],  // 1 / 14
-    [ "*12*",  14 ],  // 1 / 15
-    [ "*1*3",  10 ],  // 1 / 21
-    [ "**23",   6 ],  // 1 / 35
-    [ "012*",   7 ],  // 1 / 30
-    [ "01*3",   5 ],  // 1 / 42
-    [ "0*23",   3 ],  // 1 / 70
-    [ "*123",   2 ],  // 1 / 105
-    [ "0123",   1 ],  // 1 / 210
-]
-
-const CentroidRepel: Target[] = [
-    [ "0**", 3.  ],
-    [ "*1*", 1.  ],
-    [ "**2", 1.  ],
-    [ "01*", 0.3 ],
-    [ "0*2", 0.3 ],
-    [ "*12", 0.3 ],
-    [ "012", 0.1 ],
-]
-
-// Cenomic variants identified by 4 variant callers: VarScan, SomaticSniper, Strelka, JSM2
-// cf. https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3753564/pdf/btt375.pdf, ../4-ellipses.png
-const VariantCallers: Target[] = [
-    [ "0---", 633 ],
-    [ "-1--", 618 ],
-    [ "--2-", 187 ],
-    [ "---3", 319 ],
-    [ "01--", 112 ],
-    [ "0-2-",   0 ],
-    [ "0--3",  13 ],
-    [ "-12-",  14 ],
-    [ "-1-3",  55 ],
-    [ "--23",  21 ],
-    [ "012-",   1 ],
-    [ "01-3",  17 ],
-    [ "0-23",   0 ],
-    [ "-123",   9 ],
-    [ "0123",  36 ],
-]
-
-const MPowerPaperHref = "https://pubmed.ncbi.nlm.nih.gov/35190375/"
-const MPowerSupplementHref = "https://jitc.bmj.com/content/jitc/10/2/e003027.full.pdf?with-ds=yes"
-const MPowerLink = <A href={MPowerSupplementHref}>West HJ et al (2022)</A>
-// https://pubmed.ncbi.nlm.nih.gov/35190375/ (supplement, pg. 13): https://jitc.bmj.com/content/jitc/10/2/e003027.full.pdf?with-ds=yes
-// 0: KRAS
-// 1: STK11
-// 2: KEAP1
-// 3: TP53
-const MPower: Target[] = [
-    [ "0---",  42 ],
-    [ "-1--",  15 ],
-    [ "--2-",  10 ],
-    [ "---3", 182 ],
-    [ "01--",  16 ],
-    [ "0-2-",  10 ],
-    [ "0--3",  60 ],
-    [ "-12-",  12 ],
-    [ "-1-3",  23 ],
-    [ "--23",  44 ],
-    [ "012-",  25 ],
-    [ "01-3",  13 ],
-    [ "0-23",  13 ],
-    [ "-123",  18 ],
-    [ "0123",  11 ],
-]
-
-const Zhang2014Href = "https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0103207"
-
-const BenFredCircles: Target[] = [
-    [ "0**", 16 ],
-    [ "*1*", 16 ],
-    [ "**2", 12 ],
-    [ "01*",  4 ],
-    [ "0*2",  4 ],
-    [ "*12",  3 ],
-    [ "012",  2 ],
-]
 
 export type RunningState = "none" | "fwd" | "rev"
 
@@ -360,16 +249,7 @@ export function Body() {
         [ logLevel, ]
     );
 
-    const [ initialLayout, setInitialLayout] = useSessionStorageState<InitialLayout>(initialLayoutKey, { defaultValue:
-        CirclesFlexible
-        // SymmetricCircleLattice
-        // Disjoint
-        // Ellipses4t
-        // Ellipses4t2
-        // Ellipses4
-        // TwoOverOne
-        // Lattice_0_1
-    })
+    const [ initialLayout, setInitialLayout] = useSessionStorageState<InitialLayout>(initialLayoutKey, { defaultValue: Ellipses4t })
 
     const [ urlShapesPrecisionScheme, setUrlShapesPrecisionScheme ] = useSessionStorageState<number>("urlShapesPrecisionScheme", { defaultValue: 6 })
 
@@ -413,14 +293,7 @@ export function Body() {
         return makeTargets(
             str
                 ? JSON.parse(str)
-                : (
-                    // FizzBuzz
-                    FizzBuzzBazz
-                    // FizzBuzzBazzQux
-                    // VariantCallers
-                    // ThreeEqualCircles
-                    // CentroidRepel
-                )
+                : FizzBuzzBazz
         )
     })
 
