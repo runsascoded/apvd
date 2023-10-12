@@ -28,7 +28,7 @@ import { CopyCoordinatesType, ShapesTable } from "../src/components/tables/shape
 import _ from "lodash"
 import { getHashMap, getHistoryStateHash, HashMapVal, Param, ParsedParam, parseHashParams, updatedHash, updateHashParams } from "next-utils/params";
 import { precisionSchemes, ShapesParam } from "../src/lib/shapes-buffer";
-import { Checkbox, Number, Select } from "../src/components/controls";
+import { Checkbox, Control, Number, Select } from "../src/components/controls";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import useSessionStorageState from "use-session-storage-state";
@@ -37,6 +37,7 @@ import { fmt } from "../src/lib/utils";
 import { useDeepCmp } from "../src/lib/use-deep-cmp-memo";
 import d3ToPng from "d3-svg-to-png"
 import { Popover } from "react-bootstrap";
+import { EditableText } from "../src/components/editable-text";
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false })
 
@@ -1533,79 +1534,59 @@ export function Body() {
 
     const svgRef = useRef<SVGSVGElement | null>(null)
     const [ svgBackgroundColor, setSvgBackgroundColor ] = useSessionStorageState<string>("svgBackgroundColor", { defaultValue: "white" })
+    const [ invalidSvgColor, setInvalidSvgColor ] = useState(false)
     const [ showSaveModal, setShowSaveModal ] = useState(false)
-    const savePngButton = useRef()
-    const saveSvgButton = useRef()
+    const savePngButton = useRef<HTMLInputElement | null>(null)
+    const saveSvgButton = useRef<HTMLInputElement | null>(null)
     const SaveButton = useCallback(
         () => {
-            // const showProps: Partial<OverlayTriggerProps> = showSaveModal ? { show: true, placement: "left" } : {}
-            const showProps = {}
+            const showProps: Partial<OverlayTriggerProps> = showSaveModal ? { show: true, /*placement: "left"*/ } : {}
             return (
-                <OverlayTrigger show={showSaveModal} {...showProps} overlay={<Tooltip onClick={e => {
-                    console.log("showSaveModal tooltip click")
-                    e.preventDefault()
-                    e.stopPropagation()
-                }}>{
+                <OverlayTrigger {...showProps} overlay={<Tooltip>{
                     showSaveModal
-                        ? <div onClick={e => {
-                            console.log("showSaveModal div container click")
-                            e.preventDefault()
-                            e.stopPropagation()
-                        }}>
-                            <input
-                                ref={savePngButton}
-                                type={"button"}
-                                value={"PNG"}
-                                onMouseDown={e => {
-                                    console.log("PNG mousedown")
-                                    e.preventDefault()
-                                    e.stopPropagation()
-                                }}
-                                onMouseUp={e => {
-                                    console.log("PNG mouseup")
-                                    e.preventDefault()
-                                    e.stopPropagation()
-                                }}
-                                onSubmit={e => {
-                                    console.log("PNG submit")
-                                    e.preventDefault()
-                                    e.stopPropagation()
-                                }}
-                                onClick={e => {
-                                    // d3ToPng(`#${GridId}`, 'plot', {
-                                    //     background: svgBackgroundColor,
-                                    // });
-                                    console.log("called png download")
-                                    e.preventDefault()
-                                    e.stopPropagation()
-                                }}
-                            />
-                            <input
-                                ref={saveSvgButton}
-                                type={"button"}
-                                value={"SVG"}
-                                onClick={e => {
-                                    const svg = svgRef.current
-                                    if (svg) {
-                                        console.log("svg:", svg)
-                                        const svgData = new XMLSerializer().serializeToString(svg)
-                                        console.log("svgData:", svgData)
-                                        const svgBlob = new Blob([svgData], { "type": "image/svg+xml;charset=utf-8" })
-                                        const svgUrl = URL.createObjectURL(svgBlob)
-                                        const downloadLink = document.createElement("a")
-                                        downloadLink.href = svgUrl
-                                        downloadLink.download = "plot.svg"
-                                        document.body.appendChild(downloadLink)
-                                        downloadLink.click()
-                                        document.body.removeChild(downloadLink)
-                                        console.log("called svg download")
+                        ? <div className={css.saveModalBody}>
+                            <p>Export as PNG or SVG:</p>
+                            <p>
+                                <input
+                                    ref={savePngButton}
+                                    type={"button"}
+                                    value={"PNG"}
+                                    onClick={e => {
+                                        d3ToPng(`#${GridId}`, 'plot', {
+                                            background: svgBackgroundColor,
+                                        });
+                                        console.log("called png download")
                                         e.preventDefault()
                                         e.stopPropagation()
-                                    }
-                                }}
-                            />
+                                    }}
+                                />
+                                <input
+                                    ref={saveSvgButton}
+                                    type={"button"}
+                                    value={"SVG"}
+                                    onClick={e => {
+                                        const svg = svgRef.current
+                                        if (svg) {
+                                            console.log("svg:", svg)
+                                            const svgData = new XMLSerializer().serializeToString(svg)
+                                            console.log("svgData:", svgData)
+                                            const svgBlob = new Blob([svgData], { "type": "image/svg+xml;charset=utf-8" })
+                                            const svgUrl = URL.createObjectURL(svgBlob)
+                                            const downloadLink = document.createElement("a")
+                                            downloadLink.href = svgUrl
+                                            downloadLink.download = "plot.svg"
+                                            document.body.appendChild(downloadLink)
+                                            downloadLink.click()
+                                            document.body.removeChild(downloadLink)
+                                            console.log("called svg download")
+                                            e.preventDefault()
+                                            e.stopPropagation()
+                                        }
+                                    }}
+                                />
+                            </p>
                         </div>
-                        : "Save"
+                        : "Export as PNG or SVG; click to configure"
                 }</Tooltip>}>
                     <span className={css.link} onClick={e => {
                         setShowSaveModal(!showSaveModal)
@@ -1812,6 +1793,28 @@ export function Body() {
                                     <option key={level} value={level}>{level}</option>
                                 )
                             }</Select>
+                            <Control label={"SVG background"}>
+                                <EditableText
+                                    className={`${css.svgBackgroundColorInput} ${invalidSvgColor ? css.invalid : ""}`}
+                                    defaultValue={svgBackgroundColor}
+                                    onBlur={() => setInvalidSvgColor(false)}
+                                    onChange={(newColor) => {
+                                        if (CSS.supports("background-color", newColor)) {
+                                            console.log("new svg color:", newColor)
+                                            setSvgBackgroundColor(newColor)
+                                            setInvalidSvgColor(false)
+                                        } else if (newColor === '') {
+                                            newColor = 'white'
+                                            console.log("default svg color:", newColor)
+                                            setSvgBackgroundColor(newColor)
+                                            setInvalidSvgColor(false)
+                                        } else {
+                                            setInvalidSvgColor(true)
+                                            console.log("invalid svg color:", newColor)
+                                        }
+                                    }}
+                                />
+                            </Control>
                         </Details>
                     </div>
                 </div>

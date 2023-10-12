@@ -29,7 +29,7 @@ export function Number(
 ) {
     const parse = float ? parseFloat : parseInt
     return (
-        <div className={css.input}>
+        <div className={css.control}>
             <Label label={label} tooltip={tooltip}>
                 <input
                     type={"number"}
@@ -45,6 +45,16 @@ export function Number(
     )
 }
 
+export function Control({ label, tooltip, children }: LabelProps & { children?: ReactNode }) {
+    return (
+        <div className={css.control}>
+            <Label label={label} tooltip={tooltip}>{
+                children
+            }</Label>
+        </div>
+    )
+}
+
 export function Checkbox(
     { label, tooltip, checked, setChecked, }: LabelProps & {
         checked: boolean
@@ -52,16 +62,14 @@ export function Checkbox(
     }
 ) {
     return (
-        <div className={css.input}>
-            <Label label={label} tooltip={tooltip}>
-                <input
-                    type={"checkbox"}
-                    checked={checked}
-                    onChange={e => setChecked(e.target.checked)}
-                    onKeyDown={e => { e.stopPropagation() }}
-                />
-            </Label>
-        </div>
+        <Control label={label} tooltip={tooltip}>
+            <input
+                type={"checkbox"}
+                checked={checked}
+                onChange={e => setChecked(e.target.checked)}
+                onKeyDown={e => { e.stopPropagation() }}
+            />
+        </Control>
     )
 }
 
@@ -72,16 +80,14 @@ export function Select<T extends string | number>(
     }
 ) {
     return (
-        <div className={css.input}>
-            <Label label={label} tooltip={tooltip}>
-                <select
-                    value={value}
-                    onChange={e => setValue(e.target.value as T)}
-                    onKeyDown={e => { e.stopPropagation() }}
-                >
-                    {children}
-                </select>
-            </Label>
-        </div>
+        <Control label={label} tooltip={tooltip}>
+            <select
+                value={value}
+                onChange={e => setValue(e.target.value as T)}
+                onKeyDown={e => { e.stopPropagation() }}
+            >
+                {children}
+            </select>
+        </Control>
     )
 }

@@ -52,6 +52,19 @@
   cursor: pointer;
   margin: 0 0.2em;
 }
+.saveModalBody {
+  p {
+    margin-bottom: 0.3em;
+  }
+}
+.svgBackgroundColorInput {
+  max-width: 5em;
+  text-align: right;
+  padding: 0 0.5em;
+  &.invalid {
+    background-color: #fcc;
+  }
+}
 .body {
   width: 100%;
   padding: 0 0.8em;
@@ -202,7 +215,7 @@
         }
       }
     }
-    .input {
+    .control {
       .shortNumberInput {
         max-width: 3.5em;
       }

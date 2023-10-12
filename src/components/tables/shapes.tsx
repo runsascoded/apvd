@@ -7,6 +7,7 @@ import Tooltip from "react-bootstrap/Tooltip";
 import dynamic from "next/dynamic";
 import { deg, PI, round, sqrt } from "../../lib/math";
 import useSessionStorageState from "use-session-storage-state";
+import { EditableText } from "../editable-text";
 const StaticMathField = dynamic(() => import("react-mathquill").then(m => { m.addStyles(); return m.StaticMathField }), { ssr: false })
 
 export type CopyCoordinatesType = "JS" | "Rust" | "JSON" | "URL"
@@ -17,30 +18,6 @@ export type Props = {
     updateSetMetadatum: (idx: number, newMetadatum: Partial<SetMetadatum>) => void
     vars: Vars
     precision?: number
-}
-
-export function EditableText({ className, defaultValue, onChange }: {
-    className?: string
-    defaultValue: string
-    onChange: ((newValue: string) => string | undefined) | ((newValue: string) => void)
-}) {
-    const [ value, setValue ] = useState<string | null>(null)
-    return (
-        <input
-            className={className || ''}
-            type={"text"}
-            value={value === null ? defaultValue : value}
-            onFocus={() => { setValue(defaultValue) }}
-            onBlur={() => { setValue(null) }}
-            onChange={e => {
-                const newValue = e.target.value
-                const rv = onChange(newValue)
-                setValue(rv === undefined ? newValue : rv)
-            }}
-            onKeyDown={e => { e.stopPropagation() }}
-            onKeyUp={e => { e.stopPropagation() }}
-        />
-    )
 }
 
 export type Var = {

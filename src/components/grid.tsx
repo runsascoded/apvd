@@ -1,4 +1,4 @@
-import React, { MouseEvent, MutableRefObject, ReactNode, SVGProps, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { CSSProperties, MouseEvent, MutableRefObject, ReactNode, SVGProps, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {ResizableBox} from 'react-resizable';
 import {Point} from "./point";
 import {State} from "../lib/utils";
@@ -78,6 +78,7 @@ export type Props = {
     className?: string
     resizableNodeClassName?: string
     svgClassName?: string
+    style?: CSSProperties
 }
 
 export type ClientEvent = {
@@ -104,6 +105,7 @@ export default function Grid(
         className,
         resizableNodeClassName,
         svgClassName,
+        style,
         ...svgProps
     }: Props & SVGProps<SVGSVGElement>
 ) {
@@ -290,6 +292,7 @@ export default function Grid(
         [ center, scale, width, height ]
     )
 
+    style = { ...style, height }
     // console.log("Grid:", width, height, scale, center)
     const svgNode = (
         <svg
@@ -297,7 +300,7 @@ export default function Grid(
             ref={svg}
             viewBox={`0 0 ${width} ${height}`}
             className={`${css.grid || ''} ${svgClassName || ''}`}
-            style={{ height }}
+            style={style}
             onMouseDown={onMouseDown}
             onMouseMove={onMouseMove}
             onMouseUp={onMouseUp}
