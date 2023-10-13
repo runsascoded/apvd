@@ -99,13 +99,6 @@ TODO: show ∧p∨d solutions to these…
 
 <img src=public/img/lenz-2006-fig5.jpeg width=400 />
 
-## Background <a id="background"></a>
-When I first saw diagrams like this in the wild, I hadn't realized that 4 ellipses can intersect to form all 15 ($2^4-1$) possible regions. I knew it was impossible with 4 circles, but the added power from slightly relaxing the shapes was intriguing!
-
-The wildly disproportionate areas bugged me, though. I read up on it a bit, and found some relatively accessible open problems related to generating **"area-proportional Venn diagrams"**.
-
-I believe this library pushes the state of the art forward a bit (e.g. by supporting 4 ellipses), and hopefully provides a platform for further progress.
-
 ## Prior art <a id="prior-art"></a>
 
 ### Area-proportional + Ellipses <a id="area-proportional-ellipses"></a>
@@ -179,12 +172,12 @@ Not area-proportional, but will draw up to 6 sets:
 
 [Web app][Venny], up to 4 ellipses, not area-proportional:
 
-![](public/img/venny.png)
+<img src=public/img/venny.png width=400 />
 
 #### [Pangloss] <a id="pangloss"></a>
 [Web app][Pangloss], up to 4 rectangles, not area-proportional:
 
-![](public/img/pangloss.png)
+<img src=public/img/pangloss.png width=400 />
 
 #### [ggVennDiagram] <a id="ggvenndiagram"></a>
 
@@ -216,6 +209,13 @@ Future work could involve:
 
 See [/issues] for more info.
 
+## Background <a id="background"></a>
+When I first saw diagrams like this in the wild, I hadn't realized that 4 ellipses can intersect to form all 15 ($2^4-1$) possible regions. I knew it was impossible with 4 circles, but the added power from slightly relaxing the shapes was intriguing!
+
+The wildly disproportionate areas bugged me, though. I read up on it a bit, and found some relatively accessible open problems related to generating **"area-proportional Venn diagrams"**.
+
+I believe this library pushes the state of the art forward a bit (e.g. by supporting 4 ellipses), and hopefully provides a platform for further progress.
+
 ## Methods <a id="methods"></a>
 This repo is primarily the "frontend" / web app; the interesting computation occurs in [runsascoded/shapes].
 
@@ -234,11 +234,13 @@ Several of these steps turn out to be nontrivial, especially:
 Computing ellipse intersections can be represented as solving a system of equations that looks like:
 
 $$
-A_1x^2 + B_1xy + C_1y^2 + D_1x + E_1y + F_1 = 0 \\
-A_2x^2 + B_2xy + C_2y^2 + D_2x + E_2y + F_2 = 0 \\
+\begin{eqnarray}
+A_1x^2 + B_1xy + C_1y^2 + D_1x + E_1y + F_1 &=& 0 \\
+A_2x^2 + B_2xy + C_2y^2 + D_2x + E_2y + F_2 &=& 0 \\
+\end{eqnarray}
 $$
 
-With some algebraic manipulation, this can be represented as a quartic equation. I initially used the Rust [roots] crate, but hit issues ([#29][roots#29], [#30][roots#30]), and wrote [`quartic.rs`] instead.
+With some algebraic manipulation, this can be represented as a quartic equation in one variable (reflectin the fact that two ellipses can intersect at up to 4 points). I initially used the Rust [roots] crate, but hit issues ([#29][roots#29], [#30][roots#30]), and wrote [`quartic.rs`] instead.
 
 The [nb/](./nb) folder contains notebooks with relevant math and derivations, especially:
 - [intersect-circles.ipynb](nb/intersect-circles.ipynb)
@@ -255,12 +257,12 @@ Most of the computations related to shapes' intersections and corresponding regi
 ### Better "missing region" penalty <a id="missing-region-penalty"></a>
 The "missing region penalty" should be proportional to the distance each shape is from the required region existing. This would allow shapes to rotate to get closer, whereas currently I just move their centers closer together, which often ends up thrashing against added error in other regions.
 
-More discussion at [shapes#10].
+See [shapes#10].
 
 ### Proportional errors <a id="proportional-errors"></a>
 Currently, absolute difference between target and actual region sizes is all that is considered. Incorporating relative error is appealing, but it raises questions about what to do with missing or erroneous (shouldn't exist but do) regions.
 
-A mix of absolute and relative may be most intuitive/aesthetic; more discussion on [shapes#9].
+A mix of absolute and relative may be most intuitive/aesthetic; see [shapes#9].
 
 ### More shape types <a id="shapes"></a>
 See also: [shapes#11].
@@ -283,7 +285,7 @@ Cubic-bezier splines would be ideal, but the math is much harder; I'm not sure h
 - [List of Venn diagram tools for bioinformaticians][dlcompbiobiotech tool list]
 - [RectEuler]: many links to other tools
 - [Vsauce twitter thread]
-- [O'Rawe et al 2013]: 3- and 5-set Venn diagrmas
+- [O'Rawe et al 2013]: 3- and 5-set Venn diagrams
 
 ### Earlier versions of apvd <a id="earlier"></a>
 
