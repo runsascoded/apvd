@@ -26,6 +26,7 @@ import { SparkLineProps } from "../src/components/spark-lines";
 import { CircleCoords, Coord, makeVars, Vars, XYRRCoords, XYRRTCoords } from "../src/lib/vars";
 import { CopyCoordinatesType, ShapesTable } from "../src/components/tables/shapes";
 import _ from "lodash"
+import debounce from "lodash/debounce"
 import { getHashMap, getHistoryStateHash, HashMapVal, Param, ParsedParam, parseHashParams, updatedHash, updateHashParams } from "next-utils/params";
 import { precisionSchemes, ShapesParam } from "../src/lib/shapes-buffer";
 import { Checkbox, Control, Number, Select } from "../src/components/controls";
@@ -233,6 +234,7 @@ export function Body() {
                     in cancer," Fig. 3</>},
             { name: "MPower", val: "#t=42,15,16,10,10,12,25,182,60,23,13,44,13,18,11&n=KRAS,STK11,KEAP1=P,TP53", description: <>Values from "Clinical efficacy of atezolizumab plus bevacizumab and chemotherapy in KRAS-mutated non-small cell lung cancer with STK11, KEAP1, or TP53 comutations: subgroup results from the phase III IMpower150 trial", {MPowerLink}</> },
             { name: "\"Venn Diagrams with D3.js\"", val: "#t=i16,16,4,12,4,3,2&s=5zg0000200b4001KSA00i900000800g00&n=,,", description: <>Example from Ben Frederickson's blog post, <A href={"https://www.benfrederickson.com/venn-diagrams-with-d3.js/"}>"Venn Diagrams with D3.js"</A>.</> },
+            { name: "Zhang et al (2014)", val: "#t=7,798,0,35,0,197,0,1097,1,569,4,303,0,3177,65&n=Microarray@#99f,Cuffdiff2,DESeq@#f99,edgeR@orange", description: "Target values from Zhang et al (2014)"},
         ].map(({ name, val, description }) => ({
             name,
             val: typeof val === 'string' ? val : makeTargets(val),
@@ -362,7 +364,7 @@ export function Body() {
 
     const [ maxErrorRatioStepSize, setMaxErrorRatioStepSize ] = useSessionStorageState("maxErrorRatioStepSize", { defaultValue: 0.5 })
     const [ maxSteps, setMaxSteps ] = useSessionStorageState("maxSteps", { defaultValue: 10000 })
-    const [ stepBatchSize, setStepBatchSize ] = useSessionStorageState("stepBatchSize", { defaultValue: 10 })
+    const [ stepBatchSize, setStepBatchSize ] = useSessionStorageState("stepBatchSize", { defaultValue: 20 })
     const [ showRegionSizes, setShowRegionSizes ] = useSessionStorageState("showRegionSizes", { defaultValue: false })
 
     const [ model, setModel ] = useState<Model | null>(null)
@@ -389,14 +391,19 @@ export function Body() {
 
     const historyLog = false
     const pushHistoryState = useCallback(
-        ({ shapes, newTargets, newSetMetadata, push }: { shapes: Shapes, newTargets?: Targets, newSetMetadata?: SetMetadata, push?: boolean }) => {
-            if (stateInUrlFragment) {
-                const param = { shapes, precisionSchemeId: urlShapesPrecisionScheme }
-                const newHashMap = { s: param, t: newTargets || targets, n: newSetMetadata || setMetadata, }
-                if (historyLog) console.log(`history push (${push ? "push" : "replace"}, ${targets.numShapes}, ${newHashMap.s.shapes.length}`, newHashMap)
-                updateHashParams(params, newHashMap, { push, log: historyLog })
-            }
-        },
+        debounce(
+            ({ shapes, newTargets, newSetMetadata, push }: { shapes: Shapes, newTargets?: Targets, newSetMetadata?: SetMetadata, push?: boolean }) => {
+                console.log("debounced pushHistoryState:", shapes, newTargets, newSetMetadata, push)
+                if (stateInUrlFragment) {
+                    const param = { shapes, precisionSchemeId: urlShapesPrecisionScheme }
+                    const newHashMap = { s: param, t: newTargets || targets, n: newSetMetadata || setMetadata, }
+                    if (historyLog) console.log(`history push (${push ? "push" : "replace"}, ${targets.numShapes}, ${newHashMap.s.shapes.length}`, newHashMap)
+                    updateHashParams(params, newHashMap, { push, log: historyLog })
+                }
+            },
+            400,
+            // { leading: true, trailing: false, }
+        ),
         [ stateInUrlFragment, targets, setMetadata, urlShapesPrecisionScheme, ]
     )
 

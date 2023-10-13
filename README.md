@@ -65,9 +65,9 @@ From [the supplement][mpower supplement]:
 
 ∧p∨d [struggles a bit][mpower best] with this one:
 
-<img src="public/img/mpower%20best.png" width="500" />
+<img src=public/img/mpower%20best.png width=500 />
 
-Error is 22.9 (4.64%); half of that is { Red ∩ Yellow ∩ Blue }, which is 1.56 instead of 12. [Incorporating each region's relative error](#proportional-errors) would likely produce more intuitive results.
+Error is 22.9 (4.64%); half of that is { Red ∩ Yellow ∩ Blue }, which is 1.56 instead of 12. [Incorporating each region's relative error](#proportional-errors) would likely produce more intuitive results (see [shapes#9]).
 
 (Also, the "182" for "TP53 only" is on the { TP53 ∩ STK11 } region; TODO!)
 
@@ -279,6 +279,8 @@ Cubic-bezier splines would be ideal, but the math is much harder; I'm not sure h
 ## Other notes/references <a id="misc"></a>
 - [List of Venn diagram tools for bioinformaticians][dlcompbiobiotech tool list]
 - [RectEuler]: many links to other tools
+- [Vsauce twitter thread]
+- [O'Rawe et al 2013]: 3- and 5-set Venn diagrmas
 
 ### Earlier versions of apvd <a id="earlier"></a>
 
@@ -407,3 +409,6 @@ Core code is from a [web solver](http://www.akiti.ca/Quad4Deg.html) written by [
 [shapes#9]: https://github.com/runsascoded/shapes/issues/9
 [shapes#10]: https://github.com/runsascoded/shapes/issues/10
 [shapes#11]: https://github.com/runsascoded/shapes/issues/11
+
+[Vsauce twitter thread]: https://twitter.com/tweetsauce/status/1108498701427732481
+[O'Rawe et al 2013]: https://genomemedicine.biomedcentral.com/counter/pdf/10.1186/gm432.pdf?site=genomemedicine.biomedcentral.com
