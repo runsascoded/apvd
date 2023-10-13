@@ -68,7 +68,7 @@ From [the supplement][mpower supplement]:
 
 Error is 22.9 (4.64%); half of that is { Red ∩ Yellow ∩ Blue }, which is 1.56 instead of 12. [Incorporating each region's relative error](#proportional-errors) would likely produce more intuitive results (see [shapes#9]).
 
-(Also, the "182" for "TP53 only" is on the { TP53 ∩ STK11 } region; TODO!)
+(Also, the "182" for "TP53 only" is on the { TP53 ∩ STK11 } region; see [#7])
 
 [//]: # ( &#40;[supplement][mpower supplement], pg. 13&#41;: "Clinical efficacy of atezolizumab plus bevacizumab and chemotherapy in KRAS- mutated non-small cell lung cancer with STK11, KEAP1, or TP53 comutations: subgroup results from the phase III IMpower150 trial.")
 
@@ -418,3 +418,4 @@ Core code is from a [web solver](http://www.akiti.ca/Quad4Deg.html) written by [
 
 [Vsauce twitter thread]: https://twitter.com/tweetsauce/status/1108498701427732481
 [O'Rawe et al 2013]: https://genomemedicine.biomedcentral.com/counter/pdf/10.1186/gm432.pdf?site=genomemedicine.biomedcentral.com
+[#7]: https://github.com/runsascoded/apvd/issues/7
