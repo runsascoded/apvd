@@ -27,14 +27,13 @@ Area-Proportional Venn Diagram generator (WIP)
 
 ## Demo: gradient descent toward target region sizes <a id="demo"></a>
 
-Live app: [runsascoded.com/apvd]:
+Live app: [runsascoded.com/apvd]
 
-https://github.com/runsascoded/apvd/assets/465045/87b3c520-3413-41a1-9ea6-c2281c2fc68c
+[Here's a sample run][fizz buzz bazz sample] with targets reflecting the proportion of natural numbers that are divisible by 3, 5, 7, or any combination thereof:
 
+https://github.com/runsascoded/apvd/assets/465045/f0f27476-2bdc-4545-b127-e3e4814a1d84
 
-The "Targets" and "Layouts" sections allow configuring the target region sizes and type/arrangement of shapes.
-
-It's faily "alpha" (see [/issues]), but I believe it's "state of the art" at creating area-proportional Venn diagrams using up to 4 ellipses.
+It's fairly "alpha" (see [/issues]), but I believe it's "state of the art" at creating area-proportional Venn diagrams using up to 4 ellipses.
 
 ## Examples <a id="examples"></a>
 
@@ -90,15 +89,15 @@ TODO: show ∧p∨d solutions to these…
 
 #### [Mann (2011)] [Mann (2011)] <a id="mann-2011"></a>
 
-![](public/img/mann-2011-a.webp)
+<img src=public/img/mann-2011-a.webp width=400 />
 
 #### [Regenbrecht (2008)] <a id="regenbrecht-2008"></a>
 
-![](public/img/regenbrecht-2008.jpg)
+<img src=public/img/regenbrecht-2008.jpg width=400 />
 
 #### [Lenz (2006)] <a id="lenz-2006"></a>
 
-![](public/img/lenz-2006-fig5.jpeg)
+<img src=public/img/lenz-2006-fig5.jpeg width=400 />
 
 ## Background <a id="background"></a>
 When I first saw diagrams like this in the wild, I hadn't realized that 4 ellipses can intersect to form all 15 ($2^4-1$) possible regions. I knew it was impossible with 4 circles, but the added power from slightly relaxing the shapes was intriguing!
@@ -114,7 +113,7 @@ I believe this library pushes the state of the art forward a bit (e.g. by suppor
 #### eulerAPE <a id="euler-ape"></a>
 [Java applet][eulerAPE], up to 3 ellipses, area-proportional:
 
-Here is its solution to [the example above](#benfred):
+Here is its solution to a simple 3-set example [featured below](#benfred):
 
 <img src=public/img/eulerAPE%20benfred.png width=600 />
 
@@ -152,11 +151,12 @@ Note that the solution above is imprecise: $|A \cap B \cap C|$ should be equal t
 - [Web app][BioVenn], [Python package][BioVenn Python], R package
 - Up to 3 circles
 
-![](public/img/biovenn-example.png)
+<img src=public/img/biovenn-example.png width=500 />
 
 #### [DeepVenn] <a id="deepvenn"></a>
 [Web app][DeepVenn] by the [BioVenn](#biovenn) author, up to 10 sets, circles only:
-![](public/img/deepvenn.png)
+
+<img src=public/img/deepvenn.png width=500 />
 
 #### [Venn-Diagram-Plotter] <a id="venn-diagram-plotter"></a>
 Windows executable, 2-3 circles:
@@ -169,11 +169,11 @@ Windows executable, 2-3 circles:
 
 Not area-proportional, but will draw up to 6 sets:
 
-![](public/img/interactivenn%204.png)
+<img src=public/img/interactivenn%204.png width=400 />
 
-![](public/img/interactivenn%205.png)
+<img src=public/img/interactivenn%205.png width=400 />
 
-![](public/img/interactivenn%206.png)
+<img src=public/img/interactivenn%206.png width=400 />
 
 #### [Venny] <a id="venny"></a>
 
@@ -190,18 +190,21 @@ Not area-proportional, but will draw up to 6 sets:
 
 R package, 2-7 sets, not area-proportional:
 
-![](public/img/ggvenndiagram.png)
+<img src=public/img/ggvenndiagram.png width=400 />
 
-![](public/img/ggvenndiagram-2-7.png)
+<img src=public/img/ggvenndiagram-2-7.png width=400 />
 
 #### [UGent Venn Diagram Generator] <a id="ugent"></a>
 
 [Web app][UGent Venn Diagram Generator], up to 5 sets, not area-proportional:
 
-![](public/img/ugent%204%20symmetric.png)
-![](public/img/ugent%204%20nonsymmetric.png)
-![](public/img/ugent%205%20symmetric.png)
-![](public/img/ugent%205%20nonsymmetric.png)
+<img src=public/img/ugent%204%20symmetric.png width=400 />
+
+<img src=public/img/ugent%204%20nonsymmetric.png width=400 />
+
+<img src=public/img/ugent%205%20symmetric.png width=400 />
+
+<img src=public/img/ugent%205%20nonsymmetric.png width=400 />
 
 ## Status <a id="status"></a>
 The demo at [runsascoded.com/apvd] supports up to 4 ellipses (including allowing them to rotate relative to the axes), and arbitrary initial layouts and target region-sizes. It can gradient-descend for 100,000's of steps and converge, or reach negligible error levels, on most [examples](#examples) I've tested it on.
@@ -355,6 +358,7 @@ Dual / Autodiff libraries:
 Core code is from a [web solver](http://www.akiti.ca/Quad4Deg.html) written by [David Binner](http://www.akiti.ca/ContactPage.html)
 
 [runsascoded/shapes]: https://github.com/runsascoded/shapes
+[fizz buzz bazz sample]: https://runsascoded.com/apvd/#t=i35,21,7,15,5,3,1&n=Divisible+by+3=3,Divisible+by+5=5,Divisible+by+7=7&s=0zg00002004000004g006Xqg00w00000yg0000200400000
 [Ben Frederickson]: https://github.com/benfred
 [benfred generator]: https://www.benfrederickson.com/venn-diagrams-with-d3.js/
 [pages/ellipses.tsx]: https://github.com/runsascoded/apvd/blob/main/pages/ellipses.tsx
