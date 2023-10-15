@@ -1,4 +1,4 @@
-export const { abs, atan2, ceil, cos, floor, log, log2, log10, log1p, min, max, PI, round, sin, sqrt } = Math
+export const { abs, atan2, ceil, cos, floor, log, log2, log10, log1p, min, max, PI, round, sin, sqrt, tan } = Math
 
 export const pi = Math.PI
 export const r3 = (x: number) => Math.round(1000 * x) / 1000

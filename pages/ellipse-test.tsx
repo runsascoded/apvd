@@ -1,8 +1,11 @@
 import Grid, {GridState} from "../src/components/grid";
-import React, {useState} from "react";
+import React, { Fragment, MouseEvent, useMemo, useState } from "react";
 import css from "./index.module.scss"
 import {XYRR} from "apvd";
 import Apvd from "../src/components/apvd";
+import { Point } from "../src/components/point";
+import { abs, atan2, cos, degStr, PI, sin, sqrt, tan } from "../src/lib/math";
+import quartic from "../src/quartic";
 
 export default function Page() {
     return <Apvd>{() => <Body />}</Apvd>
@@ -97,7 +100,8 @@ export function Body() {
         { idx: 2, c: { x: 0.5, y: 0. }, r: { x: 3, y: 3, } },
         { idx: 3, c: { x: 0. , y: 3. }, r: { x: 1, y: 1, } },
     ]
-    const fillOpacity = 0.5
+    const inactiveOpacity = 0.3
+    const activeOpacity = 0.5
     const [ regionOver, setRegionOver ] = useState<"outer" | Color | null>(null)
     console.log("regionOver:", regionOver)
     const containerPath = `M0,0H7V4H0Z`
@@ -105,42 +109,93 @@ export function Body() {
         [`M1,1H3V3H1Z`, "red"],
         [`M4,1H6V3H4Z`, "green"],
     ]
-    // const circle = (props: Partial<React.SVGProps<SVGCircleElement>>) => <circle cx={3} cy={3} r={1} {...props} />
+    // const outerBlueRect = <path
+    //     d={`${containerPath} ${subregions.map(([path]) => path).join(" ")}`}
+    //     fillRule={"evenodd"}
+    //     onMouseOver={() => {
+    //         console.log("outer over");
+    //         setRegionOver("outer")
+    //     }}
+    //     // onMouseMove={() => console.log("outer move")}
+    //     onMouseOut={() => {
+    //         console.log("outer out");
+    //         setRegionOver(null)
+    //     }}
+    //     fillOpacity={regionOver === "outer" ? activeOpacity : inactiveOpacity}
+    //     fill={`blue`}
+    // />
+    // const subregionNodes = subregions.map(([subregion, color], subregionIdx) =>
+    //     <path
+    //         key={subregionIdx}
+    //         d={subregion}
+    //         fill={color}
+    //         fillOpacity={regionOver === color ? activeOpacity : inactiveOpacity}
+    //         onMouseOver={() => {
+    //             console.log(`${color} over`);
+    //             setRegionOver(color)
+    //         }}
+    //         // onMouseMove={() => console.log("inner move")},
+    //         onMouseOut={() => console.log(`${color} out`)}
+    //     />
+    // )
+    const rx = 2, ry = 1, cx = 0, cy = 0
+    const [ vPoint, setVPoint] = useState<Point | null>(null)
+    const nearestPoints = useMemo(
+        () => {
+            if (!vPoint) return []
+            let { x, y } = vPoint
+            const A = ry*ry - rx*rx
+            const B = x * rx
+            const C = -y * ry
+            const a = -A*A
+            const b = -2*A*B
+            let c = A*A - B*B - C*C
+            const d = 2*A*B
+            const e = B*B
+            const cosRoots = quartic(a, b, c, d, e)
+            console.log("cosRoots", cosRoots)
+            if (!cosRoots.length) {
+                return []
+            }
+            return cosRoots.map(c => {
+                const s0 = sqrt(1 - c*c)
+                const s1 = -s0
+                function d(s: number) { return A*c*s + B*s + C*c }
+                const d0 = d(s0)
+                const d1 = d(s1)
+                const s = abs(d0) < abs(d1) ? s0 : s1
+                const nearestPoint = { x: cx + rx * c, y: cy + ry * s, }
+                const distance = Math.sqrt((vPoint.x - nearestPoint.x)**2 + (vPoint.y - nearestPoint.y)**2)
+                const m = -ry*ry/rx/rx * nearestPoint.x / nearestPoint.y
+                console.log(
+                    // "S", S.toPrecision(3), "C", C.toPrecision(3), "T", degStr(T),
+                    "src", nearestPoint.x.toPrecision(2), nearestPoint.y.toPrecision(2),
+                    "dst", vPoint.x.toPrecision(2), vPoint.y.toPrecision(2),
+                    "distance", distance,
+                    "m", m,
+                )
+                return { ...nearestPoint, distance, m }
+            })
+        },
+        [ vPoint, rx, ry, cx, cy, ]
+    )
     return <div className={css.body}>
         <div className={`${css.row} ${css.content}`}>
-            <Grid className={css.grid} state={gridState}>
-                <ellipse
-                  cx={1.3345311198605432}
-                  cy={2.8430120216925644e-16}
-                  rx={2.362476333635918}
-                  ry={2.8207141903440474}
-                  fillOpacity={0.3}
-                  fill={"green"}
-                />
-                <circle cx={0} cy={0} r={1} />
+            <Grid
+                className={css.grid}
+                state={gridState}
+                handleMouseMove={(e: MouseEvent, offset: Point, vOffset: Point) => { setVPoint(vOffset) }}
+            >
+                <ellipse cx={cx} cy={cy} rx={rx} ry={ry} fillOpacity={inactiveOpacity}/>
 
-                <path
-                    d={`${containerPath} ${subregions.map(([ path ]) => path).join(" ")}`}
-                    fillRule={"evenodd"}
-                    onMouseOver={() => { console.log("outer over"); setRegionOver("outer") }}
-                    // onMouseMove={() => console.log("outer move")}
-                    onMouseOut={() => { console.log("outer out"); setRegionOver(null) }}
-                    fillOpacity={regionOver === "outer" ? 1 : fillOpacity}
-                    fill={`blue`}
-                />
-                {
-                    subregions.map(([subregion, color], subregionIdx) =>
-                        <path
-                            key={subregionIdx}
-                            d={subregion}
-                            fill={color}
-                            fillOpacity={regionOver === color ? 1 : fillOpacity}
-                            onMouseOver={() => { console.log(`${color} over`); setRegionOver(color) }}
-                            // onMouseMove={() => console.log("inner move")},
-                            onMouseOut={() => console.log(`${color} out`)}
-                        />
-                    )
-                }
+                {vPoint && nearestPoints.map(({ x, y, m }, idx) => <Fragment key={idx}>
+                        <circle cx={vPoint.x} cy={vPoint.y} r={0.05} fill={"black"} />
+                        <circle cx={x} cy={y} r={0.05} fill={"black"} />
+                        <line x1={x} y1={y} x2={vPoint.x} y2={vPoint.y} strokeWidth={0.03} stroke={"black"} strokeOpacity={inactiveOpacity} />
+                        <line x1={x - 1} y1={y - m} x2={x + 1} y2={y + m} strokeWidth={0.03} stroke={"red"} strokeOpacity={inactiveOpacity} />
+                        {/*<line x1={x} y1={y} x2={0} y2={0} strokeWidth={0.03} stroke={"black"} strokeOpacity={inactiveOpacity} />*/}
+                    </Fragment>
+                )}
                 {/*</rect>*/}
             </Grid>
         </div>
