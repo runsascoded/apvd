@@ -315,20 +315,20 @@ https://www.combinatorics.org/files/Surveys/ds5/ds5v3-2005/VennTriangleEJC.html
 https://www.combinatorics.org/files/Surveys/ds5/ds5v3-2005/VennPoly67EJC.html
 
 > Shown below is a 6-Venn diagram formed entirely from curves drawn from axis-aligned edges. It is a minimum-area diagram; that is, each region is composed of a single square of unit area. Note that many edges overlap, so the diagram is [infinitely intersecting](https://www.combinatorics.org/files/Surveys/ds5/ds5v3-2005/VennOtherEJC.html#infinite). As with many other diagrams in these pages, regions are coloured by weight. The diagrams on this page are from \[[CR05](https://www.combinatorics.org/files/Surveys/ds5/ds5v3-2005/VennRefs.html#CR05)\].
-> 
-> <img src="./public/img/polyvenn6-diag.png" width="300" />
+>
+> <img src="https://github.com/runsascoded/apvd/blob/main/public/img/polyvenn6-diag.png?raw=true" width=300 />
 >
 > The six component curves of the diagram, overlaid on a grayed-out version of the entire diagram:
-> 
-> <img src="public/img/polyvenn6-curves.png" width="500" />
+>
+> <img src="https://github.com/runsascoded/apvd/blob/main/public/img/polyvenn6-curves.png?raw=true" width=500 />
 >
 > This is a 7-Venn diagram formed entirely from curves drawn from axis-aligned edges. Like the above it is minimum-area and infinitely intersecting.
 >
-> <img src=public/img/polyvenn7-diag.png width=300 />
+> <img src="https://github.com/runsascoded/apvd/blob/main/public/img/polyvenn7-diag.png?raw=true" width=300 />
 >
 > The seven component curves:
 >
-> <img src="./public/img/polyvenn7-curves.png" width="300" />
+> <img src="https://github.com/runsascoded/apvd/blob/main/public/img/polyvenn7-curves.png?raw=true" width=500 />
 >
 
 ### Related libraries <a id="libs"></a>
