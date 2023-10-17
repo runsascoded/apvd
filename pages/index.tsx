@@ -1338,10 +1338,15 @@ export function Body() {
             </span>
         }, {
             name: "Zhang et al (2014)",
-            description: <>Values from "Comparison of RNA-seq and microarray-based models for clinical endpoint prediction", <A href={Zhang2014Href}>Zhang <i>et al</i> 2014</A></>,
+            description: <>Values from "Comparison of RNA-seq and microarray-based models for clinical endpoint prediction", <A href={Zhang2014Href}>Zhang <i>et al</i> 2014</A>, Fig. 7, plots D, E, and F.</>,
             children: <span>
-                <HashLink hash={"#t=7,798,0,35,0,197,0,1097,1,569,4,303,0,3177,65&n=Microarray@#99f,Cuffdiff2,DESeq@#f99,edgeR@orange"}>Zhang et al (2014)</HashLink>
-                {' '}(<HashLink hash={"#t=7,798,0,35,0,197,0,1097,1,569,4,303,0,3177,65&n=Microarray@#99f,Cuffdiff2,DESeq@#f99,edgeR@orange&s=MzmxcXrZYyppkecbYAfg4H-PdpCaRWiDeq7N44wuiJNlIm4wp8P8cuwA9Bucsmjr2dqn1zPM22wgGd1JSY0rISvxh2mUA2aXH3ag_t6G_89D8KxZnwOU6jB2JskrLQgrA2jCCHogg4hv96qke6qJW22g22WkvD-Ra6KpOXm4rQ50Y4pkpWQmTtE"}>best</HashLink>)
+                <A href={Zhang2014Href}>Zhang 2014</A> Fig. 7:
+                {' '}<HashLink hash={"#t=11,89,1,24,0,66,5,2268,5,271,5,2204,24,11368,353&n=qRT-PCR@#99f,Cuffdiff2,DESeq@#f99,edgeR@orange"}>D</HashLink>
+                {' '}(<HashLink hash={"#t=11,89,1,24,0,66,5,2268,5,271,5,2204,24,11368,353&n=qRT-PCR@#99f,Cuffdiff2,DESeq@#f99,edgeR@orange&s=MzquCc1qHJVEd39MqI0o7S6_mGGRSdwuWGwmgy3c7XFgnl4wtl91F1348bEeB_HTdcDPGo6VC8t2UKYxT-EwbfF57sa0A40Zj-Bm0Z42LRb0BuNY9qtSMtrPqjN0f0cn4ouVyooYd4wItBeD--EDMlBsOIfVgOD9prmJEtDBImoltEIQl7G2r7M"}>best</HashLink>),
+                {' '}<HashLink hash={"#t=7,798,0,35,0,197,0,1097,1,569,4,303,0,3177,65&n=Microarray@#99f,Cuffdiff2,DESeq@#f99,edgeR@orange"}>E</HashLink>
+                {' '}(<HashLink hash={"#t=7,798,0,35,0,197,0,1097,1,569,4,303,0,3177,65&n=Microarray@#99f,Cuffdiff2,DESeq@#f99,edgeR@orange&s=MzmxcXrZYyppkecbYAfg4H-PdpCaRWiDeq7N44wuiJNlIm4wp8P8cuwA9Bucsmjr2dqn1zPM22wgGd1JSY0rISvxh2mUA2aXH3ag_t6G_89D8KxZnwOU6jB2JskrLQgrA2jCCHogg4hv96qke6qJW22g22WkvD-Ra6KpOXm4rQ50Y4pkpWQmTtE"}>best</HashLink>),
+                {' '}<HashLink hash={"#t=331,63,21,1,0,0,2,88,77,13,80,6,181,1,1644&n=Simulation@#99f,Cuffdiff2,DESeq@#f99,edgeR@orange"}>F</HashLink>
+                {' '}(<HashLink hash={"#t=331,63,21,1,0,0,2,88,77,13,80,6,181,1,1644&n=Simulation@#99f,Cuffdiff2,DESeq@#f99,edgeR@orange&s=MB338Q9DnKg_lC49IjUVEzmKsO8mQ6dhETFZi7x2gOAYpX4goJWRqKd0e_8WJPog2nm0bsUU2IVkhjK5WwIsdMycjSkoz0PJuyq7cdXN0cnqKBPoRCX2ecj6dr4sA-0LA6nKlMEKu4gux-1ioITfDBxjKok5trrPfC4W0Q9uecOaeAfYDVPgngg"}>best</HashLink>),
             </span>
         }, {
             name: "\"Venn Diagrams with D3.js\"",

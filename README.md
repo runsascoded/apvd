@@ -41,11 +41,9 @@ It's fairly "alpha" (see [/issues]), but I believe it's "state of the art" at cr
 
 #### [N.D. Roberts et al, 2013][Roberts 2013] <a id="roberts-2013"></a>
 
-<img alt="Venn Diagram comprised of 4 ellipses" src="public/img/4-ellipses.png" width="500" />
+Here's Fig. 3, along with [the best layout][Variant callers - best] I've found using ∧p∨d:
 
-[Here's the best layout][Variant callers - best] I've found using ∧p∨d:
-
-<img src="public/img/variant%20callers%20-%20best.png" width="500" />
+![Venn Diagram comprised of 4 ellipses](public/img/variant-callers%20sxs.png)
 
 The error is just under 0.2%: about 1/500th of the overall area is in the wrong region.
 
@@ -56,6 +54,15 @@ Here's a closer look at the center, with region-size labels:
 The "1.86" (Red ∩ Blue ∩ Yellow) should be 0, and there a missing { Red ∩ Green ∩ Yellow } of size 1. I use a rudimentary penalty that moves shapes closer together when a region is missing (the converse happens naturally via gradient descent), but [it could definitely be made smarter](#missing-region-penalty).
 
 Definitely lots of low-hanging UX improvements as well!
+
+#### [Zhang et al, 2014][Zhang 2014] <a id="zhang-2014"></a>
+
+Fig. 7, paper and ∧p∨d versions:
+
+![](public/img/zhang%20sxss.png)
+
+- Also [discussed by Lior Pachter][lior pachter zhang 2014]
+- Live links to best solutions: [D][zhang 2014 best D], [E][zhang 2014 best E], [F][zhang 2014 best F]
 
 #### [West et al, 2013][mpower] <a id="mpower"></a>
 From [the supplement][mpower supplement]:
@@ -71,18 +78,6 @@ Error is 22.9 (4.64%); half of that is { Red ∩ Yellow ∩ Blue }, which is 1.5
 (Also, the "182" for "TP53 only" is on the { TP53 ∩ STK11 } region; see [#7])
 
 [//]: # ( &#40;[supplement][mpower supplement], pg. 13&#41;: "Clinical efficacy of atezolizumab plus bevacizumab and chemotherapy in KRAS- mutated non-small cell lung cancer with STK11, KEAP1, or TP53 comutations: subgroup results from the phase III IMpower150 trial.")
-
-#### [Zhang et al, 2014][Zhang 2014] <a id="zhang-2014"></a>
-
-Also [discussed by Lior Pachter][lior pachter zhang 2014]:
-
-![](public/img/zhang-et-al-2014.jpeg)
-
-This one basically [converges][zhang 2014 best], though it took 100k's of steps:
-
-<img src=public/img/zhang%20et%20al%202014%20best.png width=500 />
-
-Clearly there's room to improve the label positioning…
 
 ### 3 Circles <a id="3-circles"></a>
 TODO: show ∧p∨d solutions to these…
@@ -381,7 +376,9 @@ Core code is from a [web solver](http://www.akiti.ca/Quad4Deg.html) written by [
 
 [lior pachter zhang 2014]: https://liorpachter.wordpress.com/2017/08/02/how-not-to-perform-a-differential-expression-analysis-or-science/
 [Zhang 2014]: https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0103207
-[zhang 2014 best]: https://runsascoded.com/apvd#t=7,798,0,35,0,197,0,1097,1,569,4,303,0,3177,65&n=Microarray@#99f,Cuffdiff2,DESeq@#f99,edgeR@orange&s=MzmxcXrZYyppkecbYAfg4H-PdpCaRWiDeq7N44wuiJNlIm4wp8P8cuwA9Bucsmjr2dqn1zPM22wgGd1JSY0rISvxh2mUA2aXH3ag_t6G_89D8KxZnwOU6jB2JskrLQgrA2jCCHogg4hv96qke6qJW22g22WkvD-Ra6KpOXm4rQ50Y4pkpWQmTtE
+[zhang 2014 best D]: https://runsascoded.com/apvd#t=11,89,1,24,0,66,5,2268,5,271,5,2204,24,11368,353&n=qRT-PCR@#99f,Cuffdiff2,DESeq@#f99,edgeR@orange&s=MzquCc1qHJVEd39MqI0o7S6_mGGRSdwuWGwmgy3c7XFgnl4wtl91F1348bEeB_HTdcDPGo6VC8t2UKYxT-EwbfF57sa0A40Zj-Bm0Z42LRb0BuNY9qtSMtrPqjN0f0cn4ouVyooYd4wItBeD--EDMlBsOIfVgOD9prmJEtDBImoltEIQl7G2r7M
+[zhang 2014 best E]: https://runsascoded.com/apvd#t=7,798,0,35,0,197,0,1097,1,569,4,303,0,3177,65&n=Microarray@#99f,Cuffdiff2,DESeq@#f99,edgeR@orange&s=MzmxcXrZYyppkecbYAfg4H-PdpCaRWiDeq7N44wuiJNlIm4wp8P8cuwA9Bucsmjr2dqn1zPM22wgGd1JSY0rISvxh2mUA2aXH3ag_t6G_89D8KxZnwOU6jB2JskrLQgrA2jCCHogg4hv96qke6qJW22g22WkvD-Ra6KpOXm4rQ50Y4pkpWQmTtE
+[zhang 2014 best F]: https://runsascoded.com/apvd#t=331,63,21,1,0,0,2,88,77,13,80,6,181,1,1644&n=Simulation@#99f,Cuffdiff2,DESeq@#f99,edgeR@orange&s=MB338Q9DnKg_lC49IjUVEzmKsO8mQ6dhETFZi7x2gOAYpX4goJWRqKd0e_8WJPog2nm0bsUU2IVkhjK5WwIsdMycjSkoz0PJuyq7cdXN0cnqKBPoRCX2ecj6dr4sA-0LA6nKlMEKu4gux-1ioITfDBxjKok5trrPfC4W0Q9uecOaeAfYDVPgngg
 
 [Mann (2011)]: https://proteomesci.biomedcentral.com/articles/10.1186/1477-5956-9-7
 [Regenbrecht (2008)]: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2577110/
