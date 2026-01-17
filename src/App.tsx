@@ -29,7 +29,7 @@ import { getHashMap, getHistoryStateHash, HashMapVal, Param, ParsedParam, parseH
 import { precisionSchemes, ShapesParam } from "./lib/shapes-buffer"
 import { Checkbox, Control, Number, Select } from "./components/controls"
 import useSessionStorageState from "use-session-storage-state"
-import { useTheme } from "./components/theme-toggle"
+import { useTheme, isDefaultBg } from "./components/theme-toggle"
 import { Fab } from "./components/fab"
 import ClipboardSvg from "./components/clipboard-svg"
 import { fmt } from "./lib/utils"
@@ -1487,8 +1487,8 @@ export function Body() {
 
     const svgRef = useRef<SVGSVGElement | null>(null)
     const [ svgBackgroundColor, setSvgBackgroundColor ] = useSessionStorageState<string>("svgBackgroundColor", { defaultValue: "" })
-    // Use theme-based default when no custom color is set
-    const effectiveSvgBg = svgBackgroundColor || diagramBg
+    // Use theme-based default when no custom color is set or when it's a default theme color
+    const effectiveSvgBg = isDefaultBg(svgBackgroundColor) ? diagramBg : svgBackgroundColor
     const [ invalidSvgColor, setInvalidSvgColor ] = useState(false)
     const [ showSaveModal, setShowSaveModal ] = useState(false)
     const savePngButton = useRef<HTMLInputElement | null>(null)

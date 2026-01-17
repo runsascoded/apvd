@@ -3,9 +3,19 @@ import useLocalStorageState from 'use-local-storage-state'
 
 export type Theme = 'light' | 'dark'
 
-const DIAGRAM_BG = {
+export const DIAGRAM_BG = {
     light: '#ffffff',
     dark: '#1a1a2e',
+}
+
+// Check if a color is a default theme background (should follow theme)
+export function isDefaultBg(color: string): boolean {
+    const normalized = color.toLowerCase().trim()
+    return normalized === '' ||
+           normalized === 'white' ||
+           normalized === '#fff' ||
+           normalized === '#ffffff' ||
+           normalized === DIAGRAM_BG.dark.toLowerCase()
 }
 
 export function useTheme() {
