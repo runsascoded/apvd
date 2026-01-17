@@ -9,3 +9,4 @@ build/_site
 target
 project/target
 project/project
+tsconfig.tsbuildinfo
