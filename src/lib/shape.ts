@@ -1,6 +1,6 @@
 import {R2} from "apvd";
 import {abs, cos, max, sin} from "./math";
-import {Param} from "next-utils/params";
+import {Param} from "./params";
 import ShapesBuffer, {Opts, ShapesParam} from "./shapes-buffer";
 
 export interface Circle<D> {
@@ -56,7 +56,7 @@ export const setMetadataParam: Param<SetMetadata | null> = {
         }).join(',')
         return s.match(/^,+$/) ? undefined : s
     },
-    decode(v: string | undefined): SetMetadata | null {
+    decode(v: string | null): SetMetadata | null {
         // console.log("decoding setMetadata:", v)
         if (!v) return null
         return v.split(',').map((s, idx) => {
@@ -181,7 +181,7 @@ export function shapesParam(opts: Opts = {}): Param<ShapesParam | null> {
             buf.encodeShapes(shapes)
             return buf.toB64()
         },
-        decode(v: string | undefined): ShapesParam | null {
+        decode(v: string | null): ShapesParam | null {
             // console.log("decode shapes:", v)
             if (!v) return null
             const buf = ShapesBuffer.fromB64(v, opts)

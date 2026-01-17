@@ -1,14 +1,20 @@
 import { getRadii, mapShape, S, SetMetadatum, Shape } from "../../lib/shape";
-import React, { Dispatch, ReactNode, useCallback, useState } from "react";
+import React, { Dispatch, lazy, ReactNode, Suspense, useCallback, useEffect, useState } from "react";
 import {Vars} from "../../lib/vars";
 import css from "./shapes.module.scss"
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
-import dynamic from "next/dynamic";
 import { deg, PI, round, sqrt } from "../../lib/math";
 import useSessionStorageState from "use-session-storage-state";
 import { EditableText } from "../editable-text";
-const StaticMathField = dynamic(() => import("react-mathquill").then(m => { m.addStyles(); return m.StaticMathField }), { ssr: false })
+
+// Lazy load react-mathquill with styles
+const StaticMathField = lazy(() =>
+    import("react-mathquill").then(m => {
+        m.addStyles();
+        return { default: m.StaticMathField };
+    })
+);
 
 export type CopyCoordinatesType = "JS" | "Rust" | "JSON" | "URL"
 
@@ -53,7 +59,11 @@ export function VarCell({ skip, value, set, parse, render, className, }: Var & {
 }
 
 export function Math({ children }: { children: string }) {
-    return <StaticMathField className={css.math}>{children}</StaticMathField>
+    return (
+        <Suspense fallback={<span>{children}</span>}>
+            <StaticMathField className={css.math}>{children}</StaticMathField>
+        </Suspense>
+    )
 }
 
 export function ShapesTable({ sets, setShape, updateSetMetadatum, vars, precision = 4 }: Props) {

@@ -1,0 +1,346 @@
+.shapeTextTooltip {
+  text-align: left;
+  &.wrap {
+    text-wrap: unset;
+  }
+}
+.copyTextTooltip {
+  div:has(.shapeTextTooltip) {
+    max-width: 80em;
+  }
+}
+.toggleShapesMetadata {
+  cursor: pointer;
+}
+.regionTooltip {
+  div:has(.regionTooltipLabel) {
+    max-width: 20em;
+  }
+  .regionTooltipLabel {
+    margin-bottom: 0;
+    padding-bottom: 0;
+  }
+}
+.clipboardSvg {
+  cursor: pointer;
+  margin: 2px;
+}
+.resetMetadata {
+  cursor: pointer;
+}
+.resetMetadataDisabled {
+  opacity: 0.5;
+}
+.playbackControlButtonContainer {
+  vertical-align: text-bottom;
+  .playbackControlButton {
+    padding: 0;
+    border: 0;
+    line-height: 1em;
+    background-color: transparent;
+    font-family: "Twemoji Mozilla",
+    "Apple Color Emoji",
+    "Segoe UI Emoji",
+    "Segoe UI Symbol",
+    "Noto Color Emoji",
+    "EmojiOne Color",
+    "Android Emoji",
+    sans-serif;
+  }
+}
+.settingsGearInline {
+  cursor: pointer;
+  margin: 0 0.2em;
+}
+.saveModalBody {
+  p {
+    margin-bottom: 0.3em;
+  }
+}
+.svgBackgroundColorInput {
+  max-width: 5em;
+  text-align: right;
+  padding: 0 0.5em;
+  &.invalid {
+    background-color: #fcc;
+  }
+}
+.body {
+  width: 100%;
+  padding: 0 0.8em;
+
+  .invisible {
+    visibility: hidden;
+  }
+  .err {
+    padding: 0.1em 0.2em;
+  }
+  .errSame {
+    background-color: #cfc;
+  }
+  .errFlipped {
+    background-color: #fcc;
+  }
+
+  .activeLink {
+    font-weight: bold;
+  }
+  .link {
+    font-size: 0.9em;
+    margin-right: 0.2em;
+  }
+  .content {
+    max-width: 80em;
+    margin: 0 auto;
+
+    p, h1, h2, h3, h4 {
+      margin-left: 0;
+      padding-left: 0;
+    }
+
+    hr {
+      //margin: 0.5em 1em;
+    }
+
+    ul {
+      margin-left: 1.5em;
+      padding-left: 0;
+
+      li {
+        padding-left: 0;
+        margin-left: 0;
+      }
+    }
+
+    .row {
+      margin-top: 0.5em;
+      margin-left: 0;
+      padding-left: 0;
+
+    }
+
+    .copyText {
+      cursor: pointer;
+    }
+
+    .detailsSection {
+      margin-bottom: 0.3em;
+      details[open] {
+        summary {
+          margin-bottom: 0.3em;
+          &::marker {
+            content: "▼";
+          }
+        }
+      }
+      details:not([open]) {
+        summary {
+          &::marker {
+            content: "▶";
+          }
+          //opacity: 0.6;
+        }
+      }
+      summary {
+        //margin-left: -1.3em;
+        &::marker {
+          //margin-right: 0.5em;
+        }
+        h3, h4 {
+          display: inline;
+          margin-left: 0.3em;
+          user-select: none;
+        }
+        //margin-left: -1em;
+      }
+      table {
+        margin-bottom: 0.2em;
+      }
+      ul {
+        margin-left: 0;
+      }
+    }
+    .tableTitle {
+      //margin-top: 0.3em;
+    }
+    .tableBreak {
+      margin-top: 0.5em;
+    }
+    .activeRegion {
+        background-color: #eee;
+    }
+    .negativeKey {
+      background-color: #fcc;
+    }
+
+    .svgContainer {
+      padding: 0;
+    }
+    .grid {
+      width: 100%;
+      .setLabel {
+        user-select: none;
+      }
+    }
+
+    .info {
+      cursor: pointer;
+      font-size: 0.9em;
+      margin-left: 0.2em;
+    }
+
+    .settings {
+      text-align: right;
+      user-select: none;
+      summary {
+        font-size: 2em;
+        list-style: none;
+        cursor: pointer;
+        &::-webkit-details-marker {
+          display: none;
+        }
+      }
+      details:not([open]) {
+        summary {
+          .settingsIcon {
+            opacity: 0.7;
+          }
+        }
+      }
+      details[open] {
+        summary {
+          .settingsIcon {
+            opacity: 1;
+          }
+        }
+      }
+    }
+    .control {
+      .shortNumberInput {
+        max-width: 3.5em;
+      }
+      input, option, select {
+        text-align: right;
+        max-width: 6em;
+        margin-left: 0.3em;
+      }
+    }
+    .controlPanel {
+      .controls {
+        .slider {
+          width: 15em;
+          input {
+            width: 100%;
+          }
+        }
+
+        .buttons {
+          margin-bottom: 0.3em;
+          span {
+            width: auto;
+            margin: 0 0.3em 0 0;
+
+            button {
+              font-size: 2em;
+            }
+          }
+        }
+
+        .stepStats {
+
+          p {
+            margin-bottom: auto;
+          }
+          .bestStepActive {
+            font-weight: bold;
+          }
+        }
+
+        .repeatSteps {
+        }
+        .plotControls {
+          margin-top: 0.5em;
+        }
+      }
+
+      .checkbox {
+        margin-right: 0.3em;
+      }
+    }
+
+    .plot {
+      width: 15em;
+      height: 15em;
+    }
+    .stats {
+      width: auto;
+    }
+
+    .shapesPreContainer {
+      max-width: 25em;
+      overflow: scroll;
+      cursor: pointer;
+      pre {
+        overflow: scroll;
+      }
+    }
+
+    .excludedSetId {
+      //background-color: black;
+      //text-decoration: line-through;
+    }
+
+    .totalRow {
+      font-weight: bold;
+    }
+
+    .sparkLinesTable {
+      tr {
+        height: 1em;
+        font-size: 1em;
+        max-height: 1em;
+        td, th {
+          height: 1em;
+          font-size: 1em;
+          max-height: 1em;
+          text-align: right;
+        }
+        th.goalHeading {
+          //padding-right: 0.8em;
+        }
+        td.sparkNum {
+          min-width: 5em;
+          max-width: 5em;
+          overflow: hidden;
+          text-align: right;
+          span {
+            width: 100%;
+          }
+        }
+        td.val {
+          min-width: 3em;
+          max-width: 3em;
+          span {
+            width: 100%;
+          }
+        }
+        td.targetVal {
+          //padding-right: 0;
+          input {
+            background-color: transparent;
+            text-align: right;
+            width: 100%;
+            border: none;
+            //padding-right: 0;
+          }
+        }
+      }
+    }
+
+    td, th {
+      border-width: 1px;
+      padding: 0.1em 0.3em;
+      white-space: nowrap;
+    }
+  }
+}

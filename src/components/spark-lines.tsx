@@ -1,4 +1,4 @@
-import css from "../../pages/index.module.scss";
+import css from "../App.module.scss";
 import {Model, Step} from "../lib/regions";
 import {Sparklines, SparklinesLine} from "react-sparklines";
 import {max} from "../lib/math";

@@ -1,6 +1,6 @@
 import { Target } from "./targets";
 import { PI, sqrt } from "./math";
-import A from "next-utils/a";
+import A from "../components/A";
 import React from "react";
 
 export const ThreeEqualCircles: Target[] = [

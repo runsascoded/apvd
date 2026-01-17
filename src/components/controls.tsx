@@ -1,7 +1,7 @@
 import React, {DetailedHTMLProps, Dispatch, InputHTMLAttributes, ReactNode} from "react";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
-import css from "../../pages/index.module.scss";
+import css from "../App.module.scss";
 
 export type LabelProps = {
     label: string

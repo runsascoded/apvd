@@ -1,6 +1,6 @@
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
-import css from "../../pages/index.module.scss";
+import css from "../App.module.scss";
 import React from "react";
 
 export const CopyLayout = ({ label, shapesTextFn, wrap, }: { label: string, shapesTextFn: () => (string | undefined), wrap?: boolean }) => {

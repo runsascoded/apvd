@@ -1,6 +1,6 @@
 import * as apvd from "apvd";
-import {fromEntries} from "next-utils/objs";
-import {Param} from "next-utils/params";
+import {fromEntries} from "./objs";
+import {Param} from "./params";
 
 export type Target = [ string, number ]
 
@@ -117,8 +117,8 @@ export const targetsParam: Param<Targets | null> = {
             return val.toString()
         }).join(',')
     },
-    decode: (s: string | undefined): Targets | null => {
-        if (s === undefined) {
+    decode: (s: string | null): Targets | null => {
+        if (s === null) {
             return null
         }
         let givenInclusive = false
