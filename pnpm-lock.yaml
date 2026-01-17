@@ -50,6 +50,9 @@ importers:
       save-svg-as-png:
         specifier: ^1.4.17
         version: 1.4.17
+      use-kbd:
+        specifier: ^0.6.0
+        version: 0.6.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       use-local-storage-state:
         specifier: ^19.5.0
         version: 19.5.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -2756,6 +2759,12 @@ packages:
 
   update-diff@1.1.0:
     resolution: {integrity: sha512-rCiBPiHxZwT4+sBhEbChzpO5hYHjm91kScWgdHf4Qeafs6Ba7MBl+d9GlGv72bcTZQO0sLmtQS1pHSWoCLtN/A==}
+
+  use-kbd@0.6.0:
+    resolution: {integrity: sha512-JxhpTqRqMiGRfe9CDw02wkZtFN3LoZNblANzbqme9q8EO9OAkJcyHeOGT1+r0AUzZTH2+g8vvKUSOcUvK/ETLg==}
+    peerDependencies:
+      react: '>=18.0.0'
+      react-dom: '>=18.0.0'
 
   use-local-storage-state@19.5.0:
     resolution: {integrity: sha512-sUJAyFvsmqMpBhdwaRr7GTKkkoxb6PWeNVvpBDrLuwQF1PpbJRKIbOYeLLeqJI7B3wdfFlLLCBbmOdopiSTBOw==}
@@ -5769,6 +5778,11 @@ snapshots:
       picocolors: 1.1.1
 
   update-diff@1.1.0: {}
+
+  use-kbd@0.6.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
+    dependencies:
+      react: 18.3.1
+      react-dom: 18.3.1(react@18.3.1)
 
   use-local-storage-state@19.5.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:

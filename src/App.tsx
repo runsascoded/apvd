@@ -1,5 +1,6 @@
 import Grid, { GridState } from "./components/grid"
 import React, { DetailedHTMLProps, Fragment, HTMLAttributes, lazy, ReactNode, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { ShortcutsModal, Omnibar, SequenceModal, useAction } from 'use-kbd'
 import * as apvd from "apvd"
 import { train, update_log_level } from "apvd"
 import { makeModel, Model, Region, regionPath, Step } from "./lib/regions"
@@ -28,6 +29,8 @@ import { getHashMap, getHistoryStateHash, HashMapVal, Param, ParsedParam, parseH
 import { precisionSchemes, ShapesParam } from "./lib/shapes-buffer"
 import { Checkbox, Control, Number, Select } from "./components/controls"
 import useSessionStorageState from "use-session-storage-state"
+import { ThemeToggle, useTheme } from "./components/theme-toggle"
+import { FloatingControls } from "./components/floating-controls"
 import ClipboardSvg from "./components/clipboard-svg"
 import { fmt } from "./lib/utils"
 import { useDeepCmp } from "./lib/use-deep-cmp-memo"
@@ -134,7 +137,17 @@ export function Links({ links, placement, }: { links: LinkItem[], placement: Pla
 export const GridId = "grid"
 
 export default function Page() {
-    return <Apvd>{() => <Body />}</Apvd>
+    return (
+        <Apvd>{() => <>
+            <Body />
+            <ShortcutsModal groups={{
+                playback: 'Playback',
+                nav: 'Navigation',
+            }} />
+            <Omnibar placeholder="Search actions..." />
+            <SequenceModal />
+        </>}</Apvd>
+    )
 }
 
 declare var window: any;
@@ -193,6 +206,8 @@ export const MaxNumShapes = 5
 const fizzBuzzLink = <A href={"https://en.wikipedia.org/wiki/Fizz_buzz"}>Fizz Buzz</A>
 
 export function Body() {
+    const { toggleTheme } = useTheme()
+    const [ showFloatingControls, setShowFloatingControls ] = useSessionStorageState<boolean>("showFloatingControls", { defaultValue: true })
 
     const [ logLevel, setLogLevel ] = useSessionStorageState<LogLevel>("logLevel", { defaultValue: "info" })
     useEffect(
@@ -588,55 +603,106 @@ export function Body() {
 
     const cantReverse = useMemo(() => stepIdx === 0, [ stepIdx ])
 
-    // Keyboard shortcuts
-    useEffect(() => {
-        const keyDownHandler = (e: KeyboardEvent) => {
-            // console.log(`keydown: ${e.code}, shift ${e.shiftKey}, alt ${e.altKey}, meta ${e.metaKey}`)
-            switch (e.code) {
-                case 'ArrowRight':
-                    e.preventDefault()
-                    e.stopPropagation()
-                    if (cantAdvance) return
-                    if (e.metaKey) {
-                        if (model) {
-                            setStepIdx(model.steps.length - 1)
-                        }
-                    } else {
-                        fwdStep(e.shiftKey ? 10 : undefined)
-                    }
-                    setRunningState("none")
-                    break
-                case 'ArrowLeft':
-                    e.preventDefault()
-                    e.stopPropagation()
-                    if (cantReverse) return
-                    if (e.metaKey) {
-                        setStepIdx(0)
-                    } else {
-                        revStep(e.shiftKey ? 10 : 1)
-                    }
-                    setRunningState("none")
-                    break
-                case 'Space':
-                    e.preventDefault()
-                    e.stopPropagation()
-                    if (e.shiftKey) {
-                        if (cantReverse) return
-                        setRunningState(runningState == "rev" ? "none" : "rev")
-                    } else {
-                        if (cantAdvance) return
-                        setRunningState(runningState == "fwd" ? "none" : "fwd")
-                    }
-                    break
-            }
-        }
-        document.addEventListener("keydown", keyDownHandler);
+    // Keyboard shortcuts via use-kbd
+    useAction('playback:step-forward', {
+        label: 'Step forward',
+        group: 'playback',
+        defaultBindings: ['right'],
+        handler: () => {
+            if (cantAdvance) return
+            fwdStep()
+            setRunningState("none")
+        },
+    })
 
-        // clean up
-        return () => {
-            document.removeEventListener("keydown", keyDownHandler);
-        };
-    }, [ fwdStep, revStep, cantAdvance, cantReverse, setRunningState, runningState, setStepIdx, ]);
+    useAction('playback:step-forward-10', {
+        label: 'Step forward 10',
+        group: 'playback',
+        defaultBindings: ['shift+right'],
+        handler: () => {
+            if (cantAdvance) return
+            fwdStep(10)
+            setRunningState("none")
+        },
+    })
+
+    useAction('playback:go-to-end', {
+        label: 'Go to end',
+        group: 'playback',
+        defaultBindings: ['meta+right'],
+        handler: () => {
+            if (cantAdvance || !model) return
+            setStepIdx(model.steps.length - 1)
+            setRunningState("none")
+        },
+    })
+
+    useAction('playback:step-backward', {
+        label: 'Step backward',
+        group: 'playback',
+        defaultBindings: ['left'],
+        handler: () => {
+            if (cantReverse) return
+            revStep(1)
+            setRunningState("none")
+        },
+    })
+
+    useAction('playback:step-backward-10', {
+        label: 'Step backward 10',
+        group: 'playback',
+        defaultBindings: ['shift+left'],
+        handler: () => {
+            if (cantReverse) return
+            revStep(10)
+            setRunningState("none")
+        },
+    })
+
+    useAction('playback:go-to-start', {
+        label: 'Go to start',
+        group: 'playback',
+        defaultBindings: ['meta+left'],
+        handler: () => {
+            if (cantReverse) return
+            setStepIdx(0)
+            setRunningState("none")
+        },
+    })
+
+    useAction('playback:play-pause', {
+        label: 'Play/pause',
+        group: 'playback',
+        defaultBindings: ['space'],
+        handler: () => {
+            if (cantAdvance) return
+            setRunningState(runningState == "fwd" ? "none" : "fwd")
+        },
+    })
+
+    useAction('playback:play-pause-reverse', {
+        label: 'Play/pause (reverse)',
+        group: 'playback',
+        defaultBindings: ['shift+space'],
+        handler: () => {
+            if (cantReverse) return
+            setRunningState(runningState == "rev" ? "none" : "rev")
+        },
+    })
+
+    useAction('nav:toggle-theme', {
+        label: 'Toggle dark/light mode',
+        group: 'nav',
+        defaultBindings: ['t'],
+        handler: toggleTheme,
+    })
+
+    useAction('nav:toggle-floating-controls', {
+        label: 'Toggle floating controls',
+        group: 'nav',
+        defaultBindings: ['f'],
+        handler: () => setShowFloatingControls(prev => !prev),
+    })
 
     // Run steps
     useEffect(
@@ -1639,6 +1705,7 @@ export function Body() {
                             open={settingsShown}
                             toggle={setSettingsShown}
                             summary={<>
+                                <ThemeToggle />
                                 <SaveButton />
                                 <CopyCurrentURL />
                                 <SettingsGear />
@@ -1909,6 +1976,18 @@ export function Body() {
                     </div>
                 </div>
             </div>
+            <FloatingControls visible={showFloatingControls}>
+                <PlaybackControl title={"Rewind to start"} hotkey={"⌘←"} onClick={() => setStepIdx(0)} disabled={cantReverse}>⏮️</PlaybackControl>
+                <PlaybackControl title={"Rewind"} hotkey={"⇧␣"} onClick={() => setRunningState(runningState == "rev" ? "none" : "rev")} disabled={cantReverse} animating={true}>{runningState == "rev" ? "⏸️" : "⏪️"}</PlaybackControl>
+                <PlaybackControl title={"Reverse one step"} hotkey={"←"} onClick={() => revStep()} disabled={cantReverse}>⬅️</PlaybackControl>
+                <PlaybackControl title={`Advance one ${stepIdx !== null && model && stepIdx + 1 == model.steps.length ? `batch (${stepBatchSize} steps)` : "step"}`} hotkey={"→"} onClick={() => fwdStep()} disabled={cantAdvance || stepIdx == maxSteps}>➡️</PlaybackControl>
+                <FastForwardButton />
+                <PlaybackControl title={"Jump to last computed step"} hotkey={"⌘→"} onClick={() => {
+                    if (!model) return
+                    setStepIdx(model.steps.length - 1)
+                    panZoom()
+                }} disabled={!model || stepIdx === null || stepIdx + 1 == model.steps.length}>⏭️</PlaybackControl>
+            </FloatingControls>
         </div>
     )
 }

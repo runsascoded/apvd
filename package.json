@@ -30,6 +30,7 @@
     "react-scroll-wheel-handler": "^2.2.0",
     "react-sparklines": "^1.7.0",
     "save-svg-as-png": "^1.4.17",
+    "use-kbd": "^0.6.0",
     "use-local-storage-state": "^19.5.0",
     "use-session-storage-state": "^19.0.0"
   },
