@@ -11,14 +11,14 @@ export default defineConfig({
   ],
   base: '/apvd/',
   server: {
-    port: 5180,
+    port: 5183,
     fs: {
       // Allow serving files from the shapes workspace dependency
       allow: ['..'],
     },
   },
   preview: {
-    port: 5180,
+    port: 5183,
   },
   build: {
     outDir: 'dist',
