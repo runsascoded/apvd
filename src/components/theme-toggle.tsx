@@ -1,7 +1,12 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useMemo } from 'react'
 import useLocalStorageState from 'use-local-storage-state'
 
 export type Theme = 'light' | 'dark'
+
+const DIAGRAM_BG = {
+    light: '#ffffff',
+    dark: '#1a1a2e',
+}
 
 export function useTheme() {
     const [theme, setTheme] = useLocalStorageState<Theme>('apvd-theme', {
@@ -16,7 +21,9 @@ export function useTheme() {
         setTheme(prev => prev === 'light' ? 'dark' : 'light')
     }
 
-    return { theme, setTheme, toggleTheme }
+    const diagramBg = useMemo(() => DIAGRAM_BG[theme], [theme])
+
+    return { theme, setTheme, toggleTheme, diagramBg }
 }
 
 export function ThemeToggle() {

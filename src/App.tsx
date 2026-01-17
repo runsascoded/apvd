@@ -29,8 +29,8 @@ import { getHashMap, getHistoryStateHash, HashMapVal, Param, ParsedParam, parseH
 import { precisionSchemes, ShapesParam } from "./lib/shapes-buffer"
 import { Checkbox, Control, Number, Select } from "./components/controls"
 import useSessionStorageState from "use-session-storage-state"
-import { ThemeToggle, useTheme } from "./components/theme-toggle"
-import { FloatingControls } from "./components/floating-controls"
+import { useTheme } from "./components/theme-toggle"
+import { Fab } from "./components/fab"
 import ClipboardSvg from "./components/clipboard-svg"
 import { fmt } from "./lib/utils"
 import { useDeepCmp } from "./lib/use-deep-cmp-memo"
@@ -206,8 +206,7 @@ export const MaxNumShapes = 5
 const fizzBuzzLink = <A href={"https://en.wikipedia.org/wiki/Fizz_buzz"}>Fizz Buzz</A>
 
 export function Body() {
-    const { toggleTheme } = useTheme()
-    const [ showFloatingControls, setShowFloatingControls ] = useSessionStorageState<boolean>("showFloatingControls", { defaultValue: true })
+    const { toggleTheme, diagramBg } = useTheme()
 
     const [ logLevel, setLogLevel ] = useSessionStorageState<LogLevel>("logLevel", { defaultValue: "info" })
     useEffect(
@@ -695,13 +694,6 @@ export function Body() {
         group: 'nav',
         defaultBindings: ['t'],
         handler: toggleTheme,
-    })
-
-    useAction('nav:toggle-floating-controls', {
-        label: 'Toggle floating controls',
-        group: 'nav',
-        defaultBindings: ['f'],
-        handler: () => setShowFloatingControls(prev => !prev),
     })
 
     // Run steps
@@ -1494,7 +1486,9 @@ export function Body() {
     )
 
     const svgRef = useRef<SVGSVGElement | null>(null)
-    const [ svgBackgroundColor, setSvgBackgroundColor ] = useSessionStorageState<string>("svgBackgroundColor", { defaultValue: "white" })
+    const [ svgBackgroundColor, setSvgBackgroundColor ] = useSessionStorageState<string>("svgBackgroundColor", { defaultValue: "" })
+    // Use theme-based default when no custom color is set
+    const effectiveSvgBg = svgBackgroundColor || diagramBg
     const [ invalidSvgColor, setInvalidSvgColor ] = useState(false)
     const [ showSaveModal, setShowSaveModal ] = useState(false)
     const savePngButton = useRef<HTMLInputElement | null>(null)
@@ -1514,7 +1508,7 @@ export function Body() {
                                     value={"PNG"}
                                     onClick={e => {
                                         d3ToPng(`#${GridId}`, 'plot', {
-                                            background: svgBackgroundColor,
+                                            background: effectiveSvgBg,
                                         });
                                         console.log("called png download")
                                         e.preventDefault()
@@ -1557,7 +1551,7 @@ export function Body() {
                     }}>💾</span>
                 </OverlayTrigger>
             )},
-        [ showSaveModal, svgBackgroundColor, ]
+        [ showSaveModal, effectiveSvgBg, ]
     )
 
     const CopyCurrentURL = () => (
@@ -1609,7 +1603,7 @@ export function Body() {
                 <Grid
                     id={GridId}
                     className={"row"}
-                    style={{ backgroundColor: svgBackgroundColor, }}
+                    style={{ backgroundColor: effectiveSvgBg, }}
                     svgRef={svgRef}
                     resizableNodeClassName={css.svgContainer}
                     svgClassName={css.grid}
@@ -1705,7 +1699,6 @@ export function Body() {
                             open={settingsShown}
                             toggle={setSettingsShown}
                             summary={<>
-                                <ThemeToggle />
                                 <SaveButton />
                                 <CopyCurrentURL />
                                 <SettingsGear />
@@ -1976,18 +1969,7 @@ export function Body() {
                     </div>
                 </div>
             </div>
-            <FloatingControls visible={showFloatingControls}>
-                <PlaybackControl title={"Rewind to start"} hotkey={"⌘←"} onClick={() => setStepIdx(0)} disabled={cantReverse}>⏮️</PlaybackControl>
-                <PlaybackControl title={"Rewind"} hotkey={"⇧␣"} onClick={() => setRunningState(runningState == "rev" ? "none" : "rev")} disabled={cantReverse} animating={true}>{runningState == "rev" ? "⏸️" : "⏪️"}</PlaybackControl>
-                <PlaybackControl title={"Reverse one step"} hotkey={"←"} onClick={() => revStep()} disabled={cantReverse}>⬅️</PlaybackControl>
-                <PlaybackControl title={`Advance one ${stepIdx !== null && model && stepIdx + 1 == model.steps.length ? `batch (${stepBatchSize} steps)` : "step"}`} hotkey={"→"} onClick={() => fwdStep()} disabled={cantAdvance || stepIdx == maxSteps}>➡️</PlaybackControl>
-                <FastForwardButton />
-                <PlaybackControl title={"Jump to last computed step"} hotkey={"⌘→"} onClick={() => {
-                    if (!model) return
-                    setStepIdx(model.steps.length - 1)
-                    panZoom()
-                }} disabled={!model || stepIdx === null || stepIdx + 1 == model.steps.length}>⏭️</PlaybackControl>
-            </FloatingControls>
+            <Fab />
         </div>
     )
 }
