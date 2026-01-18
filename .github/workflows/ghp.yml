@@ -10,17 +10,21 @@ jobs:
     name: Build and deploy
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
         with:
-          node-version: 19
-          cache: 'npm'
-      - run: npm install
-      - run: npm run gha-export
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+      - run: pnpm install
+      - run: pnpm run build
       - name: Deploy
-        uses: JamesIves/github-pages-deploy-action@4.1.1
+        if: github.ref == 'refs/heads/main'
+        uses: JamesIves/github-pages-deploy-action@v4
         with:
           repository-name: ryan-williams/apvd
           branch: gh-pages
-          folder: out
-          token: ${{ secrets.ghp_pat }}  # expires 2023-11-16
+          folder: dist
+          token: ${{ secrets.ghp_pat }}
