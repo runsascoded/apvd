@@ -14,10 +14,14 @@ export default defineConfig({
     global: 'globalThis',
   },
   base: '/apvd/',
+  optimizeDeps: {
+    // Exclude apvd from pre-bundling so WASM is loaded correctly
+    exclude: ['apvd'],
+  },
   server: {
     port: 5183,
     fs: {
-      // Allow serving files from the shapes workspace dependency
+      // Allow serving files from node_modules
       allow: ['..'],
     },
   },
