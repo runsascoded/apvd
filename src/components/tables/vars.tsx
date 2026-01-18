@@ -17,6 +17,7 @@ export function VarsTable(
     } & SparkLineCellProps
 ) {
     const { showSparkLines} = sparkLineCellProps
+    const { sparklineColors } = sparkLineCellProps
     const varTableRows = useMemo(
         () => {
             // console.log(`varTableRows: ${initialCircles.length} vs ${circles.length} circles, vars:`, vars.coords.length, vars)
@@ -26,20 +27,20 @@ export function VarsTable(
                     <td>{sets[setIdx].name}.{coord}</td>
                     {SparkNum(vars.getVal(curStep, varIdx))}
                     {showSparkLines && <SparkLineCell
-                        color={"blue"}
+                        color={sparklineColors.blue}
                         fn={step => vars.getVal(step, varIdx)}
                         {...sparkLineCellProps}
                     />}
                     {SparkNum(-error.d[varIdx])}
                     {showSparkLines && <SparkLineCell
-                        color={"green"}
+                        color={sparklineColors.green}
                         fn={step => step.error.d[varIdx]}
                         {...sparkLineCellProps}
                     />}
                 </tr>
             )
         },
-        [ curStep, vars, sets, showSparkLines, ]
+        [ curStep, vars, sets, showSparkLines, sparklineColors, ]
     )
     return (
         <table className={css.sparkLinesTable}>

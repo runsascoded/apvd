@@ -3,7 +3,7 @@ import React, { SVGProps } from "react";
 // https://www.svgrepo.com/svg/404561/clipboard-copy-duplicate-paste-2
 export default function ClipboardSvg(props: Partial<SVGProps<SVGSVGElement>>) {
     const defaults = {
-        fill: "#000000",
+        fill: "currentColor",
         width: "20px",
         height: "20px",
         viewBox: "0 0 32 32",

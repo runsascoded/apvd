@@ -102,7 +102,7 @@ export function TargetsTable(
     const [ editingValue, setEditingValue ] = useState<[ string, string ] | null>(null)
     const totalTargetArea = curStep.targets.total_area
     const [ showTargetCurCol, setShowTargetCurCol ] = useState(false)
-    const { showSparkLines } = sparkLineProps
+    const { showSparkLines, sparklineColors } = sparkLineProps
     const cellProps = { model, stepIdx, ...sparkLineProps, }
     const targetTableRows = displayTargets.map(([ key, value ]) => {
         const name = targetName(key)
@@ -163,7 +163,7 @@ export function TargetsTable(
             }
             {SparkNum(err && err.error.v * totalTargetArea)}
             {showSparkLines && <SparkLineCell
-                color={"red"}
+                color={sparklineColors.red}
                 fn={step => abs(step.errors.get(key)?.error.v || 0)}
                 {...cellProps}
             />}
@@ -187,7 +187,7 @@ export function TargetsTable(
                 <td className={css.sparkNum}>{sum}</td>
                 {SparkNum(error.v * totalTargetArea)}
                 {showSparkLines && <SparkLineCell
-                    color={"red"}
+                    color={sparklineColors.red}
                     fn={step => step.error.v}
                     {...cellProps}
                 />}

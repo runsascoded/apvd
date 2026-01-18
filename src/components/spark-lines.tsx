@@ -56,6 +56,7 @@ export type SparkLineProps = {
     sparkLineMargin: number
     sparkLineWidth: number
     sparkLineHeight: number
+    sparklineColors: { red: string; green: string; blue: string }
 }
 export type SparkLineCellProps = SparkLineProps & {
     model: Model
