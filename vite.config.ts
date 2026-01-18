@@ -9,6 +9,10 @@ export default defineConfig({
     wasm(),
     topLevelAwait(),
   ],
+  define: {
+    // Polyfill for libraries that expect Node.js `global` (e.g., react-mathquill)
+    global: 'globalThis',
+  },
   base: '/apvd/',
   server: {
     port: 5183,
@@ -35,8 +39,5 @@ export default defineConfig({
       // Handle next-utils imports that don't depend on Next.js
       'next-utils/objs': '/src/lib/objs.ts',
     },
-  },
-  optimizeDeps: {
-    exclude: ['apvd'],
   },
 })
