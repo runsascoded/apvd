@@ -27,7 +27,7 @@ import _ from "lodash"
 import debounce from "lodash/debounce"
 import { getHashMap, getHistoryStateHash, HashMapVal, Param, ParsedParam, parseHashParams, updatedHash, updateHashParams } from "./lib/params"
 import { precisionSchemes, ShapesParam } from "./lib/shapes-buffer"
-import { Checkbox, Control, Number, Select } from "./components/controls"
+import { Checkbox, Control, Number, Select, tooltipPopperConfig } from "./components/controls"
 import useSessionStorageState from "use-session-storage-state"
 import { useTheme, isDefaultBg, getEffectiveShapeColor } from "./components/theme-toggle"
 import { Fab } from "./components/fab"
@@ -78,7 +78,10 @@ export function DetailsSection({ title, tooltip, open, toggle, className, childr
                 <summary>
                     <h4 className={css.tableTitle}>{
                         tooltip
-                            ? <OverlayTrigger overlay={<Tooltip>{tooltip}</Tooltip>}><span>{title}</span></OverlayTrigger>
+                            ? <OverlayTrigger
+                                overlay={<Tooltip>{tooltip}</Tooltip>}
+                                popperConfig={tooltipPopperConfig}
+                            ><span>{title}</span></OverlayTrigger>
                             : title
                     }</h4>
                 </summary>

@@ -3,6 +3,14 @@ import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
 import css from "../App.module.scss";
 
+// Popper config to prevent tooltip flicker/layout shifts
+export const tooltipPopperConfig = {
+    strategy: 'fixed' as const,
+    modifiers: [
+        { name: 'preventOverflow', options: { boundary: 'viewport' } },
+    ],
+}
+
 export type LabelProps = {
     label: string
     tooltip?: ReactNode
@@ -13,7 +21,7 @@ export function Label({ label, tooltip, children, }: LabelProps) {
         <label>
             {
                 tooltip
-                    ? <OverlayTrigger overlay={<Tooltip>{tooltip}</Tooltip>}><span>{label}</span></OverlayTrigger>
+                    ? <OverlayTrigger overlay={<Tooltip>{tooltip}</Tooltip>} popperConfig={tooltipPopperConfig}><span>{label}</span></OverlayTrigger>
                     : label
             }:
             {children}
