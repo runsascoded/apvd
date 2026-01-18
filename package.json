@@ -16,7 +16,7 @@
     "scrns": "scrns"
   },
   "dependencies": {
-    "apvd": "workspace:*",
+    "apvd": "github:runsascoded/shapes#6c133ca54b0cafc2aca4c897581eb7be19340452",
     "bootstrap": "^5.3.3",
     "d3-svg-to-png": "^0.3.1",
     "lodash": "^4.17.21",
@@ -30,7 +30,7 @@
     "react-scroll-wheel-handler": "^2.2.0",
     "react-sparklines": "^1.7.0",
     "save-svg-as-png": "^1.4.17",
-    "use-kbd": "^0.6.0",
+    "use-kbd": "github:runsascoded/use-kbd#cfadc133d6cd41ffd502b182b39941e522537d2f",
     "use-local-storage-state": "^19.5.0",
     "use-session-storage-state": "^19.0.0"
   },
