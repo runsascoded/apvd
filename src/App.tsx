@@ -1,6 +1,6 @@
 import Grid, { GridState } from "./components/grid"
 import React, { DetailedHTMLProps, Fragment, HTMLAttributes, lazy, ReactNode, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { ShortcutsModal, Omnibar, SequenceModal, useAction } from 'use-kbd'
+import { ShortcutsModal, Omnibar, SequenceModal, useAction, useOmnibarEndpoint } from 'use-kbd'
 import * as apvd from "apvd"
 import { train, update_log_level } from "apvd"
 import { makeModel, Model, Region, regionPath, Step } from "./lib/regions"
@@ -29,7 +29,7 @@ import { getHashMap, getHistoryStateHash, HashMapVal, Param, ParsedParam, parseH
 import { precisionSchemes, ShapesParam } from "./lib/shapes-buffer"
 import { Checkbox, Control, Number, Select } from "./components/controls"
 import useSessionStorageState from "use-session-storage-state"
-import { useTheme, isDefaultBg } from "./components/theme-toggle"
+import { useTheme, isDefaultBg, getEffectiveShapeColor } from "./components/theme-toggle"
 import { Fab } from "./components/fab"
 import ClipboardSvg from "./components/clipboard-svg"
 import { fmt } from "./lib/utils"
@@ -206,7 +206,8 @@ export const MaxNumShapes = 5
 const fizzBuzzLink = <A href={"https://en.wikipedia.org/wiki/Fizz_buzz"}>Fizz Buzz</A>
 
 export function Body() {
-    const { toggleTheme, diagramBg } = useTheme()
+
+    const { theme, toggleTheme, diagramBg, sparklineColors } = useTheme()
 
     const [ logLevel, setLogLevel ] = useSessionStorageState<LogLevel>("logLevel", { defaultValue: "info" })
     useEffect(
@@ -234,15 +235,14 @@ export function Body() {
         n: [ urlSetMetadata, setUrlSetMetadata ],
     }: ParsedParams = parseHashParams({ params })
 
+    // Track if we've consumed URL shapes (to avoid re-consuming on re-render)
+    const urlShapesConsumedRef = useRef(false)
+
     const [ initialShapes, setInitialShapes ] = useState<Shapes>(() => {
-        // console.log("initialShapes: hash", window.location.hash)
-        if (urlFragmentShapes) {
-            console.log("found urlFragmentShapes:", urlFragmentShapes)
-            setUrlFragmentShapes(null)
-            setUrlShapesPrecisionScheme(urlFragmentShapes.precisionSchemeId)
+        // URL shapes take precedence over sessionStorage
+        if (urlFragmentShapes && !urlShapesConsumedRef.current) {
+            urlShapesConsumedRef.current = true
             return urlFragmentShapes.shapes
-        } else {
-            console.log("no urlFragmentShapes found")
         }
         const str = sessionStorage.getItem(shapesKey)
         return str
@@ -250,10 +250,15 @@ export function Body() {
             : initialLayout.map(s => toShape(s))
     })
 
+    // Update precision scheme from URL shapes (in useEffect to avoid side effect during render)
+    useEffect(() => {
+        if (urlFragmentShapes) {
+            setUrlShapesPrecisionScheme(urlFragmentShapes.precisionSchemeId)
+        }
+    }, [])
+
     const [ rawTargets, setTargets ] = useState<Targets>(() => {
         if (urlFragmentTargets) {
-            console.log("found urlFragmentTargets:", urlFragmentTargets)
-            setUrlFragmentTargets(null)
             return urlFragmentTargets
         }
         const str = sessionStorage.getItem(targetsKey)
@@ -266,8 +271,6 @@ export function Body() {
 
     const [ setMetadata, setSetMetadata ] = useState<SetMetadata>(() => {
         if (urlSetMetadata) {
-            console.log("found urlSetMetadata:", urlSetMetadata)
-            setUrlSetMetadata(null)
             return urlSetMetadata
         }
         const str = sessionStorage.getItem(setMetadataKey)
@@ -329,6 +332,7 @@ export function Body() {
     const [ maxSteps, setMaxSteps ] = useSessionStorageState("maxSteps", { defaultValue: 10000 })
     const [ stepBatchSize, setStepBatchSize ] = useSessionStorageState("stepBatchSize", { defaultValue: 20 })
     const [ showRegionSizes, setShowRegionSizes ] = useSessionStorageState("showRegionSizes", { defaultValue: false })
+    const [ shapeFillOpacity, setShapeFillOpacity ] = useSessionStorageState<number>("shapeFillOpacity", { defaultValue: 0.2 })
 
     const [ model, setModel ] = useState<Model | null>(null)
     const [ modelStepIdx, setModelStepIdx ] = useState<number | null>(null)
@@ -382,7 +386,11 @@ export function Body() {
             // Save current shapes to sessionStorage
             const shapes = curStep.sets.map(({ shape }) => shape)
             sessionStorage.setItem(shapesKey, JSON.stringify(shapes))
-            const sets = curStep.sets.map(set => ({ ...initialSets[set.idx], ...set, }))
+            const sets = curStep.sets.map(set => {
+                const base = initialSets[set.idx]
+                const effectiveColor = getEffectiveShapeColor(base.color, set.idx, theme)
+                return { ...base, ...set, color: effectiveColor }
+            })
 
             if (stateInUrlFragment) {
                 if (targets.numShapes == shapes.length) {
@@ -393,7 +401,7 @@ export function Body() {
             }
             return [ curStep, sets, shapes ]
         },
-        [ model, stepIdx, initialSets, targets, stateInUrlFragment, pushHistoryState, ]
+        [ model, stepIdx, initialSets, targets, stateInUrlFragment, pushHistoryState, theme, ]
     )
 
     // Save targets to sessionStorage
@@ -606,7 +614,7 @@ export function Body() {
     useAction('playback:step-forward', {
         label: 'Step forward',
         group: 'playback',
-        defaultBindings: ['right'],
+        defaultBindings: ['arrowright'],
         handler: () => {
             if (cantAdvance) return
             fwdStep()
@@ -617,7 +625,7 @@ export function Body() {
     useAction('playback:step-forward-10', {
         label: 'Step forward 10',
         group: 'playback',
-        defaultBindings: ['shift+right'],
+        defaultBindings: ['shift+arrowright'],
         handler: () => {
             if (cantAdvance) return
             fwdStep(10)
@@ -628,7 +636,7 @@ export function Body() {
     useAction('playback:go-to-end', {
         label: 'Go to end',
         group: 'playback',
-        defaultBindings: ['meta+right'],
+        defaultBindings: ['meta+arrowright'],
         handler: () => {
             if (cantAdvance || !model) return
             setStepIdx(model.steps.length - 1)
@@ -639,7 +647,7 @@ export function Body() {
     useAction('playback:step-backward', {
         label: 'Step backward',
         group: 'playback',
-        defaultBindings: ['left'],
+        defaultBindings: ['arrowleft'],
         handler: () => {
             if (cantReverse) return
             revStep(1)
@@ -650,7 +658,7 @@ export function Body() {
     useAction('playback:step-backward-10', {
         label: 'Step backward 10',
         group: 'playback',
-        defaultBindings: ['shift+left'],
+        defaultBindings: ['shift+arrowleft'],
         handler: () => {
             if (cantReverse) return
             revStep(10)
@@ -661,7 +669,7 @@ export function Body() {
     useAction('playback:go-to-start', {
         label: 'Go to start',
         group: 'playback',
-        defaultBindings: ['meta+left'],
+        defaultBindings: ['meta+arrowleft'],
         handler: () => {
             if (cantReverse) return
             setStepIdx(0)
@@ -773,15 +781,22 @@ export function Body() {
                             dragmode: 'pan',
                             hovermode: 'x',
                             margin: { t: 0, l: 40, r: 0, b: 40, },
+                            paper_bgcolor: diagramBg,
+                            plot_bgcolor: diagramBg,
+                            font: { color: theme === 'dark' ? '#e4e4e4' : '#212529' },
                             xaxis: {
                                 title: { text: 'Step' },
                                 rangemode: 'tozero',
+                                gridcolor: theme === 'dark' ? '#3a3a5a' : '#e9ecef',
+                                linecolor: theme === 'dark' ? '#3a3a5a' : '#dee2e6',
                             },
                             yaxis: {
                                 title: { text: 'Error' },
                                 type: 'log',
                                 fixedrange: true,
                                 rangemode: 'tozero',
+                                gridcolor: theme === 'dark' ? '#3a3a5a' : '#e9ecef',
+                                linecolor: theme === 'dark' ? '#3a3a5a' : '#dee2e6',
                             },
                             shapes: [{
                                 type: 'line',
@@ -824,7 +839,7 @@ export function Body() {
     const [ sparkLineMargin, setSparkLineMargin ] = useState(1)
     const [ sparkLineWidth, setSparkLineWidth ] = useState(80)
     const [ sparkLineHeight, setSparkLineHeight ] = useState(30)
-    const sparkLineProps: SparkLineProps = { showSparkLines, sparkLineLimit, sparkLineStrokeWidth, sparkLineMargin, sparkLineWidth, sparkLineHeight, }
+    const sparkLineProps: SparkLineProps = { showSparkLines, sparkLineLimit, sparkLineStrokeWidth, sparkLineMargin, sparkLineWidth, sparkLineHeight, sparklineColors, }
     const sparkLineCellProps = model && (typeof stepIdx === 'number') && { model, stepIdx, ...sparkLineProps }
 
     const col5 = "col"
@@ -885,7 +900,7 @@ export function Body() {
                     stroke: "black",
                     strokeWidth: 3 / scale,
                     fill: color,
-                    fillOpacity: 0.3,
+                    fillOpacity: shapeFillOpacity,
                 }
                 const [ rx, ry ] = getRadii(shape)
                 const theta = shape.kind === 'XYRRT' ? shape.t : 0
@@ -903,7 +918,7 @@ export function Body() {
                 return degrees ? <g key={idx} transform={`rotate(${degrees} ${cx} ${cy})`}>{ellipse}</g> : ellipse
             })
         }</g>,
-        [ sets, scale ],
+        [ sets, scale, shapeFillOpacity ],
     )
 
     const [ showIntersectionPoints, setShowIntersectionPoints ] = useSessionStorageState("showIntersectionPoints", { defaultValue: false })
@@ -1429,6 +1444,57 @@ export function Body() {
         placement: 'left',
     })
 
+    // Omnibar endpoints for layouts and examples
+    useOmnibarEndpoint('layouts', {
+        group: 'Layouts',
+        minQueryLength: 0,
+        filter: () => ({
+            entries: layouts.map(({ name, val, description }) => ({
+                id: `layout:${name}`,
+                label: name,
+                description: typeof description === 'string' ? description : undefined,
+                handler: () => {
+                    setInitialLayout(val)
+                    const newShapes = val.slice(0, targets.numShapes).map(s => toShape(s))
+                    setInitialShapes(newShapes)
+                    pushHistoryState({ shapes: newShapes, newTargets: targets, push: true })
+                },
+            })),
+        }),
+    })
+
+    const exampleEntries = useMemo(() => [
+        { id: 'fizz-3-5', label: 'Fizz Buzz: {3, 5}', hash: '#t=i5,3,1&n=Divisible+by+3=3,Divisible+by+5=5', group: 'Fizz Buzz' },
+        { id: 'fizz-3-5-7', label: 'Fizz Buzz: {3, 5, 7}', hash: '#t=i35,21,7,15,5,3,1&n=Divisible+by+3=3,Divisible+by+5=5,Divisible+by+7=7', group: 'Fizz Buzz' },
+        { id: 'fizz-2-3-5-7', label: 'Fizz Buzz: {2, 3, 5, 7}', hash: '#t=i105,70,35,42,21,14,7,30,15,10,5,6,3,2,1&n=Divisible+by+2=2,Divisible+by+3=3,Divisible+by+5=5,Divisible+by+7=7', group: 'Fizz Buzz' },
+        { id: 'variant-callers', label: 'Variant Callers', hash: '#t=633,618,112,187,0,14,1,319,13,55,17,21,0,9,36&n=VarScan,SomaticSniper,Strelka=T@#99f,JSM2@orange', group: 'Examples' },
+        { id: 'variant-callers-best', label: 'Variant Callers (best)', hash: '#s=Mzx868wSrqe62oBeRfH2WUHakKB1OeVQltXVsxzG7xr1hF4oblIulnX_D1OLV6jNkgSlDvFN0OqgyD3OUuvX_X_5HhRUwN1mnF1uXKhW4bbNv4zNby2cxv2iiFbpHovsstMTrteKR4hgh43U5qPl9TqywzTQ4efn1ARs8VrIS_u6Ew57sD7lVHg&t=633,618,112,187,0,14,1,319,13,55,17,21,0,9,36&n=VarScan,SomaticSniper,Strelka=T@#99f,JSM2@orange', group: 'Examples' },
+        { id: 'mpower', label: 'MPower', hash: '#t=42,15,16,10,10,12,25,182,60,23,13,44,13,18,11&n=KRAS,STK11,KEAP1=P,TP53', group: 'Examples' },
+        { id: 'mpower-best', label: 'MPower (best)', hash: '#t=42,15,16,10,10,12,25,182,60,23,13,44,13,18,11&n=KRAS,STK11,KEAP1=P,TP53&s=MBa-DFxenUIPbbiY5zWUS75Sq6I_AoND3lCDN4c5cpbpL14Esh6Saq4ZExG4o8gjJ5dU0BbxsOy7d-X6u50CMd2V366UA1Ds8GIODVbI8YXEowhIyWjyf6ehH6Rv7XRt1FQ7iPZML4xDayY-CF36Azp1g3lboFO9072ceizTenkvUwA4t0T4bSM', group: 'Examples' },
+        { id: 'zhang-d', label: 'Zhang 2014 Fig. 7D', hash: '#t=11,89,1,24,0,66,5,2268,5,271,5,2204,24,11368,353&n=qRT-PCR@#99f,Cuffdiff2,DESeq@#f99,edgeR@orange', group: 'Zhang 2014' },
+        { id: 'zhang-d-best', label: 'Zhang 2014 Fig. 7D (best)', hash: '#t=11,89,1,24,0,66,5,2268,5,271,5,2204,24,11368,353&n=qRT-PCR@#99f,Cuffdiff2,DESeq@#f99,edgeR@orange&s=MzquCc1qHJVEd39MqI0o7S6_mGGRSdwuWGwmgy3c7XFgnl4wtl91F1348bEeB_HTdcDPGo6VC8t2UKYxT-EwbfF57sa0A40Zj-Bm0Z42LRb0BuNY9qtSMtrPqjN0f0cn4ouVyooYd4wItBeD--EDMlBsOIfVgOD9prmJEtDBImoltEIQl7G2r7M', group: 'Zhang 2014' },
+        { id: 'zhang-e', label: 'Zhang 2014 Fig. 7E', hash: '#t=7,798,0,35,0,197,0,1097,1,569,4,303,0,3177,65&n=Microarray@#99f,Cuffdiff2,DESeq@#f99,edgeR@orange', group: 'Zhang 2014' },
+        { id: 'zhang-e-best', label: 'Zhang 2014 Fig. 7E (best)', hash: '#t=7,798,0,35,0,197,0,1097,1,569,4,303,0,3177,65&n=Microarray@#99f,Cuffdiff2,DESeq@#f99,edgeR@orange&s=MzmxcXrZYyppkecbYAfg4H-PdpCaRWiDeq7N44wuiJNlIm4wp8P8cuwA9Bucsmjr2dqn1zPM22wgGd1JSY0rISvxh2mUA2aXH3ag_t6G_89D8KxZnwOU6jB2JskrLQgrA2jCCHogg4hv96qke6qJW22g22WkvD-Ra6KpOXm4rQ50Y4pkpWQmTtE', group: 'Zhang 2014' },
+        { id: 'zhang-f', label: 'Zhang 2014 Fig. 7F', hash: '#t=331,63,21,1,0,0,2,88,77,13,80,6,181,1,1644&n=Simulation@#99f,Cuffdiff2,DESeq@#f99,edgeR@orange', group: 'Zhang 2014' },
+        { id: 'zhang-f-best', label: 'Zhang 2014 Fig. 7F (best)', hash: '#t=331,63,21,1,0,0,2,88,77,13,80,6,181,1,1644&n=Simulation@#99f,Cuffdiff2,DESeq@#f99,edgeR@orange&s=MB338Q9DnKg_lC49IjUVEzmKsO8mQ6dhETFZi7x2gOAYpX4goJWRqKd0e_8WJPog2nm0bsUU2IVkhjK5WwIsdMycjSkoz0PJuyq7cdXN0cnqKBPoRCX2ecj6dr4sA-0LA6nKlMEKu4gux-1ioITfDBxjKok5trrPfC4W0Q9uecOaeAfYDVPgngg', group: 'Zhang 2014' },
+        { id: 'ben-fred', label: 'Venn Diagrams with D3.js', hash: '#t=i16,16,4,12,4,3,2&s=5zg0000200b4001KSA00i900000800g00&n=,,', group: 'Examples' },
+    ], [])
+
+    useOmnibarEndpoint('examples', {
+        group: 'Examples',
+        minQueryLength: 0,
+        filter: () => ({
+            entries: exampleEntries.map(({ id, label, hash, group }) => ({
+                id: `example:${id}`,
+                label,
+                group,
+                handler: () => {
+                    window.location.hash = hash
+                },
+            })),
+        }),
+    })
+
     // Clear URL fragment state if `stateInUrlFragment` has been set to `false`
     useEffect(
         () => {
@@ -1603,7 +1669,7 @@ export function Body() {
                 <Grid
                     id={GridId}
                     className={"row"}
-                    style={{ backgroundColor: effectiveSvgBg, }}
+                    style={{ backgroundColor: effectiveSvgBg }}
                     svgRef={svgRef}
                     resizableNodeClassName={css.svgContainer}
                     svgClassName={css.grid}
@@ -1754,13 +1820,12 @@ export function Body() {
                                     defaultValue={svgBackgroundColor}
                                     onBlur={() => setInvalidSvgColor(false)}
                                     onChange={(newColor) => {
-                                        if (CSS.supports("background-color", newColor)) {
-                                            console.log("new svg color:", newColor)
-                                            setSvgBackgroundColor(newColor)
+                                        if (newColor === '') {
+                                            console.log("svg color cleared, following theme")
+                                            setSvgBackgroundColor('')
                                             setInvalidSvgColor(false)
-                                        } else if (newColor === '') {
-                                            newColor = 'white'
-                                            console.log("default svg color:", newColor)
+                                        } else if (CSS.supports("background-color", newColor)) {
+                                            console.log("new svg color:", newColor)
                                             setSvgBackgroundColor(newColor)
                                             setInvalidSvgColor(false)
                                         } else {
@@ -1770,6 +1835,16 @@ export function Body() {
                                     }}
                                 />
                             </Control>
+                            <Number
+                                label={"Shape opacity"}
+                                className={css.shortNumberInput}
+                                value={shapeFillOpacity}
+                                setValue={setShapeFillOpacity}
+                                min={0}
+                                max={1}
+                                step={0.05}
+                                float={true}
+                            />
                         </Details>
                     </div>
                 </div>
