@@ -26,7 +26,7 @@ export function getNegativeEntries(targets: Targets): Map<string, number> {
 }
 
 export function TargetsTable(
-    { initialSets, targets, setTargets, showDisjointSets, model, curStep, error, stepIdx, hoveredRegion, ...sparkLineProps }: {
+    { initialSets, targets, setTargets, showDisjointSets, model, curStep, error, stepIdx, hoveredRegion, setHoveredRegion, ...sparkLineProps }: {
         initialSets: S[]
         targets: Targets
         setTargets: Dispatch<Targets>
@@ -36,6 +36,7 @@ export function TargetsTable(
         error: Dual
         stepIdx: number
         hoveredRegion: string | null
+        setHoveredRegion: Dispatch<string | null>
     } & SparkLineProps
 ) {
     // console.log(`TargetsTable: ${initialShapes.length} shapes`)
@@ -102,19 +103,53 @@ export function TargetsTable(
     const [ editingValue, setEditingValue ] = useState<[ string, string ] | null>(null)
     const totalTargetArea = curStep.targets.total_area
     const [ showTargetCurCol, setShowTargetCurCol ] = useState(false)
-    const { showSparkLines, sparklineColors } = sparkLineProps
+    const { showSparkLines, sparklineColors, sparkLineWidth, sparkLineHeight } = sparkLineProps
     const cellProps = { model, stepIdx, ...sparkLineProps, }
+
+    // Compute max absolute error for normalizing error bars
+    const maxAbsError = useMemo(() => {
+        let max = 0
+        displayTargets.forEach(([key]) => {
+            const err = curStep.errors.get(key)
+            if (err) {
+                max = Math.max(max, abs(err.error.v * totalTargetArea))
+            }
+        })
+        return max || 1  // Avoid division by zero
+    }, [displayTargets, curStep.errors, totalTargetArea])
+
+    // Only show spark lines if we have more than 1 step (otherwise it's just a flat line)
+    const hasEnoughSteps = model.steps.length > 1
+
     const targetTableRows = displayTargets.map(([ key, value ]) => {
         const name = targetName(key)
         const err = curStep.errors.get(key)
         const negativeKey = negativeEntries && negativeEntries.has(key) || negativePropsEntries.has(key)
         const activeRegion = key == hoveredRegion || (!(hoveredRegion && targetsMap.has(hoveredRegion)) && regionContains(key, hoveredRegion))
-        const className = negativeKey ? css.negativeKey : activeRegion ? css.activeRegion : ''
+
+        // Error bar calculation
+        const errorVal = err ? err.error.v * totalTargetArea : 0
+        const errorBarWidth = maxAbsError > 0 ? (abs(errorVal) / maxAbsError) * 100 : 0
+        // Check for "infinite" error cases: missing region (should exist but doesn't) or extra region (exists but shouldn't)
+        const isMissing = err && err.actual_area === null && value > 0
+        const isExtra = err && err.actual_area !== null && err.actual_area > 0 && value === 0
+
+        const className = [
+            negativeKey ? css.negativeKey : '',
+            activeRegion ? css.activeRegion : '',
+            isMissing ? css.missingRow : '',
+        ].filter(Boolean).join(' ')
         const valueStr =
             editingValue && editingValue[0] == key
                 ? editingValue[1]
                 : fmt(value)
-        return <tr className={className} key={key}>
+
+        return <tr
+            className={className}
+            key={key}
+            onMouseEnter={() => setHoveredRegion(key)}
+            onMouseLeave={() => setHoveredRegion(null)}
+        >
             <td className={`${css.val} ${negativeKey}`}>{name}</td>
             <td className={`${css.val} ${css.targetVal}`}>
                 <input
@@ -162,11 +197,21 @@ export function TargetsTable(
                 }</td>
             }
             {SparkNum(err && err.error.v * totalTargetArea)}
-            {showSparkLines && <SparkLineCell
-                color={sparklineColors.red}
-                fn={step => abs(step.errors.get(key)?.error.v || 0)}
-                {...cellProps}
-            />}
+            <td className={css.errorBarCell}>
+                <div
+                    className={`${css.errorBar} ${isMissing ? css.missingRegion : ''} ${isExtra ? css.extraRegion : ''}`}
+                    style={{ width: `${errorBarWidth}%` }}
+                    title={isMissing ? 'Missing region' : isExtra ? 'Extra region' : undefined}
+                />
+            </td>
+            {showSparkLines && (hasEnoughSteps
+                ? <SparkLineCell
+                    color={sparklineColors.red}
+                    fn={step => abs(step.errors.get(key)?.error.v || 0)}
+                    {...cellProps}
+                />
+                : <td className={css.sparkLineCell} style={{ width: sparkLineWidth, height: sparkLineHeight }}></td>
+            )}
         </tr>
     })
 
@@ -177,7 +222,7 @@ export function TargetsTable(
                 <th></th>
                 <th className={css.goalHeading}>Goal</th>
                 {showTargetCurCol && <th>Cur</th>}
-                <th style={{ textAlign: "center" }} colSpan={showSparkLines ? 2 : 1}>Error</th>
+                <th style={{ textAlign: "center" }} colSpan={showSparkLines ? 3 : 2}>Error</th>
             </tr>
             </thead>
             <tbody>
@@ -186,11 +231,15 @@ export function TargetsTable(
                 <td style={{ textAlign: "right", }}>Σ</td>
                 <td className={css.sparkNum}>{sum}</td>
                 {SparkNum(error.v * totalTargetArea)}
-                {showSparkLines && <SparkLineCell
-                    color={sparklineColors.red}
-                    fn={step => step.error.v}
-                    {...cellProps}
-                />}
+                <td className={css.errorBarCell}></td>
+                {showSparkLines && (hasEnoughSteps
+                    ? <SparkLineCell
+                        color={sparklineColors.red}
+                        fn={step => step.error.v}
+                        {...cellProps}
+                    />
+                    : <td className={css.sparkLineCell} style={{ width: sparkLineWidth, height: sparkLineHeight }}></td>
+                )}
             </tr>
             </tbody>
         </table>

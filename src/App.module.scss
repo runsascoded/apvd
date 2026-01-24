@@ -167,10 +167,20 @@
       margin-top: 0.5em;
     }
     .activeRegion {
-        background-color: #eee;
+        background-color: var(--hover-bg, rgba(255, 255, 255, 0.15));
+        outline: 2px solid var(--link-color, #0d6efd);
+        outline-offset: -2px;
     }
     .negativeKey {
       background-color: #fcc;
+    }
+    .missingRow {
+      opacity: 0.5;
+      font-style: italic;
+      td:first-child::after {
+        content: " ∅";
+        font-style: normal;
+      }
     }
 
     .svgContainer {
@@ -180,6 +190,7 @@
       width: 100%;
       .setLabel {
         user-select: none;
+        fill: var(--text-primary);
       }
     }
 
@@ -328,10 +339,41 @@
           //padding-right: 0;
           input {
             background-color: transparent;
+            color: inherit;
             text-align: right;
             width: 100%;
             border: none;
             //padding-right: 0;
+          }
+        }
+        td.errorBarCell {
+          width: 4em;
+          min-width: 4em;
+          padding: 0 0.2em;
+          .errorBar {
+            height: 0.8em;
+            background-color: var(--error-bar-color, #dc3545);
+            border-radius: 2px;
+            min-width: 1px;
+            &.missingRegion {
+              background: repeating-linear-gradient(
+                45deg,
+                var(--error-bar-color, #dc3545),
+                var(--error-bar-color, #dc3545) 2px,
+                transparent 2px,
+                transparent 4px
+              );
+              border: 1px solid var(--error-bar-color, #dc3545);
+            }
+            &.extraRegion {
+              background: repeating-linear-gradient(
+                -45deg,
+                var(--error-bar-color, #dc3545),
+                var(--error-bar-color, #dc3545) 2px,
+                #ff9800 2px,
+                #ff9800 4px
+              );
+            }
           }
         }
       }
