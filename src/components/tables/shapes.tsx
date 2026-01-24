@@ -69,6 +69,7 @@ export function Math({ children }: { children: string }) {
 export function ShapesTable({ sets, setShape, updateSetMetadatum, vars, precision = 4 }: Props) {
     const hasDoubleRadii = sets.some(({shape}) => shape.kind === "XYRR" || shape.kind === "XYRRT")
     const hasXYRRT = sets.some(({shape}) => shape.kind === "XYRRT")
+    const hasPolygon = sets.some(({shape}) => shape.kind === "Polygon")
     const [ showShapesMetadata, setShowShapesMetadata ] = useSessionStorageState("showShapesMetadata", { defaultValue: true })
     const nameHeader = <th className={css.shapeNameHeader}>
         Name{' '}
@@ -126,8 +127,64 @@ export function ShapesTable({ sets, setShape, updateSetMetadatum, vars, precisio
             <tbody>{
                 sets.map(({ idx, name, abbrev, color, shape }) => {
                     const skippedVars = vars.skipVars[idx] || []
+
+                    // For Polygon shapes, only show metadata view (no coordinate editing yet)
+                    if (shape.kind === 'Polygon') {
+                        return <tr key={idx}>
+                            <td style={{ textAlign: "right", }}>
+                                <EditableText
+                                    className={css.editableShapeField}
+                                    defaultValue={name}
+                                    onChange={newName => {
+                                        if (!newName) return
+                                        updateSetMetadatum(idx, { name: newName })
+                                    }}
+                                />
+                            </td>
+                            {
+                                showShapesMetadata ? <>
+                                    <td className={css.abbrevCol}>
+                                        <EditableText
+                                            className={css.shapeAbbrev}
+                                            defaultValue={abbrev}
+                                            onChange={newAbbrev => {
+                                                if (!newAbbrev) return
+                                                let newChar = newAbbrev.split('').find((ch, i) => i >= abbrev.length || ch != abbrev[i])
+                                                if (newChar) {
+                                                    updateSetMetadatum(idx, { abbrev: newChar })
+                                                    return newChar
+                                                }
+                                            }}
+                                        />
+                                    </td>
+                                    <td>
+                                        <EditableText
+                                            className={css.editableShapeField}
+                                            defaultValue={color}
+                                            onChange={newColor => {
+                                                if (!newColor) return
+                                                if (CSS.supports("color", newColor)) {
+                                                    updateSetMetadatum(idx, { color: newColor })
+                                                }
+                                            }}
+                                        />
+                                    </td>
+                                    <td>Polygon ({shape.vertices.length} vertices)</td>
+                                </> : <>
+                                    <td colSpan={hasDoubleRadii ? 4 : 3}>
+                                        {shape.vertices.length} vertices
+                                    </td>
+                                    { hasXYRRT && <td></td> }
+                                </>
+                            }
+                        </tr>
+                    }
+
+                    // Circle/XYRR/XYRRT shapes
                     const c = shape.c
-                    const [ rx, ry ] = getRadii(shape)
+                    const radii = getRadii(shape)
+                    if (!radii) throw new Error(`Expected radii for shape kind ${shape.kind}`)
+                    const [rx, ry] = radii
                     const cxVar = { skip: skippedVars.includes("x"), value: c.x, set: (x: number) => setShape(idx, { ...shape, c: { x, y: shape.c.y } }) }
                     const cyVar = { skip: skippedVars.includes("y"), value: c.y, set: (y: number) => setShape(idx, { ...shape, c: { y, x: shape.c.x } }) }
                     const [ rxVar, ryVar ]: [ Var, Var ] = mapShape(
@@ -143,12 +200,15 @@ export function ShapesTable({ sets, setShape, updateSetMetadatum, vars, precisio
                             { skip: skippedVars.includes("rx"), value: e.r.x, set: (x: number) => setShape(idx, { ...e, r: { x, y: ry }}), },
                             { skip: skippedVars.includes("ry"), value: e.r.y, set: (y: number) => setShape(idx, { ...e, r: { y, x: rx }}), },
                         ],
+                        undefined,
+                        () => { throw new Error("Polygon should have been handled above") }
                     )
                     const tVar = mapShape(
                         shape,
                         () => null,
                         () => null,
                         e => ({ skip: skippedVars.includes("t"), value: e.t, set: (t: number) => setShape(idx, { ...e, t }) }),
+                        () => null,
                     )
                     return <tr key={idx}>
                         <td style={{ textAlign: "right", }}>

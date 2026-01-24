@@ -17,11 +17,11 @@ import Apvd, { LogLevel } from "./components/apvd"
 import { getLabelAttrs, getMidpoint, getPointAndDirectionAtTheta, getRegionCenter, LabelAttrs } from "./lib/region"
 import { BoundingBox, DefaultSetMetadata, getRadii, mapShape, S, SetMetadata, setMetadataParam, Shape, shapeBox, Shapes, shapesParam, shapeStrJS, shapeStrJSON, shapeStrRust } from "./lib/shape"
 import { TargetsTable } from "./components/tables/targets"
-import { makeTargets, Target, Targets, targetsParam } from "./lib/targets"
-import { CirclesFixed, CirclesFlexible, Disjoint, Ellipses4, Ellipses4t, InitialLayout, Nested, toShape } from "./lib/layout"
+import { defaultTargets, makeTargets, Target, Targets, targetsParam } from "./lib/targets"
+import { CirclesFixed, CirclesFlexible, Disjoint, Ellipses4, Ellipses4t, FourDodecagonsVenn, FourHexagons, FourHexagonsVenn, FourIcosagonsVenn, InitialLayout, Nested, ThreeHexagons, ThreePentagons, toShape, TriangleCircle, TwoPentagonsOneHexagon, TwoTriangles } from "./lib/layout"
 import { VarsTable } from "./components/tables/vars"
 import { SparkLineProps } from "./components/spark-lines"
-import { CircleCoords, Coord, makeVars, Vars, XYRRCoords, XYRRTCoords } from "./lib/vars"
+import { CircleCoords, Coord, getPolygonCoords, makeVars, Vars, XYRRCoords, XYRRTCoords } from "./lib/vars"
 import { CopyCoordinatesType, ShapesTable } from "./components/tables/shapes"
 import _ from "lodash"
 import debounce from "lodash/debounce"
@@ -169,7 +169,16 @@ const layouts: ValItem<InitialLayout>[] = [
     { name: "Circles (fixed)", val: CirclesFixed, description: "4 circles, initialized in a diamond as in \"Circles (flexible)\" above, but these are fixed as circles (rx and ry remain constant, rotation is immaterial)", },
     { name: "Disjoint", val: Disjoint, description: "4 disjoint circles. When two (or more) sets are supposed to intersect, but don't, a synthetic penalty is added to the error computation, which is proportional to: 1) each involved set's distance to the centroid of the centers of the sets that are supposed to intersect, as well as 2) the size of the target subset. This \"disjoint\" initial layout serves demonstrate/test this behavior. More sophisticated heuristics would be useful here, as the current scheme is generally insufficient to coerce all sets into intersecting as they should." },
     { name: "Nested", val: Nested, description: "4 nested circles, stresses disjoint/contained region handling, which has known issues!" },
-    // { name: "CircleLattice", layout: SymmetricCircleLattice, description: "4 circles centered at (0,0), (0,1), (1,0), (1,1)", },
+    // Polygon layouts
+    { name: "Triangle + Circle", val: TriangleCircle, description: "A circle and an overlapping triangle (polygon test)" },
+    { name: "Two Triangles", val: TwoTriangles, description: "Two overlapping triangles (Star of David pattern)" },
+    { name: "Three Pentagons", val: ThreePentagons, description: "Three overlapping pentagons in a triangular arrangement" },
+    { name: "Three Hexagons", val: ThreeHexagons, description: "Three hexagons in a row (like a classic Venn diagram)" },
+    { name: "Four Hexagons", val: FourHexagons, description: "Four overlapping hexagons in a square arrangement" },
+    { name: "Four Hexagons (Venn)", val: FourHexagonsVenn, description: "Four elongated hexagons (6-gons) in the 4-ellipse Venn pattern" },
+    { name: "Four 12-gons (Venn)", val: FourDodecagonsVenn, description: "Four elongated dodecagons (12-gons) - better ellipse approximation" },
+    { name: "Four 20-gons (Venn)", val: FourIcosagonsVenn, description: "Four elongated icosagons (20-gons) - close ellipse approximation, should achieve all 15 regions" },
+    { name: "2 Pentagons + Hexagon", val: TwoPentagonsOneHexagon, description: "Two pentagons and a hexagon (mixed polygon test)" },
 ]
 
 export type Params = {
@@ -389,6 +398,11 @@ export function Body() {
             // Save current shapes to sessionStorage
             const shapes = curStep.sets.map(({ shape }) => shape)
             sessionStorage.setItem(shapesKey, JSON.stringify(shapes))
+            // Guard against stale model with different shape count than initialSets
+            if (curStep.sets.length !== initialSets.length) {
+                console.warn("curStep.sets.length !== initialSets.length", curStep.sets.length, initialSets.length)
+                return [null, null, null]
+            }
             const sets = curStep.sets.map(set => {
                 const base = initialSets[set.idx]
                 const effectiveColor = getEffectiveShapeColor(base.color, set.idx, theme)
@@ -498,14 +512,23 @@ export function Body() {
             const { numVars, skipVars } = vars
             const inputs = initialSets.map((set: S, shapeIdx: number) => {
                 const shape = set.shape;
-                const coords: Coord[] = mapShape<number, Coord[]>(shape, () => CircleCoords, () => XYRRCoords, () => XYRRTCoords)
+                const coords: Coord[] = mapShape<number, Coord[]>(
+                    shape,
+                    () => CircleCoords,
+                    () => XYRRCoords,
+                    () => XYRRTCoords,
+                    (p) => getPolygonCoords(p.vertices.length),
+                )
+                // WASM now expects discriminated unions with `kind` field
+                const wasmShape = mapShape<number, any>(
+                    shape,
+                    s => ({ kind: "Circle", c: s.c, r: s.r }),
+                    s => ({ kind: "XYRR", c: s.c, r: s.r }),
+                    s => ({ kind: "XYRRT", c: s.c, r: s.r, t: s.t }),
+                    p => ({ kind: "Polygon", vertices: p.vertices }),
+                )
                 return [
-                    mapShape<number, any>(
-                        shape,
-                        s => ({ Circle: s }),
-                        s => ({ XYRR: s }),
-                        s => ({ XYRRT: s })
-                    ),
+                    wasmShape,
                     coords.map(v => shapeIdx >= skipVars.length || !skipVars[shapeIdx].includes(v)),
                 ]
             })
@@ -897,22 +920,29 @@ export function Body() {
     const shapeNodes = useMemo(
         () => <g id={"shapes"}>{
             sets?.map(({ color, shape }: S, idx: number) => {
-                const { x: cx, y: cy } = shape.c
-                const props = {
-                    cx, cy,
+                const commonProps = {
                     stroke: "black",
                     strokeWidth: 3 / scale,
                     fill: color,
                     fillOpacity: shapeFillOpacity,
                 }
-                const [ rx, ry ] = getRadii(shape)
+                if (shape.kind === 'Polygon') {
+                    const points = shape.vertices.map(v => `${v.x},${v.y}`).join(' ')
+                    return <polygon key={idx} points={points} {...commonProps} />
+                }
+                const { x: cx, y: cy } = shape.c
+                const radii = getRadii(shape)
+                if (!radii) throw new Error(`Expected radii for shape kind ${shape.kind}`)
+                const [rx, ry] = radii
                 const theta = shape.kind === 'XYRRT' ? shape.t : 0
                 const degrees = theta * 180 / PI
                 const ellipse =
                     <ellipse
                         key={idx}
+                        cx={cx}
+                        cy={cy}
                         rx={rx}
-                        ry={ry} {...props}
+                        ry={ry} {...commonProps}
                         // onMouseDown={e => {
                         //     console.log(`ellipse ${idx} onMouseDown`, e)
                         //     e.stopPropagation()
@@ -1076,12 +1106,12 @@ export function Body() {
                         textAnchor={textAnchor}
                         dominantBaseline={dominantBaseline}
                         className={css.setLabel}
-                        fontSize={setLabelSize / scale}
+                        fontSize={setLabelSize / Math.max(scale, 50)}
                     >{label}</text>
                 </Fragment>)
             })
         }</g>,
-        [ setLabelPoints, setLabelDistance, ]
+        [ setLabelPoints, setLabelDistance, scale, ]
     )
     const labelBoxes = useMemo(
         () => {
@@ -1244,22 +1274,37 @@ export function Body() {
         [ curStep, scale, hoveredRegion, totalRegionAreas, showRegionSizes ],
     )
 
+    // Check if a region key matches a hovered key (handles inclusive wildcards)
+    // e.g., hoveredKey "0*" matches region "01" and "0-"
+    // In disjoint mode, keys are exact (e.g., "01--" matches only "01--")
+    // In inclusive mode, '*' is a wildcard (e.g., "0***" matches "0123", "01--", etc.)
+    const regionMatchesHovered = useCallback((regionKey: string, hoveredKey: string | null): boolean => {
+        if (!hoveredKey || regionKey.length !== hoveredKey.length) return false
+        for (let i = 0; i < hoveredKey.length; i++) {
+            const h = hoveredKey[i]
+            const r = regionKey[i]
+            if (h === '*') continue  // wildcard matches anything
+            if (h !== r) return false  // exact match required for non-wildcards
+        }
+        return true
+    }, [])
+
     const regionPaths = useMemo(
         () =>
             curStep && <g id={"regionPaths"}>{
                 curStep.regions.map((region, regionIdx) => {
                     const { key} = region
                     const d = regionPath(region)
-                    const isHovered = hoveredRegion == key
+                    const isHovered = hoveredRegion === key || regionMatchesHovered(key, hoveredRegion)
                     return (
                         <path
                             key={`${regionIdx}-${key}`}
                             id={key}
                             d={d}
-                            stroke={"black"}
-                            strokeWidth={1 / scale}
+                            stroke={isHovered ? "white" : "black"}
+                            strokeWidth={isHovered ? 3 / scale : 1 / scale}
                             fill={"grey"}
-                            fillOpacity={isHovered ? 0.4 : 0}
+                            fillOpacity={isHovered ? 0.5 : 0}
                             fillRule={"evenodd"}
                             onMouseOver={() => setHoveredRegion(key)}
                             // onMouseLeave={() => setHoveredRegion(null)}
@@ -1268,7 +1313,7 @@ export function Body() {
                     )
                 })
             }</g>,
-        [ curStep, scale, hoveredRegion, ],
+        [ curStep, scale, hoveredRegion, regionMatchesHovered, ],
     )
 
     const shapesStr = useCallback(
@@ -1434,9 +1479,17 @@ export function Body() {
                     onClick={e => {
                         e.preventDefault()
                         setInitialLayout(val)
-                        const newShapes = val.slice(0, targets.numShapes).map(s => toShape(s))
+                        const layoutShapeCount = val.length
+                        // If layout has fewer shapes than current targets, auto-adjust targets
+                        const newTargets = layoutShapeCount < targets.numShapes
+                            ? defaultTargets(layoutShapeCount)
+                            : targets
+                        if (newTargets !== targets) {
+                            setTargets(newTargets)
+                        }
+                        const newShapes = val.slice(0, newTargets.numShapes).map(s => toShape(s))
                         setInitialShapes(newShapes)
-                        pushHistoryState({shapes: newShapes, newTargets: targets, push: true})
+                        pushHistoryState({shapes: newShapes, newTargets, push: true})
                         console.log(`clicked link: ${name}`)
                     }}
                 >
@@ -1458,9 +1511,16 @@ export function Body() {
                 description: typeof description === 'string' ? description : undefined,
                 handler: () => {
                     setInitialLayout(val)
-                    const newShapes = val.slice(0, targets.numShapes).map(s => toShape(s))
+                    const layoutShapeCount = val.length
+                    const newTargets = layoutShapeCount < targets.numShapes
+                        ? defaultTargets(layoutShapeCount)
+                        : targets
+                    if (newTargets !== targets) {
+                        setTargets(newTargets)
+                    }
+                    const newShapes = val.slice(0, newTargets.numShapes).map(s => toShape(s))
                     setInitialShapes(newShapes)
-                    pushHistoryState({ shapes: newShapes, newTargets: targets, push: true })
+                    pushHistoryState({ shapes: newShapes, newTargets, push: true })
                 },
             })),
         }),
@@ -1875,6 +1935,7 @@ export function Body() {
                                     curStep={curStep}
                                     error={error}
                                     hoveredRegion={hoveredRegion}
+                                    setHoveredRegion={setHoveredRegion}
                                     {...sparkLineCellProps}
                                 />
                             }
@@ -1884,7 +1945,14 @@ export function Body() {
                                     Express target sizes for "inclusive" (e.g. <code>A**</code>: A's overall size) vs. "exclusive" (<code>A--</code>: A and not B or C) sets
                                 </span>}
                                 checked={!rawTargets.givenInclusive}
-                                setChecked={showDisjointSets => setTargets(t => ({ ...t, givenInclusive: !showDisjointSets }))}
+                                setChecked={showDisjointSets => {
+                                    const newTargets = { ...rawTargets, givenInclusive: !showDisjointSets }
+                                    setTargets(newTargets)
+                                    setUrlFragmentTargets(newTargets)
+                                    if (shapes) {
+                                        pushHistoryState({ shapes, newTargets })
+                                    }
+                                }}
                             />
                         </DetailsSection>
                         <DetailsSection
