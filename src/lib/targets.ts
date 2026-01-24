@@ -137,3 +137,19 @@ export const targetsParam: Param<Targets | null> = {
         return makeTargets(given)
     }
 }
+
+/**
+ * Generate default equal-weight inclusive targets for n shapes.
+ * Each region gets weight 1.
+ */
+export function defaultTargets(n: number): Targets {
+    if (n < 1 || n > 5) {
+        throw new Error(`defaultTargets: n must be 1-5, got ${n}`)
+    }
+    const keySet = KeySets[2 ** n - 1]?.inclusive
+    if (!keySet) {
+        throw new Error(`defaultTargets: no KeySet for n=${n}`)
+    }
+    const given: Target[] = keySet.map(key => [key, 1])
+    return makeTargets(given)
+}
