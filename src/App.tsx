@@ -1,6 +1,7 @@
 import Grid, { GridState } from "./components/grid"
 import React, { DetailedHTMLProps, Fragment, HTMLAttributes, lazy, ReactNode, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { ShortcutsModal, Omnibar, SequenceModal, useAction, useOmnibarEndpoint } from 'use-kbd'
+import { PlaybackRenderer } from './components/groupRenderers'
 import * as apvd from "apvd"
 import { train, update_log_level } from "apvd"
 import { makeModel, Model, Region, regionPath, Step } from "./lib/regions"
@@ -143,10 +144,11 @@ export default function Page() {
     return (
         <Apvd>{() => <>
             <Body />
-            <ShortcutsModal groups={{
-                playback: 'Playback',
-                nav: 'Navigation',
-            }} />
+            <ShortcutsModal
+                groups={{ playback: 'Playback', Global: 'General' }}
+                groupOrder={['Playback', 'General']}
+                groupRenderers={{ Playback: PlaybackRenderer }}
+            />
             <Omnibar placeholder="Search actions..." />
             <SequenceModal />
         </>}</Apvd>
@@ -723,9 +725,9 @@ export function Body() {
         },
     })
 
-    useAction('nav:toggle-theme', {
+    useAction('Global:toggle-theme', {
         label: 'Toggle dark/light mode',
-        group: 'nav',
+        group: 'Global',
         defaultBindings: ['t'],
         handler: toggleTheme,
     })
