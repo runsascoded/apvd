@@ -24,6 +24,20 @@ export const getPointAtTheta = (shape: Shape<number>, theta: number): R2<number>
             const p = getPointAtTheta(xyrr, theta)
             return rotate(p, shape.t)
         }
+        case 'Polygon': {
+            // For polygons, theta is a perimeter coordinate: vertex i has coord i,
+            // points along edge i→i+1 have coords in [i, i+1)
+            const { vertices } = shape
+            const n = vertices.length
+            const edgeIdx = Math.floor(theta) % n
+            const t = theta - Math.floor(theta)  // position along edge [0, 1)
+            const v0 = vertices[edgeIdx]
+            const v1 = vertices[(edgeIdx + 1) % n]
+            return {
+                x: v0.x * (1 - t) + v1.x * t,
+                y: v0.y * (1 - t) + v1.y * t,
+            }
+        }
     }
 }
 
@@ -57,16 +71,50 @@ export const getPointAndDirectionAtTheta = (shape: Shape<number>, theta: number)
             const [p, d] = getPointAndDirectionAtTheta(xyrr, theta)
             return [rotate(p, shape.t), d + shape.t]
         }
+        case 'Polygon': {
+            // For polygons, theta is a perimeter coordinate
+            const { vertices } = shape
+            const n = vertices.length
+            const edgeIdx = Math.floor(theta) % n
+            const t = theta - Math.floor(theta)
+            const v0 = vertices[edgeIdx]
+            const v1 = vertices[(edgeIdx + 1) % n]
+            const point = {
+                x: v0.x * (1 - t) + v1.x * t,
+                y: v0.y * (1 - t) + v1.y * t,
+            }
+            // Direction is the tangent (along the edge)
+            const dx = v1.x - v0.x
+            const dy = v1.y - v0.y
+            const direction = atan2(dy, dx)
+            return [point, direction]
+        }
     }
 }
-export const getMidpoint = ({ set, theta0, theta1 }: Edge, f: number = 0.5) =>
-    getPointAtTheta(
+export const getMidpoint = ({ set, node0, node1, theta0, theta1 }: Edge, f: number = 0.5): R2<number> => {
+    if (set.shape.kind === 'Polygon') {
+        // For polygon edges, linear interpolation between nodes
+        return {
+            x: node0.x * (1 - f) + node1.x * f,
+            y: node0.y * (1 - f) + node1.y * f,
+        }
+    }
+    return getPointAtTheta(
         set.shape,
         theta0 * (1 - f) + f * theta1,
     )
+}
 
-export const getEdgeLength = ({ set: { shape }, theta0, theta1 }: Edge) => {
-    const [ rx, ry ] = getRadii(shape)
+export const getEdgeLength = ({ set: { shape }, node0, node1, theta0, theta1 }: Edge) => {
+    if (shape.kind === 'Polygon') {
+        // For polygon edges, Euclidean distance between nodes
+        const dx = node1.x - node0.x
+        const dy = node1.y - node0.y
+        return sqrt(dx * dx + dy * dy)
+    }
+    const radii = getRadii(shape)
+    if (!radii) throw new Error(`Expected radii for shape kind ${shape.kind}`)
+    const [rx, ry] = radii
     return sqrt(rx * ry) * (theta1 - theta0)  // TODO: this is approximate
 }
 

@@ -1,6 +1,6 @@
 import * as apvd from "apvd";
 import {Dual, Targets} from "apvd"
-import {getRadii, S, Set, Shape} from "./shape";
+import {getRadii, Polygon, S, Set, Shape} from "./shape";
 import {PI} from "./math";
 import {getMidpoint} from "./region";
 
@@ -48,10 +48,11 @@ export function makeModel(model: apvd.Model, initialSets: Set[]): Model {
 
 export function makeStep(step: apvd.Step, initialSets: Set[]): Step {
     // console.log("makeStep:", step)
-    const { components, errors, ...rest } = step
-    const sets: S[] = []
-    components.forEach(c => c.sets.forEach(({ idx, shape }) => {
-        sets[idx] = { ...initialSets[idx], shape: makeShape(shape), }
+    const { shapes, components, errors, ...rest } = step
+    // Build sets from step.shapes (canonical location after shapes lib update)
+    const sets: S[] = shapes.map((shape, idx) => ({
+        ...initialSets[idx],
+        shape: makeShape(shape),
     }))
     const newComponents = components.map(c => makeComponent(c, sets))
     const newComponentsMap = new Map(newComponents.map(c => [c.key, c]))
@@ -83,16 +84,27 @@ export function makeStep(step: apvd.Step, initialSets: Set[]): Step {
     }
 }
 
-export function makeShape(shape: apvd.Shape<number>): Shape<number> {
-    if ('Circle' in shape) {
-        const { c, r } = shape.Circle
-        return { kind: 'Circle', c, r, }
-    } else if ('XYRR' in shape) {
-        const { c, r } = shape.XYRR
-        return { kind: 'XYRR', c, r, }
-    } else {
-        const { c, r, t } = shape.XYRRT
-        return { kind: 'XYRRT', c, r, t, }
+// Extract number value from Dual (autodiff wrapper)
+function dualToNumber(d: Dual): number {
+    return d.v
+}
+
+function r2ToNumber(r: apvd.R2<Dual>): { x: number, y: number } {
+    return { x: dualToNumber(r.x), y: dualToNumber(r.y) }
+}
+
+// Convert WASM Shape<Dual> to our Shape<number> by extracting values
+// The shapes lib now emits discriminated unions with `kind` field via #[serde(tag = "kind")]
+export function makeShape(shape: apvd.Shape<apvd.D>): Shape<number> {
+    switch (shape.kind) {
+        case 'Circle':
+            return { kind: 'Circle', c: r2ToNumber(shape.c), r: dualToNumber(shape.r) }
+        case 'XYRR':
+            return { kind: 'XYRR', c: r2ToNumber(shape.c), r: r2ToNumber(shape.r) }
+        case 'XYRRT':
+            return { kind: 'XYRRT', c: r2ToNumber(shape.c), r: r2ToNumber(shape.r), t: dualToNumber(shape.t) }
+        case 'Polygon':
+            return { kind: 'Polygon', vertices: shape.vertices.map(r2ToNumber) }
     }
 }
 
@@ -142,7 +154,8 @@ export function makeComponent(component: apvd.Component, allSets: S[]): Componen
         point.edges = edge_idxs.map(edgeIdx => edges[edgeIdx])
     })
     const regions: Region[] = component.regions.map(r => makeRegion(r, allSets, edges))
-    const sets = component.sets.map(({ idx }) => allSets[idx])
+    // Parse component key to get set indices (e.g., "02" means shapes 0 and 2)
+    const sets = component.key.split('').map(ch => allSets[parseInt(ch)])
     const hull = makeSegments(component.hull, edges)
     return { key: component.key, sets, points, edges, regions, hull, }
 }
@@ -159,22 +172,30 @@ export function regionPath({ segments, childComponents, }: { segments: Segment[]
     let d = ''
     segments.forEach(({edge, fwd}, idx) => {
         const { set: { shape }, node0, node1, theta0, theta1, } = edge
-        const [rx, ry] = getRadii(shape)
-        const theta = shape.kind === 'XYRRT' ? shape.t : 0
-        const degrees = theta * 180 / PI
         const [startNode, endNode] = fwd ? [node0, node1] : [node1, node0]
         const start = { x: startNode.x, y: startNode.y }
         const end = { x: endNode.x, y: endNode.y }
         if (idx == 0) {
             d = `M ${start.x} ${start.y}`
         }
-        // console.log("edge:", edge, "fwd:", fwd, "theta0:", theta0, "theta1:", theta1, "start:", start, "end:", end, "shape:", shape, "degrees:", degrees)
-        if (segments.length == 1) {
-            const mid = getMidpoint(edge, 0.4)
-            d += ` A ${rx},${ry} ${degrees} 0 ${fwd ? 1 : 0} ${mid.x},${mid.y}`
-            d += ` A ${rx},${ry} ${degrees} 1 ${fwd ? 1 : 0} ${end.x},${end.y}`
+
+        // Polygon edges are straight lines, ellipse/circle edges are arcs
+        if (shape.kind === 'Polygon') {
+            d += ` L ${end.x},${end.y}`
         } else {
-            d += ` A ${rx},${ry} ${degrees} ${theta1 - theta0 > PI ? 1 : 0} ${fwd ? 1 : 0} ${end.x},${end.y}`
+            const radii = getRadii(shape)
+            if (!radii) throw new Error(`Expected radii for shape kind ${shape.kind}`)
+            const [rx, ry] = radii
+            const theta = shape.kind === 'XYRRT' ? shape.t : 0
+            const degrees = theta * 180 / PI
+            // console.log("edge:", edge, "fwd:", fwd, "theta0:", theta0, "theta1:", theta1, "start:", start, "end:", end, "shape:", shape, "degrees:", degrees)
+            if (segments.length == 1) {
+                const mid = getMidpoint(edge, 0.4)
+                d += ` A ${rx},${ry} ${degrees} 0 ${fwd ? 1 : 0} ${mid.x},${mid.y}`
+                d += ` A ${rx},${ry} ${degrees} 1 ${fwd ? 1 : 0} ${end.x},${end.y}`
+            } else {
+                d += ` A ${rx},${ry} ${degrees} ${theta1 - theta0 > PI ? 1 : 0} ${fwd ? 1 : 0} ${end.x},${end.y}`
+            }
         }
     })
     if (childComponents?.length) {

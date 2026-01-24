@@ -1,6 +1,6 @@
 import {Circle, Dual, XYRR, XYRRT} from "apvd";
 import {Step} from "./regions";
-import {S} from "./shape";
+import {Polygon, S} from "./shape";
 
 export type CircleCoord = 'x' | 'y' | 'r'
 export type CircleGetter<T> = (c: Circle<T>) => T
@@ -47,7 +47,27 @@ export function XYRRTGetters<T>(): XYRRTGetters<T> {
 export const XYRRTFloatGetters = XYRRTGetters<number>()
 export const XYRRTDualGetters = XYRRTGetters<Dual>()
 
-export type Coord = CircleCoord | XYRRCoord | XYRRTCoord
+// Polygon coordinates are dynamic: v0.x, v0.y, v1.x, v1.y, ...
+export type PolygonCoord = `v${number}.${'x' | 'y'}`
+
+export function getPolygonCoords(numVertices: number): PolygonCoord[] {
+    const coords: PolygonCoord[] = []
+    for (let i = 0; i < numVertices; i++) {
+        coords.push(`v${i}.x`, `v${i}.y`)
+    }
+    return coords
+}
+
+export function PolygonGetters<T>(numVertices: number): Record<PolygonCoord, (p: Polygon<T>) => T> {
+    const getters: Record<string, (p: Polygon<T>) => T> = {}
+    for (let i = 0; i < numVertices; i++) {
+        getters[`v${i}.x`] = p => p.vertices[i].x
+        getters[`v${i}.y`] = p => p.vertices[i].y
+    }
+    return getters as Record<PolygonCoord, (p: Polygon<T>) => T>
+}
+
+export type Coord = CircleCoord | XYRRCoord | XYRRTCoord | PolygonCoord
 export type VarCoord = [ number, Coord ]
 export type StepVarGetter = (step: Step, varIdx: number) => number | null
 
@@ -64,14 +84,16 @@ export type Vars = {
 
 export function makeVars(initialSets: S[]) {
     // Create Vars
-    const allCoords: Coord[][] = initialSets.map(({shape: {kind}}) => {
-        switch (kind) {
+    const allCoords: Coord[][] = initialSets.map(({shape}) => {
+        switch (shape.kind) {
             case 'Circle':
                 return CircleCoords
             case 'XYRR':
                 return XYRRCoords
             case 'XYRRT':
                 return XYRRTCoords
+            case 'Polygon':
+                return getPolygonCoords(shape.vertices.length)
         }
     })
     const numCoords = ([] as string[]).concat(...allCoords).length
@@ -133,6 +155,15 @@ export function makeVars(initialSets: S[]) {
                 } else {
                     return XYRRTFloatGetters[coord as XYRRTCoord](shape)
                 }
+            case "Polygon": {
+                const polygonGetters = PolygonGetters<number>(shape.vertices.length)
+                const polygonCoord = coord as PolygonCoord
+                if (!(polygonCoord in polygonGetters)) {
+                    console.warn(`Polygon coord ${polygonCoord} not found`)
+                    return null
+                }
+                return polygonGetters[polygonCoord](shape)
+            }
         }
     }
 

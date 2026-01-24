@@ -22,7 +22,12 @@ export interface XYRRT<D> {
     t: D
 }
 
-export type Shape<D> = Circle<D> | XYRR<D> | XYRRT<D>
+export interface Polygon<D> {
+    kind: 'Polygon'
+    vertices: R2<D>[]
+}
+
+export type Shape<D> = Circle<D> | XYRR<D> | XYRRT<D> | Polygon<D>
 export type Shapes = Shape<number>[]
 
 export type SetMetadatum = {
@@ -103,17 +108,24 @@ export function level(xyrrt: XYRRT<number>): XYRR<number> {
     }
 }
 
-export const getRadii = <D>(s: Shape<D>): [D, D] => mapShape(
+export const getRadii = <D>(s: Shape<D>): [D, D] | undefined => mapShape(
     s,
     ({ r }) => [r, r],
     ({ r }) => [r.x, r.y],
+    undefined,
+    () => undefined,  // Polygon has no radii
 )
+
+function assertNever(x: never): never {
+    throw new Error(`Unexpected shape kind: ${JSON.stringify(x)}`)
+}
 
 export function mapShape<D, O>(
     s: Shape<D>,
     circleFn: (c: Circle<D>) => O,
     xyrrFn: (e: XYRR<D>) => O,
     xyrrtFn?: (e: XYRRT<D>) => O,
+    polygonFn?: (p: Polygon<D>) => O,
 ): O {
     switch (s.kind) {
         case 'Circle': return circleFn(s)
@@ -122,6 +134,10 @@ export function mapShape<D, O>(
             if (xyrrtFn) return xyrrtFn(s)
             const { c, r } = s
             return xyrrFn({ kind: "XYRR", c, r })
+        case 'Polygon':
+            if (!polygonFn) throw new Error("Polygon handler required")
+            return polygonFn(s)
+        default: return assertNever(s)
     }
 }
 
@@ -141,6 +157,14 @@ export function shapeBox(s: Shape<number>): BoundingBox<number> {
                 { x: c.x + dx, y: c.y + dy, },
             ]
         },
+        ({ vertices }) => {
+            const xs = vertices.map(v => v.x)
+            const ys = vertices.map(v => v.y)
+            return [
+                { x: Math.min(...xs), y: Math.min(...ys) },
+                { x: Math.max(...xs), y: Math.max(...ys) },
+            ]
+        },
     )
 }
 
@@ -149,6 +173,11 @@ export function shapeStrRust(s: Shape<number>): string {
         case 'Circle': return `Circle { c: R2 { x: ${s.c.x}, y: ${s.c.y} }, r: ${s.r} }`
         case 'XYRR': return `XYRR { c: R2 { x: ${s.c.x}, y: ${s.c.y} }, r: R2 { x: ${s.r.x}, y: ${s.r.y} } }`
         case 'XYRRT': return `XYRRT { c: R2 { x: ${s.c.x}, y: ${s.c.y} }, r: R2 { x: ${s.r.x}, y: ${s.r.y} }, t: ${s.t} }`
+        case 'Polygon': {
+            const verts = s.vertices.map(v => `R2 { x: ${v.x}, y: ${v.y} }`).join(', ')
+            return `Polygon { vertices: vec![${verts}] }`
+        }
+        default: return assertNever(s)
     }
 }
 
@@ -157,6 +186,11 @@ export function shapeStrJS(s: Shape<number>): string {
         case 'Circle': return `{ kind: "Circle", c: { x: ${s.c.x}, y: ${s.c.y} }, r: ${s.r} }`
         case 'XYRR': return `{ kind: "XYRR", c: { x: ${s.c.x}, y: ${s.c.y} }, r: { x: ${s.r.x}, y: ${s.r.y} } }`
         case 'XYRRT': return `{ kind: "XYRRT", c: { x: ${s.c.x}, y: ${s.c.y} }, r: { x: ${s.r.x}, y: ${s.r.y} }, t: ${s.t} }`
+        case 'Polygon': {
+            const verts = s.vertices.map(v => `{ x: ${v.x}, y: ${v.y} }`).join(', ')
+            return `{ kind: "Polygon", vertices: [${verts}] }`
+        }
+        default: return assertNever(s)
     }
 }
 
@@ -165,6 +199,11 @@ export function shapeStrJSON(s: Shape<number>): string {
         case 'Circle': return `{ "kind": "Circle", "c": { "x": ${s.c.x}, "y": ${s.c.y} }, "r": ${s.r} }`
         case 'XYRR': return `{ "kind": "XYRR", "c": { "x": ${s.c.x}, "y": ${s.c.y} }, "r": { "x": ${s.r.x}, "y": ${s.r.y} } }`
         case 'XYRRT': return `{ "kind": "XYRRT", "c": { "x": ${s.c.x}, "y": ${s.c.y} }, "r": { "x": ${s.r.x}, "y": ${s.r.y} }, "t": ${s.t} }`
+        case 'Polygon': {
+            const verts = s.vertices.map(v => `{ "x": ${v.x}, "y": ${v.y} }`).join(', ')
+            return `{ "kind": "Polygon", "vertices": [${verts}] }`
+        }
+        default: return assertNever(s)
     }
 }
 

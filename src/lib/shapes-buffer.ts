@@ -2,7 +2,7 @@ import BitBuffer from "./bit-buffer";
 import {fromFloat, toFloat} from "./float";
 import {tau} from "./math";
 import {FixedPoint, fromFixedPoint, toFixedPoint} from "./fixed-point";
-import {Circle, Shape, XYRR, XYRRT} from "./shape";
+import {Circle, Polygon, Shape, XYRR, XYRRT} from "./shape";
 
 export type Opts = {
     precisionScheme?: PrecisionScheme,
@@ -36,9 +36,10 @@ export default class ShapesBuffer {
     precisionScheme: PrecisionScheme
 
     ID = {
-        XYRRT: 0,
-        XYRR: 4,
-        Circle: 5,
+        XYRRT: 0,    // 000
+        XYRR: 4,     // 100
+        Circle: 5,   // 101
+        Polygon: 6,  // 110
     }
     ShapeBits = 3
 
@@ -146,23 +147,53 @@ export default class ShapesBuffer {
         const c = { x: cx, y: cy }
         return { kind: 'Circle', c, r, }
     }
+
+    encodePolygon(polygon: Polygon<number>): ShapesBuffer {
+        const { buf, mantBits, expBits, ID, ShapeBits } = this
+        const { vertices } = polygon
+        // 3 bits: shape ID (110)
+        // 8 bits: vertex count N (max 255 vertices)
+        // N × 2 × (expBits + mantBits + 1): vertex coordinates
+        buf.encodeInt(ID.Polygon, ShapeBits)
+        buf.encodeInt(vertices.length, 8)
+        const coords = vertices.flatMap(v => [v.x, v.y])
+        buf.encodeFixedPoints(coords, { expBits, mantBits })
+        return this
+    }
+
+    decodePolygon(): Polygon<number> {
+        const { buf, mantBits, expBits } = this
+        // Expect ShapeBits has already been processed
+        const numVertices = buf.decodeInt(8)
+        const coords = buf.decodeFixedPoints({ expBits, mantBits, numFloats: numVertices * 2 })
+        const vertices: { x: number, y: number }[] = []
+        for (let i = 0; i < numVertices; i++) {
+            vertices.push({ x: coords[i * 2], y: coords[i * 2 + 1] })
+        }
+        return { kind: 'Polygon', vertices }
+    }
+
     encodeShape(s: Shape<number>): ShapesBuffer {
         switch (s.kind) {
             case 'Circle': return this.encodeCircle(s)
-            case   'XYRR': return this.encodeXYRR(s)
-            case  'XYRRT': return this.encodeXYRRT(s)
+            case 'XYRR': return this.encodeXYRR(s)
+            case 'XYRRT': return this.encodeXYRRT(s)
+            case 'Polygon': return this.encodePolygon(s)
         }
     }
+
     decodeShape(): Shape<number> {
         const shapeId = this.buf.decodeInt(3)
         // Shape ID bits:
-        //   - 0: XYRRT
+        //   - 000: XYRRT
         //   - 100: XYRR
         //   - 101: Circle
+        //   - 110: Polygon
         switch (shapeId) {
             case 0: return this.decodeXYRRT()
             case 4: return this.decodeXYRR()
             case 5: return this.decodeCircle()
+            case 6: return this.decodePolygon()
             default: throw Error(`unknown shapeId ${shapeId}`)
         }
     }
