@@ -195,7 +195,7 @@ R package, 2-7 sets, not area-proportional:
 <img src=public/img/ugent%205%20nonsymmetric.png width=400 />
 
 ## Status <a id="status"></a>
-The demo at [runsascoded.com/apvd] supports up to 4 ellipses (including allowing them to rotate relative to the axes), and arbitrary initial layouts and target region-sizes. It can gradient-descend for 100,000's of steps and converge, or reach negligible error levels, on most [examples](#examples) I've tested it on.
+The demo at [runsascoded.com/apvd] supports up to 4 ellipses (including allowing them to rotate relative to the axes) or polygons, and arbitrary initial layouts and target region-sizes. It can gradient-descend for 100,000's of steps and converge, or reach negligible error levels, on most [examples](#examples) I've tested it on.
 
 Future work could involve:
 - command-line / server-based version (evolving models from multiple initial layouts in parallel)
@@ -289,7 +289,7 @@ I previously implemented an interface for computing ellipse intersections, which
 
 https://github.com/runsascoded/apvd/assets/465045/108e974d-f103-4005-9762-732c25f8cb7b
 
-*(live demo: [runsascoded.com/apvd/ellipses])*
+*(live demo: [runsascoded.com/apvd/ellipses], source: [src/lib/ellipses.tsx])*
 
 It's implemented in JS, pre-[shapes][runsascoded/shapes], and computes intersections and region sizes, but isn't differentiable / can't gradient-descend.
 
@@ -358,7 +358,7 @@ Core code is from a [web solver](http://www.akiti.ca/Quad4Deg.html) written by [
 [fizz buzz bazz sample]: https://runsascoded.com/apvd/#t=i35,21,7,15,5,3,1&n=Divisible+by+3=3,Divisible+by+5=5,Divisible+by+7=7&s=0zg00002004000004g006Xqg00w00000yg0000200400000
 [Ben Frederickson]: https://github.com/benfred
 [benfred generator]: https://www.benfrederickson.com/venn-diagrams-with-d3.js/
-[pages/ellipses.tsx]: https://github.com/runsascoded/apvd/blob/main/pages/ellipses.tsx
+[src/lib/ellipses.tsx]: https://github.com/runsascoded/apvd/blob/main/src/lib/ellipses.tsx
 [runsascoded.com/apvd/ellipses]: https://runsascoded.com/apvd/ellipses
 [runsascoded.com/apvd]: https://runsascoded.com/apvd
 [/issues]: https://github.com/runsascoded/apvd/issues

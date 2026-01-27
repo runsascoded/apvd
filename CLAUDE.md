@@ -1,6 +1,6 @@
 # APVD - Area-Proportional Venn Diagrams
 
-Interactive web app for generating area-proportional Venn diagrams using up to 4 ellipses with gradient-descent optimization.
+Interactive web app for generating area-proportional Venn diagrams using up to 4 ellipses (or polygons) with gradient-descent optimization.
 
 **Live**: https://runsascoded.com/apvd
 **Repo**: https://github.com/runsascoded/apvd
@@ -8,18 +8,18 @@ Interactive web app for generating area-proportional Venn diagrams using up to 4
 ## Architecture
 
 Two repos:
-- **apvd** (this repo): Next.js/React frontend, visualization, UI
-- **[shapes]** (`../shapes`): Rust→WASM library for math, autodiff, optimization
+- **apvd** (this repo): Vite/React SPA frontend, visualization, UI
+- **[shapes]** (`../shapes`): Rust→WASM library for math, autodiff, optimization (published as `apvd-wasm`)
 
 [shapes]: https://github.com/runsascoded/shapes
 
 ## Quick Start
 
 ```bash
-npm install
-npm run dev    # Dev server on :3000
-npm run build  # Production build
-npm run test   # Jest tests
+pnpm install
+pnpm dev       # Dev server on :5183
+pnpm build     # Production build
+pnpm test      # Vitest tests
 ```
 
 ### shapes (Rust/WASM)
@@ -32,16 +32,21 @@ cargo test
 
 ## Key Files
 
-### Frontend (`pages/`, `src/`)
-- `pages/index.tsx`: Main app (≈1500 lines) - UI, state management, keyboard shortcuts
-- `src/lib/shape.ts`: Shape types (Circle, XYRR, XYRRT)
-- `src/lib/shapes-buffer.ts`: Binary encoding for URL serialization
+### Frontend (`src/`)
+- `src/App.tsx`: Main app - UI, state management, keyboard shortcuts
+- `src/lib/shape.ts`: Shape types (Circle, XYRR, XYRRT, Polygon)
+- `src/lib/shapes-buffer.ts`: Binary encoding for URL serialization (uses [use-prms] for bit-packing)
 - `src/lib/targets.ts`: Target region sizes
 - `src/lib/regions.ts`: Region computation, area calculations
 - `src/lib/layout.ts`: Initial shape configurations (Ellipses4, CirclesFlexible, etc.)
 - `src/lib/sample-targets.tsx`: Built-in examples (FizzBuzz, Zhang 2014, etc.)
+- `src/lib/params.ts`: URL parameter handling
 - `src/components/grid.tsx`: Main SVG visualization
+- `src/components/fab.tsx`: Floating action button (controls bar)
+- `src/components/theme-toggle.tsx`: Light/dark mode toggle
 - `src/components/tables/`: Interactive data tables (targets, shapes, vars)
+
+[use-prms]: https://github.com/runsascoded/use-prms
 
 ### Rust/WASM (`../shapes/src/`)
 - `lib.rs`: WASM exports (`make_model`, `train`, `make_step`, etc.)
@@ -76,67 +81,61 @@ Example: `#s=Mzx868w...&t=i16,16,4,12,4,3,2&n=Fizz,Buzz,Bazz`
 - **Circle**: center (x,y), radius r
 - **XYRR**: axis-aligned ellipse - center (x,y), radii (rx, ry)
 - **XYRRT**: rotated ellipse - center (x,y), radii (rx, ry), rotation theta
+- **Polygon**: vertices as array of (x,y) points
 
 ## Dependencies
 
 Frontend uses:
-- next@13.2.4, react@18.2.0
+- vite@6, react@18, typescript@5
 - react-bootstrap, react-plotly.js
-- [next-utils] for param handling
-- apvd (shapes WASM) via gitpkg
+- [use-kbd] for keyboard shortcuts and omnibar
+- [use-prms] for lossy float/binary encoding (URL serialization)
+- apvd-wasm (shapes WASM) via GitHub
 
 Rust uses:
 - num-dual (autodiff), nalgebra (linear algebra)
 - wasm-bindgen, serde-wasm-bindgen, tsify
 
-[next-utils]: https://github.com/runsascoded/next-utils
+[use-kbd]: https://github.com/runsascoded/use-kbd
 
 ## Known Issues / TODOs
 
-- Max 4 shapes (ellipses); polygon support would enable more
 - Absolute error metric only (shapes#9)
 - Basic missing-region penalty (shapes#10)
 - URL params are 1-directional / lossy (UI→URL, not URL→UI after init)
 
 ## Improvement Roadmap
 
-### Phase 1: Tooling Modernization
-- [ ] Convert Next.js → Vite (static SPA, no SSR needed)
-- [ ] Switch npm → pnpm
-- [ ] Upgrade dependencies (React 18→19, TypeScript 5.1→5.7, etc.)
-- [ ] Add [scrns] for automated screenshot capture of examples
+### Phase 1: Tooling Modernization ✓
+- [x] Convert Next.js → Vite (static SPA, no SSR needed)
+- [x] Switch npm → pnpm
+- [x] Upgrade dependencies (React 18, TypeScript 5.7, Vite 6)
+- [x] Add [scrns] for automated screenshot capture
 
-### Phase 2: Library Integration
-- [ ] Replace manual keyboard handling with [use-kbd]
-  - Add omnibar (⌘K) for actions: play, rewind, load examples, export, etc.
+### Phase 2: Library Integration ✓
+- [x] Replace manual keyboard handling with [use-kbd]
+  - Omnibar (⌘K) for actions
   - User-customizable keybindings
-  - Shortcuts modal (?)
-- [ ] Replace `next-utils/params` with [@rdub/use-url-params]
-  - Requires new "lossy/write-only" mode (spec at `use-url-params/SPEC-LOSSY-MODE.md`)
-  - Hash param support already exists
+  - Shortcuts modal
+- [x] Integrate [use-prms] for lossy float/binary encoding
+  - Custom base64 alphabet for backward-compatible URL serialization
+  - Bit-aligned encoding for compact URLs
 
-### Phase 3: UI Improvements
-- [ ] Light/dark mode with theme toggle
-- [ ] Floating controls bar (L/R FAB pattern from use-kbd site)
+### Phase 3: UI Improvements ✓
+- [x] Light/dark mode with theme toggle
+- [x] Floating controls bar (FAB)
   - Theme toggle, keyboard shortcuts button, GitHub link
 - [ ] Responsive layout improvements
 
-### Phase 4: Polygon Support (shapes + apvd)
-- [ ] Add `Polygon` shape type to shapes crate
+### Phase 4: Polygon Support ✓ (shapes crate)
+- [x] Add `Polygon` shape type to shapes crate
   - Vertices as `Vec<R2<D>>`
   - Polygon-polygon intersection (line segment intersections)
-  - Shoelace formula for area (already have this)
+  - Shoelace formula for area
+- [x] Binary encoding for polygons in URL params
 - [ ] Self-intersection detection and prevention
-  - Detect edge crossings
-  - Either zero out gradients or heavy penalty
 - [ ] Convexity/skinny penalty in loss function
-  - Isoperimetric quotient: penalize low area/perimeter² ratio
-  - Compare to convex hull area
-- [ ] UI for polygon mode toggle (ellipses OR polygons, not mixed initially)
-- [ ] Vertex manipulation UI
-  - Add vertex (break edge)
-  - Remove vertex
-  - Drag vertices
+- [ ] Polygon vertex manipulation UI
 
 ### Phase 5: Future (Curvy Blobs)
 - [ ] Circular arc splines: alternating line segments + circular arcs
@@ -145,13 +144,13 @@ Rust uses:
 
 [scrns]: https://www.npmjs.com/package/scrns
 [use-kbd]: https://www.npmjs.com/package/use-kbd
-[@rdub/use-url-params]: https://www.npmjs.com/package/@rdub/use-url-params
+[use-prms]: https://github.com/runsascoded/use-prms
 
 ## Tests
 
 ```bash
-npm run test          # Jest (frontend)
+pnpm test             # Vitest (frontend)
 cd ../shapes && cargo test  # Rust
 ```
 
-Test files: `tests/*.test.ts` (shape encoding, math functions)
+Test files: `tests/*.test.ts` (shape encoding, backward compatibility, math functions)
