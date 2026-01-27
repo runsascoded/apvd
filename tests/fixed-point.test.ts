@@ -1,7 +1,7 @@
-import {fromFixedPoint, Opts, toFixedPoint} from "../src/lib/fixed-point";
-import {fromFloat, toFloat} from "../src/lib/float";
+import {fromFixedPoint, toFixedPoint, fromFloat, toFloat, BitBuffer} from "use-prms";
 import {js} from "../src/lib/utils";
-import BitBuffer from "../src/lib/bit-buffer";
+
+type Opts = { mantBits: number, exp?: number }
 
 describe("test FixedPoint round-trips", () => {
     function check(f: number, opts: Opts) {
@@ -39,7 +39,7 @@ describe('test FixedPoint', () => {
       const vals0 = [-0.5, 0, 1, 1]
       buf.encodeFixedPoints(vals0, { expBits: 3, mantBits: 4 })
       buf.seek(0)
-      const vals1 = buf.decodeFixedPoints({ expBits: 3, mantBits: 4, numFloats: 4 })
+      const vals1 = buf.decodeFixedPoints(4, { expBits: 3, mantBits: 4 })
       expect(vals1).toEqual(vals0)
   })
 })

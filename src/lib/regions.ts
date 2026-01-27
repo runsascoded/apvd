@@ -1,5 +1,5 @@
-import * as apvd from "apvd";
-import {Dual, Targets} from "apvd"
+import * as apvd from "apvd-wasm";
+import {Dual, Targets} from "apvd-wasm"
 import {getRadii, Polygon, S, Set, Shape} from "./shape";
 import {PI} from "./math";
 import {getMidpoint} from "./region";

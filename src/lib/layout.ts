@@ -1,4 +1,4 @@
-import {R2} from "apvd";
+import {R2} from "apvd-wasm";
 import * as Shapes from "./shape"
 import {pi2, pi4, sq3, sqrt} from "./math";
 import {rotate} from "./shape";

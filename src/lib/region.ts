@@ -1,4 +1,4 @@
-import {R2} from "apvd";
+import {R2} from "apvd-wasm";
 import {Edge, Region} from "./regions";
 import { atan2, cos, deg, sin, sqrt } from "./math";
 import {getRadii, level, rotate, Shape} from "./shape";

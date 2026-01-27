@@ -3,6 +3,8 @@ import react from '@vitejs/plugin-react'
 import wasm from 'vite-plugin-wasm'
 import topLevelAwait from 'vite-plugin-top-level-await'
 
+const allowedHosts = process.env.VITE_ALLOWED_HOSTS?.split(',') ?? []
+
 export default defineConfig({
   plugins: [
     react(),
@@ -18,8 +20,7 @@ export default defineConfig({
   },
   base: '/apvd/',
   optimizeDeps: {
-    // Exclude apvd from pre-bundling so WASM is loaded correctly
-    exclude: ['apvd'],
+    // Exclude from pre-bundling so WASM is loaded correctly
   },
   server: {
     port: 5183,
@@ -27,6 +28,7 @@ export default defineConfig({
       // Allow serving files from node_modules
       allow: ['..'],
     },
+    ...(allowedHosts.length > 0 && { allowedHosts }),
   },
   preview: {
     port: 5183,

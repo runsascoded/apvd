@@ -1,4 +1,4 @@
-import {fromFloat, toFloat} from "../src/lib/float";
+import {fromFloat, toFloat} from "use-prms";
 import {pi, pi2, tau} from "../src/lib/math";
 
 describe('test float round trips', () => {

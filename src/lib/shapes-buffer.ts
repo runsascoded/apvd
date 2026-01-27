@@ -1,8 +1,9 @@
-import BitBuffer from "./bit-buffer";
-import {fromFloat, toFloat} from "./float";
+import {BitBuffer, toFloat, fromFloat, toFixedPoint, fromFixedPoint, type FixedPoint} from "use-prms";
 import {tau} from "./math";
-import {FixedPoint, fromFixedPoint, toFixedPoint} from "./fixed-point";
 import {Circle, Polygon, Shape, XYRR, XYRRT} from "./shape";
+
+// apvd's custom alphabet for backward compatibility with existing URLs
+export const APVD_ALPHABET = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_'
 
 export type Opts = {
     precisionScheme?: PrecisionScheme,
@@ -57,7 +58,7 @@ export default class ShapesBuffer {
     }
 
     static fromB64(s: string, opts: Opts = {}): ShapesBuffer {
-        return new ShapesBuffer({ buf: BitBuffer.b64ToBuf(s), ...opts })
+        return new ShapesBuffer({ buf: BitBuffer.fromBase64(s, { alphabet: APVD_ALPHABET }), ...opts })
     }
 
     static fromShapes(shapes: Shape<number>[], opts: Opts = {}): ShapesBuffer {
@@ -66,7 +67,9 @@ export default class ShapesBuffer {
         return buf
     }
 
-    toB64(): string { return this.buf.toB64() }
+    toB64(): string {
+        return this.buf.toBase64({ alphabet: APVD_ALPHABET })
+    }
     get totalBitOffset(): number { return this.buf.totalBitOffset }
     seek(totalBitOffset: number): ShapesBuffer { this.buf.seek(totalBitOffset); return this }
     get end(): number { return this.buf.end }
@@ -101,7 +104,7 @@ export default class ShapesBuffer {
         // console.log("decode buf:", buf)
         // Expect ShapeBits has already been processed
         const floatBits = mantBits + 1
-        const [ cx, cy, rx, ry ] = buf.decodeFixedPoints({ expBits, mantBits, numFloats: 4 })
+        const [ cx, cy, rx, ry ] = buf.decodeFixedPoints(4, { expBits, mantBits })
         const c = { x: cx, y: cy }
         const r = { x: rx, y: ry }
         // console.log("decode theta, bitOffset:", bitOffset)
@@ -124,7 +127,7 @@ export default class ShapesBuffer {
         const {buf, mantBits, expBits} = this
         // console.log("decode buf:", buf)
         // Expect ShapeBits has already been processed
-        const [cx, cy, rx, ry] = buf.decodeFixedPoints({expBits, mantBits, numFloats: 4})
+        const [cx, cy, rx, ry] = buf.decodeFixedPoints(4, {expBits, mantBits})
         const c = {x: cx, y: cy}
         const r = {x: rx, y: ry}
         return { kind: 'XYRR', c, r, }
@@ -143,7 +146,7 @@ export default class ShapesBuffer {
         const { buf, mantBits, expBits } = this
         // console.log("decode buf:", buf)
         // Expect ShapeBits has already been processed
-        const [ cx, cy, r ] = buf.decodeFixedPoints({ expBits, mantBits, numFloats: 3 })
+        const [ cx, cy, r ] = buf.decodeFixedPoints(3, { expBits, mantBits })
         const c = { x: cx, y: cy }
         return { kind: 'Circle', c, r, }
     }
@@ -165,7 +168,7 @@ export default class ShapesBuffer {
         const { buf, mantBits, expBits } = this
         // Expect ShapeBits has already been processed
         const numVertices = buf.decodeInt(8)
-        const coords = buf.decodeFixedPoints({ expBits, mantBits, numFloats: numVertices * 2 })
+        const coords = buf.decodeFixedPoints(numVertices * 2, { expBits, mantBits })
         const vertices: { x: number, y: number }[] = []
         for (let i = 0; i < numVertices; i++) {
             vertices.push({ x: coords[i * 2], y: coords[i * 2 + 1] })

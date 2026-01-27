@@ -1,4 +1,4 @@
-import {R2} from "apvd";
+import {R2} from "apvd-wasm";
 import {abs, cos, max, sin} from "./math";
 import {Param} from "./params";
 import ShapesBuffer, {Opts, ShapesParam} from "./shapes-buffer";

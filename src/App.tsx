@@ -2,8 +2,8 @@ import Grid, { GridState } from "./components/grid"
 import React, { DetailedHTMLProps, Fragment, HTMLAttributes, lazy, ReactNode, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { ShortcutsModal, Omnibar, SequenceModal, useAction, useOmnibarEndpoint } from 'use-kbd'
 import { PlaybackRenderer } from './components/groupRenderers'
-import * as apvd from "apvd"
-import { train, update_log_level } from "apvd"
+import * as apvd from "apvd-wasm"
+import { train, update_log_level } from "apvd-wasm"
 import { makeModel, Model, Region, regionPath, Step } from "./lib/regions"
 import { Point } from "./components/point"
 import css from "./App.module.scss"
