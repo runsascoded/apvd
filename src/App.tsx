@@ -458,13 +458,31 @@ export function Body() {
         [ params ]
     )
 
+    // Track the last hash we processed to avoid reprocessing on non-navigation popstate events
+    // (e.g., use-kbd uses history.back() for modal management which triggers popstate)
+    const lastProcessedHashRef = useRef<string | null>(null)
+
     useEffect(
         () => {
             const popStateFn = (e: PopStateEvent) => {
                 const hash = getHistoryStateHash()
                 console.log("popstate: hash", hash, "e.state", e.state, "history.state", history.state)
+
+                // Skip if this is a use-kbd modal state change (not a real navigation)
+                if (history.state?.kbdActiveModal !== undefined) {
+                    console.log("popstate: skipping use-kbd modal state change")
+                    return
+                }
+
+                // Skip if hash hasn't changed (prevents unnecessary resets)
+                if (hash === lastProcessedHashRef.current) {
+                    console.log("popstate: skipping, hash unchanged")
+                    return
+                }
+                lastProcessedHashRef.current = hash
+
                 if (!hash) {
-                    console.warn(`no hash in history state url ${history.state.url} or as ${history.state.as}`)
+                    console.warn(`no hash in history state url ${history.state?.url} or as ${history.state?.as}`)
                     return
                 }
                 const { s, t, n } = getHistoryState(hash)
@@ -498,7 +516,7 @@ export function Body() {
                 window.removeEventListener('hashchange', hashChangeFn)
             }
         },
-        [ setInitialShapes, setUrlShapesPrecisionScheme, setTargets, ]
+        [ setInitialShapes, setUrlShapesPrecisionScheme, setTargets, getHistoryState ]
     )
 
     const [ vars, setVars ] = useState<Vars | null>(null)
