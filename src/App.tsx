@@ -41,11 +41,13 @@ import { FizzBuzzBazz, MPowerLink, Zhang2014Href } from "./lib/sample-targets"
 import { Details, DetailsSection, Links } from "./components/Details"
 import { HashMap, HistoryState, LabelPoint, LinkItem, Params, ParsedParams, RunningState, ValItem } from "./types"
 import { Ellipses4t, fizzBuzzLink, GridId, initialLayoutKey, layouts, MaxNumShapes, setMetadataKey, shapesKey, targetsKey, VariantCallersPaperLink } from "./lib/constants"
+import { SettingsProvider, useSettings } from "./contexts/SettingsContext"
 
 const Plot = lazy(() => import("react-plotly.js"))
 
 export default function Page() {
     return (
+        <SettingsProvider>
         <Apvd>{() => <>
             <Body />
             <ShortcutsModal
@@ -56,6 +58,7 @@ export default function Page() {
             <Omnibar placeholder="Search actions..." />
             <SequenceModal />
         </>}</Apvd>
+        </SettingsProvider>
     )
 }
 
@@ -72,8 +75,35 @@ function usePreviousValue<T>(value: T) {
 export function Body() {
 
     const { theme, toggleTheme, diagramBg, sparklineColors } = useTheme()
+    const settings = useSettings()
+    const {
+        logLevel, setLogLevel,
+        urlShapesPrecisionScheme, setUrlShapesPrecisionScheme,
+        stateInUrlFragment, setStateInUrlFragment,
+        // Panel toggles
+        settingsShown, setSettingsShown,
+        targetsShown, setTargetsShown,
+        examplesShown, setExamplesShown,
+        errorPlotShown, setErrorPlotShown,
+        varsShown, setVarsShown,
+        shapesShown, setShapesShown,
+        layoutsShown, setLayoutsShown,
+        // Training
+        maxErrorRatioStepSize, setMaxErrorRatioStepSize,
+        maxSteps, setMaxSteps,
+        stepBatchSize, setStepBatchSize,
+        // Display
+        showRegionSizes, setShowRegionSizes,
+        shapeFillOpacity, setShapeFillOpacity,
+        autoCenter, setAutoCenter,
+        showSparkLines, setShowSparkLines,
+        sparkLineLimit, setSparkLineLimit,
+        showIntersectionPoints, setShowIntersectionPoints,
+        svgBackgroundColor, setSvgBackgroundColor,
+        // Misc
+        copyCoordinatesType, setCopyCoordinatesType,
+    } = settings
 
-    const [ logLevel, setLogLevel ] = useSessionStorageState<LogLevel>("logLevel", { defaultValue: "info" })
     useEffect(
         () => {
             update_log_level(logLevel)
@@ -83,15 +113,11 @@ export function Body() {
 
     const [ initialLayout, setInitialLayout] = useSessionStorageState<InitialLayout>(initialLayoutKey, { defaultValue: Ellipses4t })
 
-    const [ urlShapesPrecisionScheme, setUrlShapesPrecisionScheme ] = useSessionStorageState<number>("urlShapesPrecisionScheme", { defaultValue: 6 })
-
     const params: Params = {
         s: shapesParam({ precisionSchemeId: 1 }),
         t: targetsParam,
         n: setMetadataParam,
     }
-
-    const [ stateInUrlFragment, setStateInUrlFragment ] = useSessionStorageState<boolean>("shapesInUrlFragment", { defaultValue: true })
 
     const {
         s: [ urlFragmentShapes, setUrlFragmentShapes ],
@@ -184,26 +210,11 @@ export function Body() {
         showGrid: [ showGrid, setShowGrid ],
     } = gridState
 
-    const [ settingsShown, setSettingsShown ] = useSessionStorageState("settingsShown", { defaultValue: false, })
-    const [ targetsShown, setTargetsShown ] = useSessionStorageState("targetsShown", { defaultValue: false, })
-    const [ examplesShown, setExamplesShown ] = useSessionStorageState("examplesShown", { defaultValue: false, })
-    const [ errorPlotShown, setErrorPlotShown ] = useSessionStorageState("errorPlotShown", { defaultValue: false, })
-    const [ varsShown, setVarsShown ] = useSessionStorageState("varsShown", { defaultValue: false, })
-    const [ shapesShown, setShapesShown ] = useSessionStorageState("shapesShown", { defaultValue: false, })
-    const [ layoutsShown, setLayoutsShown ] = useSessionStorageState("layoutsShown", { defaultValue: false, })
-
-    const [ maxErrorRatioStepSize, setMaxErrorRatioStepSize ] = useSessionStorageState("maxErrorRatioStepSize", { defaultValue: 0.5 })
-    const [ maxSteps, setMaxSteps ] = useSessionStorageState("maxSteps", { defaultValue: 10000 })
-    const [ stepBatchSize, setStepBatchSize ] = useSessionStorageState("stepBatchSize", { defaultValue: 20 })
-    const [ showRegionSizes, setShowRegionSizes ] = useSessionStorageState("showRegionSizes", { defaultValue: false })
-    const [ shapeFillOpacity, setShapeFillOpacity ] = useSessionStorageState<number>("shapeFillOpacity", { defaultValue: 0.2 })
-
     const [ model, setModel ] = useState<Model | null>(null)
     const [ modelStepIdx, setModelStepIdx ] = useState<number | null>(null)
     const [ vStepIdx, setVStepIdx ] = useState<number | null>(null)
     const [ runningState, setRunningState ] = useState<RunningState>("none")
     const [ frameLen, setFrameLen ] = useState(0)
-    const [ autoCenter, setAutoCenter ] = useSessionStorageState("autoCenter", { defaultValue: true })
     const [ setLabelDistance, setSetLabelDistance ] = useState(0.15)
     const [ setLabelSize, setSetLabelSize ] = useState(20)
 
@@ -730,8 +741,6 @@ export function Body() {
         [ model, stepIdx, plotInitialized, ],
     )
 
-    const [ showSparkLines, setShowSparkLines ] = useSessionStorageState("showSparkLines", { defaultValue: true })
-    const [ sparkLineLimit, setSparkLineLimit ] = useSessionStorageState("sparkLineLimit", { defaultValue: 40 })
     const [ sparkLineStrokeWidth, setSparkLineStrokeWidth ] = useState(1)
     const [ sparkLineMargin, setSparkLineMargin ] = useState(1)
     const [ sparkLineWidth, setSparkLineWidth ] = useState(80)
@@ -825,7 +834,6 @@ export function Body() {
         [ sets, scale, shapeFillOpacity ],
     )
 
-    const [ showIntersectionPoints, setShowIntersectionPoints ] = useSessionStorageState("showIntersectionPoints", { defaultValue: false })
     const intersectionNodes = useMemo(
         () => showIntersectionPoints && <g id={"intersections"}>{
             curStep && ([] as ReactNode[]).concat(...curStep.components.map((component, componentIdx) => component.points.map(({ x, y, }, pointIdx) => {
@@ -1210,7 +1218,6 @@ export function Body() {
         [ shapes, targets, urlShapesPrecisionScheme, ]
     )
 
-    const [ copyCoordinatesType, setCopyCoordinatesType ] = useSessionStorageState<CopyCoordinatesType>("copyCoordinatesType", { defaultValue: "JSON" })
     const [ canCopyCoordinates, setCanCopyCoordinates ] = useState(false)
     useEffect(
         () => {
@@ -1486,7 +1493,6 @@ export function Body() {
     )
 
     const svgRef = useRef<SVGSVGElement | null>(null)
-    const [ svgBackgroundColor, setSvgBackgroundColor ] = useSessionStorageState<string>("svgBackgroundColor", { defaultValue: "" })
     // Use theme-based default when no custom color is set or when it's a default theme color
     const effectiveSvgBg = isDefaultBg(svgBackgroundColor) ? diagramBg : svgBackgroundColor
     const [ invalidSvgColor, setInvalidSvgColor ] = useState(false)
