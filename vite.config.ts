@@ -21,6 +21,7 @@ export default defineConfig({
   base: '/apvd/',
   optimizeDeps: {
     // Exclude from pre-bundling so WASM is loaded correctly
+    exclude: ['apvd-wasm'],
   },
   server: {
     port: 5183,

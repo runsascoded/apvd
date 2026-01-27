@@ -390,16 +390,14 @@ export function Body() {
 
     const [ curStep, sets, shapes, ] = useMemo(
         () => {
-            if (!model || stepIdx === null) return [ null, null ]
+            if (!model || stepIdx === null) return [ null, null, null ]
             // console.log("recomputing curStep")
             if (stepIdx >= model.steps.length) {
                 console.warn("stepIdx >= model.steps.length", stepIdx, model.steps.length)
-                return [ null, null ]
+                return [ null, null, null ]
             }
             const curStep = model.steps[stepIdx]
-            // Save current shapes to sessionStorage
             const shapes = curStep.sets.map(({ shape }) => shape)
-            sessionStorage.setItem(shapesKey, JSON.stringify(shapes))
             // Guard against stale model with different shape count than initialSets
             if (curStep.sets.length !== initialSets.length) {
                 console.warn("curStep.sets.length !== initialSets.length", curStep.sets.length, initialSets.length)
@@ -410,17 +408,21 @@ export function Body() {
                 const effectiveColor = getEffectiveShapeColor(base.color, set.idx, theme)
                 return { ...base, ...set, color: effectiveColor }
             })
-
-            if (stateInUrlFragment) {
-                if (targets.numShapes == shapes.length) {
-                    pushHistoryState({ shapes, newTargets: targets })
-                } else {
-                    console.warn("skipping updateUrl push: targets.numShapes != shapes.length", targets.numShapes, shapes.length)
-                }
-            }
             return [ curStep, sets, shapes ]
         },
-        [ model, stepIdx, initialSets, targets, stateInUrlFragment, pushHistoryState, theme, ]
+        [ model, stepIdx, initialSets, theme, ]
+    )
+
+    // Sync current shapes to sessionStorage and URL (side effects moved out of useMemo)
+    useEffect(
+        () => {
+            if (!shapes) return
+            sessionStorage.setItem(shapesKey, JSON.stringify(shapes))
+            if (stateInUrlFragment && targets.numShapes == shapes.length) {
+                pushHistoryState({ shapes, newTargets: targets })
+            }
+        },
+        [ shapes, stateInUrlFragment, targets, pushHistoryState, ]
     )
 
     // Save targets to sessionStorage

@@ -33,7 +33,7 @@
     "react-scroll-wheel-handler": "^2.2.0",
     "react-sparklines": "^1.7.0",
     "save-svg-as-png": "^1.4.17",
-    "use-kbd": "github:runsascoded/use-kbd#d51354bbde2bf134570d81a5f8eee69ed730c0d8",
+    "use-kbd": "^0.8.0",
     "use-local-storage-state": "^19.5.0",
     "use-session-storage-state": "^19.0.0",
     "use-prms": "^0.4.0"
