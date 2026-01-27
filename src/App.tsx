@@ -1,5 +1,5 @@
 import Grid, { GridState } from "./components/grid"
-import React, { DetailedHTMLProps, Fragment, HTMLAttributes, lazy, ReactNode, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import React, { Fragment, lazy, ReactNode, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { ShortcutsModal, Omnibar, SequenceModal, useAction, useOmnibarEndpoint } from 'use-kbd'
 import { PlaybackRenderer } from './components/groupRenderers'
 import * as apvd from "apvd-wasm"
@@ -15,18 +15,18 @@ import { entries, mapEntries, values } from "./lib/objs"
 import { getSliderValue } from "./components/inputs"
 import { cos, max, min, PI, pi2, round, sin, sq3 } from "./lib/math"
 import Apvd, { LogLevel } from "./components/apvd"
-import { getLabelAttrs, getMidpoint, getPointAndDirectionAtTheta, getRegionCenter, LabelAttrs } from "./lib/region"
+import { getLabelAttrs, getMidpoint, getPointAndDirectionAtTheta, getRegionCenter } from "./lib/region"
 import { BoundingBox, DefaultSetMetadata, getRadii, mapShape, S, SetMetadata, setMetadataParam, Shape, shapeBox, Shapes, shapesParam, shapeStrJS, shapeStrJSON, shapeStrRust } from "./lib/shape"
 import { TargetsTable } from "./components/tables/targets"
 import { defaultTargets, makeTargets, Target, Targets, targetsParam } from "./lib/targets"
-import { CirclesFixed, CirclesFlexible, Disjoint, Ellipses4, Ellipses4t, FourDodecagonsVenn, FourHexagons, FourHexagonsVenn, FourIcosagonsVenn, InitialLayout, Nested, ThreeHexagons, ThreePentagons, toShape, TriangleCircle, TwoPentagonsOneHexagon, TwoTriangles } from "./lib/layout"
+import { InitialLayout, toShape } from "./lib/layout"
 import { VarsTable } from "./components/tables/vars"
 import { SparkLineProps } from "./components/spark-lines"
 import { CircleCoords, Coord, getPolygonCoords, makeVars, Vars, XYRRCoords, XYRRTCoords } from "./lib/vars"
 import { CopyCoordinatesType, ShapesTable } from "./components/tables/shapes"
 import _ from "lodash"
 import debounce from "lodash/debounce"
-import { getHashMap, getHistoryStateHash, HashMapVal, Param, ParsedParam, parseHashParams, updatedHash, updateHashParams } from "./lib/params"
+import { getHashMap, getHistoryStateHash, parseHashParams, updatedHash, updateHashParams } from "./lib/params"
 import { precisionSchemes, ShapesParam } from "./lib/shapes-buffer"
 import { Checkbox, Control, Number, Select, tooltipPopperConfig } from "./components/controls"
 import useSessionStorageState from "use-session-storage-state"
@@ -38,107 +38,11 @@ import { useDeepCmp } from "./lib/use-deep-cmp-memo"
 import d3ToPng from "d3-svg-to-png"
 import { EditableText } from "./components/editable-text"
 import { FizzBuzzBazz, MPowerLink, Zhang2014Href } from "./lib/sample-targets"
-import { Placement } from "react-bootstrap/types"
+import { Details, DetailsSection, Links } from "./components/Details"
+import { HashMap, HistoryState, LabelPoint, LinkItem, Params, ParsedParams, RunningState, ValItem } from "./types"
+import { Ellipses4t, fizzBuzzLink, GridId, initialLayoutKey, layouts, MaxNumShapes, setMetadataKey, shapesKey, targetsKey, VariantCallersPaperLink } from "./lib/constants"
 
 const Plot = lazy(() => import("react-plotly.js"))
-
-export type RunningState = "none" | "fwd" | "rev"
-
-export type LabelPoint = Point & LabelAttrs & { setIdx: number, point: Point }
-
-export function Details({ open, toggle, summary, className, children, }: {
-    open: boolean
-    toggle: (open: boolean) => void
-    summary?: ReactNode
-    className?: string
-    children: ReactNode
-}) {
-    return (
-        <details
-            className={className || ''}
-            open={open}
-            onToggle={e => toggle((e.currentTarget as HTMLDetailsElement).open)}
-        >
-            {summary && <summary>{summary}</summary>}
-            {children}
-        </details>
-    )
-}
-
-export function DetailsSection({ title, tooltip, open, toggle, className, children, ...rest }: {
-    title: string
-    tooltip?: ReactNode
-    open: boolean
-    toggle: (open: boolean) => void
-    className?: string
-    children: ReactNode
-} & DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) {
-    return (
-        <div className={css.detailsSection} {...rest}>
-            <Details open={open} toggle={toggle} className={className}>
-                <summary>
-                    <h4 className={css.tableTitle}>{
-                        tooltip
-                            ? <OverlayTrigger
-                                overlay={<Tooltip>{tooltip}</Tooltip>}
-                                popperConfig={tooltipPopperConfig}
-                            ><span>{title}</span></OverlayTrigger>
-                            : title
-                    }</h4>
-                </summary>
-                {children}
-            </Details>
-        </div>
-    )
-}
-
-export type ValItem<Val> = { name: string, val: Val, description: ReactNode }
-export type LinkItem = { name: string, children: ReactNode, description: ReactNode }
-export function Links({ links, placement, }: { links: LinkItem[], placement: Placement }): [ () => void, ReactNode ] {
-    const [ showTooltip, setShowTooltip ] = useState<string | null>(null)
-    return [
-        () => setShowTooltip(null),
-        <ul style={{ listStyle: "none", }}>{
-            links.map(({ name, description, children }, idx) => {
-                const overlay = <Tooltip onClick={e => console.log("tooltip click:", name)}>{description}</Tooltip>
-                // const isCurVal = _.isEqual(cur, val)
-                // console.log("link:", isCurVal, cur, val)
-                return (
-                    <li key={idx}>
-                        <OverlayTrigger
-                            trigger={["focus", "click"]}
-                            onToggle={shown => {
-                                if (shown) {
-                                    console.log("showing:", name)
-                                    setShowTooltip(name)
-                                } else if (name == showTooltip) {
-                                    console.log("hiding:", name)
-                                    setShowTooltip(null)
-                                }
-                            }}
-                            show={name == showTooltip}
-                            placement={placement}
-                            overlay={overlay}
-                        >
-                            <span
-                                className={css.info}
-                                style={{ opacity: name == showTooltip ? 0.5 : 1 }}
-                                onClick={e => {
-                                    console.log("info click:", name, name == showTooltip)
-                                    e.stopPropagation()
-                                }}
-                            >ℹ️</span>
-                        </OverlayTrigger>
-                        {' '}
-                        <span onClick={() => { setShowTooltip(null) }}>{children}</span>
-                    </li>
-                )
-            })
-        }</ul>
-    ]
-}
-
-export const GridId = "grid"
 
 export default function Page() {
     return (
@@ -157,56 +61,6 @@ export default function Page() {
 
 declare var window: any;
 
-export const initialLayoutKey = "initialLayout"
-export const shapesKey = "shapes"
-export const targetsKey = "targets"
-export const setMetadataKey = "setMetadata"
-
-export const VariantCallersPaperLink = <A href={"https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3753564/pdf/btt375.pdf"}>Roberts et al (2013)</A>
-
-const layouts: ValItem<InitialLayout>[] = [
-    { name: "Ellipses", val: Ellipses4t, description: "4 ellipses intersecting to form all 15 possible regions, rotated -45°", },
-    { name: "Ellipses (axis-aligned)", val: Ellipses4, description: "Same as above, but ellipse axes are horizontal/vertical (and rotation is disabled)", },
-    { name: "Circles (flexible)", val: CirclesFlexible, description: "4 ellipses, initialized as circles, and oriented in a diamond configuration, such that 2 different subsets (of 3) are symmetric, and 11 of 15 possible regions are represented (missing 2 4C2's and 2 4C3's).", },
-    { name: "Circles (fixed)", val: CirclesFixed, description: "4 circles, initialized in a diamond as in \"Circles (flexible)\" above, but these are fixed as circles (rx and ry remain constant, rotation is immaterial)", },
-    { name: "Disjoint", val: Disjoint, description: "4 disjoint circles. When two (or more) sets are supposed to intersect, but don't, a synthetic penalty is added to the error computation, which is proportional to: 1) each involved set's distance to the centroid of the centers of the sets that are supposed to intersect, as well as 2) the size of the target subset. This \"disjoint\" initial layout serves demonstrate/test this behavior. More sophisticated heuristics would be useful here, as the current scheme is generally insufficient to coerce all sets into intersecting as they should." },
-    { name: "Nested", val: Nested, description: "4 nested circles, stresses disjoint/contained region handling, which has known issues!" },
-    // Polygon layouts
-    { name: "Triangle + Circle", val: TriangleCircle, description: "A circle and an overlapping triangle (polygon test)" },
-    { name: "Two Triangles", val: TwoTriangles, description: "Two overlapping triangles (Star of David pattern)" },
-    { name: "Three Pentagons", val: ThreePentagons, description: "Three overlapping pentagons in a triangular arrangement" },
-    { name: "Three Hexagons", val: ThreeHexagons, description: "Three hexagons in a row (like a classic Venn diagram)" },
-    { name: "Four Hexagons", val: FourHexagons, description: "Four overlapping hexagons in a square arrangement" },
-    { name: "Four Hexagons (Venn)", val: FourHexagonsVenn, description: "Four elongated hexagons (6-gons) in the 4-ellipse Venn pattern" },
-    { name: "Four 12-gons (Venn)", val: FourDodecagonsVenn, description: "Four elongated dodecagons (12-gons) - better ellipse approximation" },
-    { name: "Four 20-gons (Venn)", val: FourIcosagonsVenn, description: "Four elongated icosagons (20-gons) - close ellipse approximation, should achieve all 15 regions" },
-    { name: "2 Pentagons + Hexagon", val: TwoPentagonsOneHexagon, description: "Two pentagons and a hexagon (mixed polygon test)" },
-]
-
-export type Params = {
-    s: Param<ShapesParam | null>
-    t: Param<Targets | null>
-    n: Param<SetMetadata | null>
-}
-
-export type ParsedParams = {
-    s: ParsedParam<ShapesParam | null>
-    t: ParsedParam<Targets | null>
-    n: ParsedParam<SetMetadata | null>
-}
-
-export type HashMap = {
-    s: HashMapVal<ShapesParam>
-    t: HashMapVal<Targets>
-    n: HashMapVal<SetMetadata>
-}
-
-export type HistoryState = {
-    s: ShapesParam
-    t: Targets
-    n: SetMetadata
-}
-
 function usePreviousValue<T>(value: T) {
     const ref = useRef<T>();
     useEffect(() => {
@@ -214,10 +68,6 @@ function usePreviousValue<T>(value: T) {
     });
     return ref.current;
 }
-
-export const MaxNumShapes = 5
-
-const fizzBuzzLink = <A href={"https://en.wikipedia.org/wiki/Fizz_buzz"}>Fizz Buzz</A>
 
 export function Body() {
 
@@ -379,7 +229,12 @@ export function Body() {
                     const param = { shapes, precisionSchemeId: urlShapesPrecisionScheme }
                     const newHashMap = { s: param, t: newTargets || targets, n: newSetMetadata || setMetadata, }
                     if (historyLog) console.log(`history push (${push ? "push" : "replace"}, ${targets.numShapes}, ${newHashMap.s.shapes.length}`, newHashMap)
+                    // Mark that we're updating the URL ourselves, so we ignore the synthetic popstate
+                    // that use-prms dispatches (it patches replaceState for React Router compatibility)
+                    isUpdatingUrlRef.current = true
                     updateHashParams(params, newHashMap, { push, log: historyLog })
+                    // Reset after a tick to allow the synthetic popstate to be ignored
+                    setTimeout(() => { isUpdatingUrlRef.current = false }, 0)
                 }
             },
             400,
@@ -458,28 +313,22 @@ export function Body() {
         [ params ]
     )
 
-    // Track the last hash we processed to avoid reprocessing on non-navigation popstate events
-    // (e.g., use-kbd uses history.back() for modal management which triggers popstate)
-    const lastProcessedHashRef = useRef<string | null>(null)
+    // Track when we're updating the URL ourselves to ignore synthetic popstate events
+    // (use-prms patches history.replaceState to dispatch popstate for React Router compatibility)
+    const isUpdatingUrlRef = useRef(false)
 
     useEffect(
         () => {
             const popStateFn = (e: PopStateEvent) => {
                 const hash = getHistoryStateHash()
-                console.log("popstate: hash", hash, "e.state", e.state, "history.state", history.state)
+                console.log("popstate: hash", hash, "e.state", e.state, "history.state", history.state, "isUpdatingUrl", isUpdatingUrlRef.current)
 
-                // Skip if this is a use-kbd modal state change (not a real navigation)
-                if (history.state?.kbdActiveModal !== undefined) {
-                    console.log("popstate: skipping use-kbd modal state change")
+                // Skip synthetic popstate events from our own URL updates
+                // (use-prms patches history.replaceState to dispatch popstate for React Router)
+                if (isUpdatingUrlRef.current) {
+                    console.log("popstate: skipping, we're updating URL ourselves")
                     return
                 }
-
-                // Skip if hash hasn't changed (prevents unnecessary resets)
-                if (hash === lastProcessedHashRef.current) {
-                    console.log("popstate: skipping, hash unchanged")
-                    return
-                }
-                lastProcessedHashRef.current = hash
 
                 if (!hash) {
                     console.warn(`no hash in history state url ${history.state?.url} or as ${history.state?.as}`)
