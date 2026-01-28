@@ -20,8 +20,13 @@ export default defineConfig({
   },
   base: '/apvd/',
   optimizeDeps: {
-    // Exclude from pre-bundling so WASM is loaded correctly
-    exclude: ['apvd-wasm'],
+    // Exclude from Vite's pre-bundling:
+    // - WASM packages: esbuild breaks WASM imports (permanent)
+    // - Local deps: enables hot reload without restart (managed by pds)
+    exclude: [
+      'apvd-wasm',      // WASM - always exclude
+      // pds
+    ],
   },
   server: {
     port: 5183,
