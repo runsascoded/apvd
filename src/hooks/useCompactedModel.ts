@@ -91,29 +91,32 @@ export function useCompactedModel(options: UseCompactedModelOptions): UseCompact
   const setModel = useCallback((newModel: Model | null) => {
     const storage = storageRef.current
 
-    // Clear old data
-    storage?.clear()
+    // Clear old data (must await to avoid race with pushMany)
     stepCacheRef.current.clear()
     setPagedCount(0)
 
-    if (!newModel) {
-      setModelInternal(null)
-      setErrors([])
-      return
-    }
+    const clearPromise = storage?.clear() ?? Promise.resolve()
 
-    // Store raw steps in OPFS and extract errors
-    if (storage && storageReady) {
-      const rawSteps = newModel.raw.steps
-      storage.pushMany(rawSteps).then(() => {
-        setErrors(storage.getSummaries().map(s => s.error))
-      })
-    } else {
-      // Fallback: extract errors directly
-      setErrors(newModel.raw.steps.map(s => s.error.v))
-    }
+    clearPromise.then(() => {
+      if (!newModel) {
+        setModelInternal(null)
+        setErrors([])
+        return
+      }
 
-    setModelInternal(newModel)
+      // Store raw steps in OPFS and extract errors
+      if (storage && storageReady) {
+        const rawSteps = newModel.raw.steps
+        storage.pushMany(rawSteps).then(() => {
+          setErrors(storage.getSummaries().map(s => s.error))
+        })
+      } else {
+        // Fallback: extract errors directly
+        setErrors(newModel.raw.steps.map(s => s.error.v))
+      }
+
+      setModelInternal(newModel)
+    })
   }, [storageReady])
 
   // Append training batch
