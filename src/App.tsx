@@ -44,6 +44,7 @@ import { Ellipses4t, fizzBuzzLink, GridId, initialLayoutKey, layouts, MaxNumShap
 import { SettingsProvider, useSettings } from "./contexts/SettingsContext"
 import { useTraining } from "./hooks/useTraining"
 import { ErrorPlot } from "./components/ErrorPlot"
+import { ExpandCollapseButtons } from "./components/expand-collapse-icons"
 
 export default function Page() {
     return (
@@ -111,6 +112,24 @@ export function Body() {
         },
         [ logLevel, ]
     );
+
+    // Expand/collapse all details sections
+    const expandAllSections = () => {
+        setTargetsShown(true)
+        setExamplesShown(true)
+        setErrorPlotShown(true)
+        setShapesShown(true)
+        setLayoutsShown(true)
+        setVarsShown(true)
+    }
+    const collapseAllSections = () => {
+        setTargetsShown(false)
+        setExamplesShown(false)
+        setErrorPlotShown(false)
+        setShapesShown(false)
+        setLayoutsShown(false)
+        setVarsShown(false)
+    }
 
     const [ initialLayout, setInitialLayout] = useSessionStorageState<InitialLayout>(initialLayoutKey, { defaultValue: Ellipses4t })
 
@@ -1342,6 +1361,12 @@ export function Body() {
                     </div>
                 </div>
                 <hr />
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem' }}>
+                    <ExpandCollapseButtons
+                        expandAll={expandAllSections}
+                        collapseAll={collapseAllSections}
+                    />
+                </div>
                 <div className={"row"}>
                     <div className={`${col7}`}>
                         <DetailsSection
