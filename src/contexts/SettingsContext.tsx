@@ -29,6 +29,8 @@ export type TrainingSettings = {
     setMaxSteps: (v: number) => void
     stepBatchSize: number
     setStepBatchSize: (v: number) => void
+    convergenceThreshold: number
+    setConvergenceThreshold: (v: number) => void
 }
 
 // Display settings
@@ -83,6 +85,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     const [ maxErrorRatioStepSize, setMaxErrorRatioStepSize ] = useSessionStorageState("maxErrorRatioStepSize", { defaultValue: 0.5 })
     const [ maxSteps, setMaxSteps ] = useSessionStorageState("maxSteps", { defaultValue: 10000 })
     const [ stepBatchSize, setStepBatchSize ] = useSessionStorageState("stepBatchSize", { defaultValue: 20 })
+    const [ convergenceThreshold, setConvergenceThreshold ] = useSessionStorageState("convergenceThreshold", { defaultValue: 1e-10 })
 
     // Display settings
     const [ showRegionSizes, setShowRegionSizes ] = useSessionStorageState("showRegionSizes", { defaultValue: false })
@@ -114,6 +117,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         maxErrorRatioStepSize, setMaxErrorRatioStepSize,
         maxSteps, setMaxSteps,
         stepBatchSize, setStepBatchSize,
+        convergenceThreshold, setConvergenceThreshold,
         // Display
         showRegionSizes, setShowRegionSizes,
         shapeFillOpacity, setShapeFillOpacity,
@@ -165,6 +169,7 @@ export function useTrainingSettings(): TrainingSettings {
         maxErrorRatioStepSize: ctx.maxErrorRatioStepSize, setMaxErrorRatioStepSize: ctx.setMaxErrorRatioStepSize,
         maxSteps: ctx.maxSteps, setMaxSteps: ctx.setMaxSteps,
         stepBatchSize: ctx.stepBatchSize, setStepBatchSize: ctx.setStepBatchSize,
+        convergenceThreshold: ctx.convergenceThreshold, setConvergenceThreshold: ctx.setConvergenceThreshold,
     }
 }
 
