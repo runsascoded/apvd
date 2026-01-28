@@ -1,10 +1,12 @@
 /**
  * ErrorPlot - Plotly chart showing training error over steps.
+ *
+ * Note: Hover preview is disabled due to performance issues with full re-renders.
+ * The step indicator line shows the current training step position.
  */
 
-import { lazy, Suspense, useState, useMemo } from "react"
+import { lazy, Suspense, useState, useMemo, useCallback } from "react"
 import { Model } from "../lib/regions"
-import { round } from "../lib/math"
 import css from "../App.module.scss"
 
 const Plot = lazy(() => import("react-plotly.js"))
@@ -24,87 +26,86 @@ export function ErrorPlot({
   errors,
   theme,
   diagramBg,
-  setVStepIdx,
 }: ErrorPlotProps) {
   const [plotInitialized, setPlotInitialized] = useState(false)
 
-  const plotContent = useMemo(() => {
-    if (!model || stepIdx === null) return null
+  // Memoize data separately from stepIdx
+  const plotData = useMemo(() => {
+    if (!model) return null
 
-    // Use errors (always complete, kept in memory) instead of mapping sparse steps
     const plotErrors = errors.length > 0
       ? errors
       : model.steps.filter(Boolean).map(step => step.error.v)
 
-    return (
-      <>
-        <Suspense fallback={<div className={css.plot}>Loading plot...</div>}>
-          <Plot
-            className={css.plot}
-            style={plotInitialized ? {} : { display: "none" }}
-            data={[{
-              y: plotErrors,
-              type: 'scatter',
-              mode: 'lines',
-              marker: { color: 'red' },
-            }]}
-            layout={{
-              dragmode: 'pan',
-              hovermode: 'x',
-              margin: { t: 0, l: 40, r: 0, b: 40 },
-              paper_bgcolor: diagramBg,
-              plot_bgcolor: diagramBg,
-              font: { color: theme === 'dark' ? '#e4e4e4' : '#212529' },
-              xaxis: {
-                title: { text: 'Step' },
-                rangemode: 'tozero',
-                gridcolor: theme === 'dark' ? '#3a3a5a' : '#e9ecef',
-                linecolor: theme === 'dark' ? '#3a3a5a' : '#dee2e6',
-              },
-              yaxis: {
-                title: { text: 'Error' },
-                type: 'log',
-                fixedrange: true,
-                rangemode: 'tozero',
-                gridcolor: theme === 'dark' ? '#3a3a5a' : '#e9ecef',
-                linecolor: theme === 'dark' ? '#3a3a5a' : '#dee2e6',
-              },
-              shapes: [{
-                type: 'line',
-                x0: stepIdx,
-                x1: stepIdx,
-                xref: 'x',
-                y0: 0,
-                y1: 1,
-                yref: 'paper',
-                line: {
-                  color: theme === 'dark' ? '#6a6a8a' : '#adb5bd',
-                  width: 1,
-                },
-              }]
-            }}
-            config={{ displayModeBar: false, responsive: true }}
-            onInitialized={() => {
-              console.log("plot initialized")
-              setPlotInitialized(true)
-            }}
-            onRelayout={(e: any) => {
-              console.log("relayout:", e)
-            }}
-            onHover={(e: any) => {
-              const vStepIdx = round(e.xvals[0])
-              setVStepIdx(vStepIdx)
-            }}
-          />
-        </Suspense>
-        {!plotInitialized && (
-          <div className={css.plot}>
-            Loading plot...
-          </div>
-        )}
-      </>
-    )
-  }, [model, stepIdx, plotInitialized, errors, theme, diagramBg, setVStepIdx])
+    return [{
+      y: plotErrors,
+      type: 'scatter' as const,
+      mode: 'lines' as const,
+      line: { color: 'red' },
+    }]
+  }, [model, errors])
 
-  return plotContent
+  // Layout with step indicator - only re-renders when stepIdx changes significantly
+  const plotLayout = useMemo(() => ({
+    dragmode: 'pan' as const,
+    hovermode: 'x' as const,
+    margin: { t: 0, l: 40, r: 0, b: 40 },
+    paper_bgcolor: diagramBg,
+    plot_bgcolor: diagramBg,
+    font: { color: theme === 'dark' ? '#e4e4e4' : '#212529' },
+    xaxis: {
+      title: { text: 'Step' },
+      rangemode: 'tozero' as const,
+      gridcolor: theme === 'dark' ? '#3a3a5a' : '#e9ecef',
+      linecolor: theme === 'dark' ? '#3a3a5a' : '#dee2e6',
+    },
+    yaxis: {
+      title: { text: 'Error' },
+      type: 'log' as const,
+      fixedrange: true,
+      rangemode: 'tozero' as const,
+      gridcolor: theme === 'dark' ? '#3a3a5a' : '#e9ecef',
+      linecolor: theme === 'dark' ? '#3a3a5a' : '#dee2e6',
+    },
+    shapes: [{
+      type: 'line' as const,
+      x0: stepIdx ?? 0,
+      x1: stepIdx ?? 0,
+      xref: 'x' as const,
+      y0: 0,
+      y1: 1,
+      yref: 'paper' as const,
+      line: {
+        color: theme === 'dark' ? '#6a6a8a' : '#adb5bd',
+        width: 1,
+      },
+    }]
+  }), [theme, diagramBg, stepIdx])
+
+  const handleInitialized = useCallback(() => {
+    console.log("plot initialized")
+    setPlotInitialized(true)
+  }, [])
+
+  if (!model || !plotData) return null
+
+  return (
+    <>
+      <Suspense fallback={<div className={css.plot}>Loading plot...</div>}>
+        <Plot
+          className={css.plot}
+          style={plotInitialized ? {} : { display: "none" }}
+          data={plotData}
+          layout={plotLayout}
+          config={{ displayModeBar: false, responsive: true }}
+          onInitialized={handleInitialized}
+        />
+      </Suspense>
+      {!plotInitialized && (
+        <div className={css.plot}>
+          Loading plot...
+        </div>
+      )}
+    </>
+  )
 }
