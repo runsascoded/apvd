@@ -36,7 +36,7 @@
     "use-kbd": "^0.8.0",
     "use-local-storage-state": "^19.5.0",
     "use-session-storage-state": "^19.0.0",
-    "use-prms": "^0.4.0"
+    "use-prms": "github:runsascoded/use-prms#cf28edc59fea41899aca2ada69499cd11604f60e"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.6.3",

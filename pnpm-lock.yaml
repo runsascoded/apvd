@@ -57,8 +57,8 @@ importers:
         specifier: ^19.5.0
         version: 19.5.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       use-prms:
-        specifier: ^0.4.0
-        version: 0.4.0(react@18.3.1)
+        specifier: github:runsascoded/use-prms#cf28edc59fea41899aca2ada69499cd11604f60e
+        version: https://codeload.github.com/runsascoded/use-prms/tar.gz/cf28edc59fea41899aca2ada69499cd11604f60e(react@18.3.1)
       use-session-storage-state:
         specifier: ^19.0.0
         version: 19.0.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -3075,13 +3075,11 @@ packages:
       react: '>=18'
       react-dom: '>=18'
 
-  use-prms@0.4.0:
-    resolution: {integrity: sha512-rVcgaXJxwWNfa7ojdrkaGi+OmHtA7gvXjDoBoVT7k8HTD2av7oQ2Ii9nu6kKfDR6nwm4+tdlQ0+VEc/obildgQ==}
+  use-prms@https://codeload.github.com/runsascoded/use-prms/tar.gz/cf28edc59fea41899aca2ada69499cd11604f60e:
+    resolution: {tarball: https://codeload.github.com/runsascoded/use-prms/tar.gz/cf28edc59fea41899aca2ada69499cd11604f60e}
+    version: 0.4.0-dist.1d591ca
     peerDependencies:
-      react: ^18.0.0 || ^19.0.0
-    peerDependenciesMeta:
-      react:
-        optional: true
+      react: ^18.0.0
 
   use-session-storage-state@19.0.1:
     resolution: {integrity: sha512-TK1K+UyTGNyOPN2K3yLOt0nTfeRlYRrLlNRN0kiI4irDng3HU4P0BArSAib0eD/VaQNlYs5WCdjeoEK1y/fIZA==}
@@ -6319,8 +6317,8 @@ snapshots:
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
 
-  use-prms@0.4.0(react@18.3.1):
-    optionalDependencies:
+  use-prms@https://codeload.github.com/runsascoded/use-prms/tar.gz/cf28edc59fea41899aca2ada69499cd11604f60e(react@18.3.1):
+    dependencies:
       react: 18.3.1
 
   use-session-storage-state@19.0.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
