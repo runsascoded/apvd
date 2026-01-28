@@ -8,11 +8,9 @@ import { makeModel, Model, Region, regionPath, Step } from "./lib/regions"
 import { Point } from "./components/point"
 import css from "./App.module.scss"
 import A from "./components/A"
-import Button from 'react-bootstrap/Button'
 import OverlayTrigger, { OverlayTriggerProps } from 'react-bootstrap/OverlayTrigger'
 import Tooltip from 'react-bootstrap/Tooltip'
 import { entries, mapEntries, values } from "./lib/objs"
-import { getSliderValue } from "./components/inputs"
 import { cos, max, min, PI, pi2, round, sin, sq3 } from "./lib/math"
 import Apvd, { LogLevel } from "./components/apvd"
 import { getLabelAttrs, getMidpoint, getPointAndDirectionAtTheta, getRegionCenter } from "./lib/region"
@@ -40,6 +38,7 @@ import { EditableText } from "./components/editable-text"
 import { FizzBuzzBazz, MPowerLink, Zhang2014Href } from "./lib/sample-targets"
 import { Details, DetailsSection, Links } from "./components/Details"
 import { SettingsPanel } from "./components/SettingsPanel"
+import { PlaybackControls, FastForwardButtonStandalone } from "./components/PlaybackControls"
 import { HashMap, HistoryState, LabelPoint, LinkItem, Params, ParsedParams, RunningState, ValItem } from "./types"
 import { Ellipses4t, fizzBuzzLink, GridId, initialLayoutKey, layouts, MaxNumShapes, setMetadataKey, shapesKey, targetsKey, VariantCallersPaperLink } from "./lib/constants"
 import { SettingsProvider, useSettings } from "./contexts/SettingsContext"
@@ -232,6 +231,13 @@ export function Body() {
         [ modelStepIdx, setModelStepIdx, vStepIdx, setVStepIdx, ]
     )
 
+    // Track when we're updating the URL ourselves to ignore synthetic popstate events
+    // (use-prms patches history.replaceState to dispatch popstate for React Router compatibility)
+    const isUpdatingUrlRef = useRef(false)
+    // Track the last hash we processed to avoid resetting state when hash hasn't changed
+    // (e.g., when use-kbd closes a modal via history.back(), the hash is unchanged)
+    const lastProcessedHashRef = useRef<string | null>(getHistoryStateHash())
+
     const historyLog = false
     const pushHistoryState = useCallback(
         debounce(
@@ -245,6 +251,8 @@ export function Body() {
                     // that use-prms dispatches (it patches replaceState for React Router compatibility)
                     isUpdatingUrlRef.current = true
                     updateHashParams(params, newHashMap, { push, log: historyLog })
+                    // Update lastProcessedHash so popstate handler knows this is the current state
+                    lastProcessedHashRef.current = getHistoryStateHash()
                     // Reset after a tick to allow the synthetic popstate to be ignored
                     setTimeout(() => { isUpdatingUrlRef.current = false }, 0)
                 }
@@ -325,15 +333,11 @@ export function Body() {
         [ params ]
     )
 
-    // Track when we're updating the URL ourselves to ignore synthetic popstate events
-    // (use-prms patches history.replaceState to dispatch popstate for React Router compatibility)
-    const isUpdatingUrlRef = useRef(false)
-
     useEffect(
         () => {
             const popStateFn = (e: PopStateEvent) => {
                 const hash = getHistoryStateHash()
-                console.log("popstate: hash", hash, "e.state", e.state, "history.state", history.state, "isUpdatingUrl", isUpdatingUrlRef.current)
+                console.log("popstate: hash", hash, "lastProcessedHash", lastProcessedHashRef.current, "e.state", e.state, "isUpdatingUrl", isUpdatingUrlRef.current)
 
                 // Skip synthetic popstate events from our own URL updates
                 // (use-prms patches history.replaceState to dispatch popstate for React Router)
@@ -342,10 +346,18 @@ export function Body() {
                     return
                 }
 
+                // Skip if hash hasn't changed (e.g., use-kbd modal close via history.back())
+                if (hash === lastProcessedHashRef.current) {
+                    console.log("popstate: skipping, hash unchanged (likely modal close)")
+                    return
+                }
+
                 if (!hash) {
                     console.warn(`no hash in history state url ${history.state?.url} or as ${history.state?.as}`)
                     return
                 }
+
+                lastProcessedHashRef.current = hash
                 const { s, t, n } = getHistoryState(hash)
                 if (s) {
                     console.log("setting shapes from history state:", s)
@@ -662,7 +674,7 @@ export function Body() {
         [ model ],
     )
     const repeatSteps = useMemo(
-        () => {
+        (): [number, number] | null => {
             if (!model || !model.repeat_idx || stepIdx === null) return null
             return [ model.repeat_idx, model.steps.length - 1 ]
         },
@@ -753,47 +765,6 @@ export function Body() {
     const col7 = "col"
     const col6 = "col"
     const col12 = "col-12"
-
-    const PlaybackControl = useCallback(
-        ({ title, hotkey, onClick, disabled, animating, children }: {
-            title: string
-            hotkey: string
-            onClick: () => void
-            disabled: boolean
-            animating?: boolean
-            children?: ReactNode
-        }) => {
-            title = `${title} (${hotkey})`
-            return <OverlayTrigger overlay={<Tooltip>{title}</Tooltip>}>
-                <span className={css.playbackControlButtonContainer}>
-                    <Button
-                        className={css.playbackControlButton}
-                        title={title}
-                        onTouchEnd={e => {
-                            // console.log("onTouchEnd")
-                            onClick()
-                            if (!animating) {
-                                setRunningState("none")
-                            }
-                            e.stopPropagation()
-                            e.preventDefault()
-                        }}
-                        onClick={e => {
-                            // console.log("onClick")
-                            onClick()
-                            if (!animating) {
-                                setRunningState("none")
-                            }
-                            e.stopPropagation()
-                        }}
-                        disabled={disabled}>
-                        {children}
-                    </Button>
-                </span>
-            </OverlayTrigger>
-        },
-        [ setRunningState ],
-    )
 
     const fs = [ 0.25, 0.5, 0.75, ];
     // const fs = [ 0.5, ];
@@ -1456,19 +1427,16 @@ export function Body() {
         [ setMetadata ]
     )
 
+    // FastForwardButton for use outside PlaybackControls (e.g., examples section)
     const FastForwardButton = useCallback(
         () => (
-            <PlaybackControl
-                title={runningState == "fwd" ? "Pause animation" : "Animate forward"}
-                hotkey={"␣"}
-                onClick={() => setRunningState(runningState == "fwd" ? "none" : "fwd")}
-                disabled={cantAdvance}
-                animating={true}
-            >{
-                runningState == "fwd" ? "⏸️" : "⏩"
-            }</PlaybackControl>
+            <FastForwardButtonStandalone
+                runningState={runningState}
+                setRunningState={setRunningState}
+                cantAdvance={cantAdvance}
+            />
         ),
-        [ runningState, setRunningState, cantAdvance ]
+        [runningState, setRunningState, cantAdvance]
     )
 
     const copyCurrentURLClick = useCallback(
@@ -1627,78 +1595,23 @@ export function Body() {
                 </Grid>
                 <div className={"row"}>
                     <div className={`${col6} ${css.controlPanel}`}>
-                        <div className={`${css.controls}`}>
-                            <div className={css.slider}>{model && stepIdx !== null &&
-                                <input
-                                    type={"range"}
-                                    value={stepIdx}
-                                    min={0}
-                                    max={model.steps.length - 1}
-                                    onChange={e => {} /*setStepIdx(parseInt(e.target.value))*/}
-                                    onMouseMove={e => {
-                                        setVStepIdx(getSliderValue(e))
-                                    }}
-                                    onClick={e => {
-                                        setStepIdx(getSliderValue(e))
-                                        setRunningState("none")
-                                    }}
-                                    onMouseOut={() => {
-                                        // console.log("onMouseOut")
-                                        setVStepIdx(null)
-                                    }}
-                                />
-                            }</div>
-                            <div className={`${css.buttons}`}>
-                                <PlaybackControl title={"Rewind to start"} hotkey={"⌘←"} onClick={() => setStepIdx(0)} disabled={cantReverse}>⏮️</PlaybackControl>
-                                <PlaybackControl title={"Rewind"} hotkey={"⇧␣"} onClick={() => setRunningState(runningState == "rev" ? "none" : "rev")} disabled={cantReverse} animating={true}>{runningState == "rev" ? "⏸️" : "⏪️"}</PlaybackControl>
-                                <PlaybackControl title={"Reverse one step"} hotkey={"←"} onClick={() => revStep()} disabled={cantReverse}>⬅️</PlaybackControl>
-                                <PlaybackControl title={`Advance one ${stepIdx !== null && model && stepIdx + 1 == model.steps.length ? `batch (${stepBatchSize} steps)` : "step"}`} hotkey={"→"} onClick={() => fwdStep()} disabled={cantAdvance || stepIdx == maxSteps}>➡️</PlaybackControl>
-                                <FastForwardButton />
-                                <PlaybackControl title={"Jump to last computed step"} hotkey={"⌘→"} onClick={() => {
-                                    if (!model) return
-                                    setStepIdx(model.steps.length - 1)
-                                    // console.log("setDopanZoom(): warp to end")
-                                    panZoom()
-                                }} disabled={!model || stepIdx === null || stepIdx + 1 == model.steps.length}>⏭️</PlaybackControl>
-                            </div>
-                            <div className={css.stepStats}>
-                                <p>Step {stepIdx}{ curStep && error && <span>, error: {(error.v * curStep.targets.total_area).toPrecision(3)}</span> }</p>
-                                <p
-                                    onTouchStart={e => {
-                                        if (!model) return
-                                        // console.log("touchstart:", e.touches, e, "setting min_idx", model.min_idx)
-                                        setStepIdx(model.min_idx)
-                                        setRunningState("none")
-                                        e.stopPropagation()
-                                    }}
-                                    onMouseMove={() => {
-                                        if (!model || runningState != 'none') return
-                                        // console.log("mousemove set to min_idx", model.min_idx)
-                                        setVStepIdx(model.min_idx)
-                                        // setRunningState("none")
-                                    }}
-                                    onMouseOut={() => {
-                                        // console.log("mousout vidx null")
-                                        setVStepIdx(null)
-                                    }}
-                                    onClick={() => {
-                                        if (!model) return
-                                        // console.log("click min_idx", model.min_idx)
-                                        setStepIdx(model.min_idx)
-                                        setRunningState("none")
-                                    }}
-                                >{
-                                    model && curStep && bestStep && <span className={stepIdx == model.min_idx && runningState == 'none' && stepIdx > 0 ? css.bestStepActive : ''}>
-                                        Best step: {model.min_idx}, error: {(bestStep.error.v * curStep.targets.total_area).toPrecision(3)} ({(bestStep.error.v * 100).toPrecision(3)}%)
-                                    </span>
-                                }</p>
-                                {/*<p>History length: {history.length}</p>*/}
-                                {repeatSteps && stepIdx == repeatSteps[1] ?
-                                    <p className={css.repeatSteps}>♻️ Step {repeatSteps[1]} repeats step {repeatSteps[0]}</p> :
-                                    <p className={`${css.repeatSteps} ${css.invisible}`}>♻️ Step {"?"} repeats step {"?"}</p>
-                                }
-                            </div>
-                        </div>
+                        <PlaybackControls
+                            model={model}
+                            stepIdx={stepIdx}
+                            curStep={curStep}
+                            bestStep={bestStep}
+                            repeatSteps={repeatSteps}
+                            error={error}
+                            runningState={runningState}
+                            setRunningState={setRunningState}
+                            setStepIdx={setStepIdx}
+                            setVStepIdx={setVStepIdx}
+                            fwdStep={fwdStep}
+                            revStep={revStep}
+                            panZoom={panZoom}
+                            cantAdvance={cantAdvance}
+                            cantReverse={cantReverse}
+                        />
                     </div>
                     <div className={`${col6} ${css.settings}`}>
                         <SettingsPanel

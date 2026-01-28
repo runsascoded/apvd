@@ -157,10 +157,12 @@ export function updateHashParams<P extends ParamsConfig>(
   }
 
   if (newHash !== window.location.hash) {
+    // Preserve existing history.state (other libraries like use-kbd store state there)
+    const currentState = window.history.state || {}
     if (push) {
-      window.history.pushState(null, '', newHash || window.location.pathname)
+      window.history.pushState({ ...currentState }, '', newHash || window.location.pathname)
     } else {
-      window.history.replaceState(null, '', newHash || window.location.pathname)
+      window.history.replaceState({ ...currentState }, '', newHash || window.location.pathname)
     }
   }
 }
