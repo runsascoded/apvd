@@ -1,10 +1,10 @@
 import Grid, { GridState } from "./components/grid"
-import React, { Fragment, lazy, ReactNode, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { ShortcutsModal, Omnibar, SequenceModal, useAction, useOmnibarEndpoint } from 'use-kbd'
+import React, { Fragment, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { ShortcutsModal, Omnibar, SequenceModal, useOmnibarEndpoint } from 'use-kbd'
+import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts"
 import { PlaybackRenderer } from './components/groupRenderers'
-import * as apvd from "apvd-wasm"
-import { train, update_log_level } from "apvd-wasm"
-import { makeModel, Model, Region, regionPath, Step } from "./lib/regions"
+import { update_log_level } from "apvd-wasm"
+import { Model, Region, regionPath, Step } from "./lib/regions"
 import { Point } from "./components/point"
 import css from "./App.module.scss"
 import A from "./components/A"
@@ -20,7 +20,7 @@ import { defaultTargets, makeTargets, Target, Targets, targetsParam } from "./li
 import { InitialLayout, toShape } from "./lib/layout"
 import { VarsTable } from "./components/tables/vars"
 import { SparkLineProps } from "./components/spark-lines"
-import { CircleCoords, Coord, getPolygonCoords, makeVars, Vars, XYRRCoords, XYRRTCoords } from "./lib/vars"
+import { Vars } from "./lib/vars"
 import { CopyCoordinatesType, ShapesTable } from "./components/tables/shapes"
 import _ from "lodash"
 import debounce from "lodash/debounce"
@@ -42,8 +42,8 @@ import { PlaybackControls, FastForwardButtonStandalone } from "./components/Play
 import { HashMap, HistoryState, LabelPoint, LinkItem, Params, ParsedParams, RunningState, ValItem } from "./types"
 import { Ellipses4t, fizzBuzzLink, GridId, initialLayoutKey, layouts, MaxNumShapes, setMetadataKey, shapesKey, targetsKey, VariantCallersPaperLink } from "./lib/constants"
 import { SettingsProvider, useSettings } from "./contexts/SettingsContext"
-
-const Plot = lazy(() => import("react-plotly.js"))
+import { useTraining } from "./hooks/useTraining"
+import { ErrorPlot } from "./components/ErrorPlot"
 
 export default function Page() {
     return (
@@ -92,6 +92,7 @@ export function Body() {
         maxErrorRatioStepSize, setMaxErrorRatioStepSize,
         maxSteps, setMaxSteps,
         stepBatchSize, setStepBatchSize,
+        convergenceThreshold, setConvergenceThreshold,
         // Display
         showRegionSizes, setShowRegionSizes,
         shapeFillOpacity, setShapeFillOpacity,
@@ -210,26 +211,41 @@ export function Body() {
         showGrid: [ showGrid, setShowGrid ],
     } = gridState
 
-    const [ model, setModel ] = useState<Model | null>(null)
-    const [ modelStepIdx, setModelStepIdx ] = useState<number | null>(null)
-    const [ vStepIdx, setVStepIdx ] = useState<number | null>(null)
-    const [ runningState, setRunningState ] = useState<RunningState>("none")
+    // Training state and logic (with OPFS paging for large step counts)
+    const {
+        model,
+        setModel,
+        vars,
+        stepIdx,
+        setStepIdx,
+        vStepIdx,
+        setVStepIdx,
+        fwdStep,
+        revStep,
+        cantAdvance,
+        cantReverse,
+        runningState,
+        setRunningState,
+        curStep: trainingCurStep,
+        getStepFromCache,
+        ensureStepLoaded,
+        modelErrors,
+        bestStep,
+        pagedCount,
+        opfsAvailable,
+        converged,
+    } = useTraining({
+        initialSets,
+        targets,
+        maxSteps,
+        stepBatchSize,
+        maxErrorRatioStepSize,
+        convergenceThreshold,
+    })
+
     const [ frameLen, setFrameLen ] = useState(0)
     const [ setLabelDistance, setSetLabelDistance ] = useState(0.15)
     const [ setLabelSize, setSetLabelSize ] = useState(20)
-
-    const [ stepIdx, setStepIdx ] = useMemo(
-        () => {
-            return [
-                vStepIdx !== null ? vStepIdx : modelStepIdx,
-                (stepIdx: number) => {
-                    setModelStepIdx(stepIdx)
-                    setVStepIdx(null)
-                },
-            ]
-        },
-        [ modelStepIdx, setModelStepIdx, vStepIdx, setVStepIdx, ]
-    )
 
     // Track when we're updating the URL ourselves to ignore synthetic popstate events
     // (use-prms patches history.replaceState to dispatch popstate for React Router compatibility)
@@ -263,29 +279,25 @@ export function Body() {
         [ stateInUrlFragment, targets, setMetadata, urlShapesPrecisionScheme, ]
     )
 
+    // Compute sets and shapes from training curStep (curStep and OPFS loading handled by useTraining)
     const [ curStep, sets, shapes, ] = useMemo(
         () => {
-            if (!model || stepIdx === null) return [ null, null, null ]
-            // console.log("recomputing curStep")
-            if (stepIdx >= model.steps.length) {
-                console.warn("stepIdx >= model.steps.length", stepIdx, model.steps.length)
-                return [ null, null, null ]
-            }
-            const curStep = model.steps[stepIdx]
-            const shapes = curStep.sets.map(({ shape }) => shape)
+            if (!trainingCurStep) return [ null, null, null ]
+
+            const shapes = trainingCurStep.sets.map(({ shape }) => shape)
             // Guard against stale model with different shape count than initialSets
-            if (curStep.sets.length !== initialSets.length) {
-                console.warn("curStep.sets.length !== initialSets.length", curStep.sets.length, initialSets.length)
+            if (trainingCurStep.sets.length !== initialSets.length) {
+                console.warn("curStep.sets.length !== initialSets.length", trainingCurStep.sets.length, initialSets.length)
                 return [null, null, null]
             }
-            const sets = curStep.sets.map(set => {
+            const sets = trainingCurStep.sets.map(set => {
                 const base = initialSets[set.idx]
                 const effectiveColor = getEffectiveShapeColor(base.color, set.idx, theme)
                 return { ...base, ...set, color: effectiveColor }
             })
-            return [ curStep, sets, shapes ]
+            return [ trainingCurStep, sets, shapes ]
         },
-        [ model, stepIdx, initialSets, theme, ]
+        [ trainingCurStep, initialSets, theme, ]
     )
 
     // Sync current shapes to sessionStorage and URL (side effects moved out of useMemo)
@@ -392,237 +404,18 @@ export function Body() {
         [ setInitialShapes, setUrlShapesPrecisionScheme, setTargets, getHistoryState ]
     )
 
-    const [ vars, setVars ] = useState<Vars | null>(null)
-
-    // Initialize model, stepIdx
-    useEffect(
-        () => {
-            // console.log("make model effect")
-            // Naively, n circles have 3n degrees of freedom. However, WLOG, we can fix:
-            // - c0 to be a unit circle at origin (x = y = 0, r = 1)
-            // - c1.y = 0 (only x and r can move)
-            // resulting in 4 fewer free variables.
-            let curIdx = 0
-            const vars = makeVars(initialSets)
-            const { numVars, skipVars } = vars
-            const inputs = initialSets.map((set: S, shapeIdx: number) => {
-                const shape = set.shape;
-                const coords: Coord[] = mapShape<number, Coord[]>(
-                    shape,
-                    () => CircleCoords,
-                    () => XYRRCoords,
-                    () => XYRRTCoords,
-                    (p) => getPolygonCoords(p.vertices.length),
-                )
-                // WASM now expects discriminated unions with `kind` field
-                const wasmShape = mapShape<number, any>(
-                    shape,
-                    s => ({ kind: "Circle", c: s.c, r: s.r }),
-                    s => ({ kind: "XYRR", c: s.c, r: s.r }),
-                    s => ({ kind: "XYRRT", c: s.c, r: s.r, t: s.t }),
-                    p => ({ kind: "Polygon", vertices: p.vertices }),
-                )
-                return [
-                    wasmShape,
-                    coords.map(v => shapeIdx >= skipVars.length || !skipVars[shapeIdx].includes(v)),
-                ]
-            })
-            console.log("inputs:", inputs)
-            console.log("targets:", targets)
-            const tgtList: Target[] = Array.from(targets.all)
-            if (inputs.length != tgtList[0][0].length) {
-                console.warn("inputs.length != tgtList[0][0].length", inputs.length, tgtList[0][0].length)
-                return
-            }
-            const model = makeModel(apvd.make_model(inputs, tgtList), initialSets)
-            console.log("new model:", model)
-            setModel(model)
-            setStepIdx(0)
-            setVars(vars)
-        },
-        [ initialSets, targets.all, ]
-    )
-
-    const fwdStep = useCallback(
-        (n?: number) => {
-            if (!model || stepIdx === null) return
-            if (stepIdx >= maxSteps) {
-                console.log("maxSteps reached, not running step")
-                setRunningState("none")
-                return
-            }
-            let batchSize
-            if (n === undefined) {
-                n = stepIdx + 1 == model.steps.length ? stepBatchSize : 1
-                batchSize = stepBatchSize
-            } else {
-                batchSize = stepIdx + n + 1 - model.steps.length
-            }
-            if (stepIdx + n < model.steps.length) {
-                // "Fast-forward" without any new computation
-                setStepIdx(stepIdx + n)
-                console.log("fwdStep: bumping stepIdx to", stepIdx + n)
-                return
-            }
-            if (model.repeat_idx) {
-                // Don't advance past repeat_idx
-                setStepIdx(model.steps.length - 1)
-                console.log(`fwdStep: bumping stepIdx to ${model.steps.length - 1} due to repeat_idx ${model.repeat_idx}`)
-                return
-            }
-            if (stepIdx + n > maxSteps) {
-                n = maxSteps - stepIdx
-                batchSize = n
-                console.log(`fwdStep: clamping advance to ${n} steps due to maxSteps ${maxSteps}`)
-            }
-
-            const lastStep: apvd.Step = model.raw.steps[model.raw.steps.length - 1]
-            const batchSeed: apvd.Model = {
-                steps: [ lastStep ],
-                repeat_idx: null,
-                min_idx: 0,
-                min_error: lastStep.error.v,
-            }
-            const batch: Model = makeModel(train(batchSeed, maxErrorRatioStepSize, batchSize), initialSets)
-            const batchMinStep = batch.steps[batch.min_idx]
-            const modelMinStep = model.raw.steps[model.min_idx]
-            const steps = model.steps.concat(batch.steps.slice(1))
-            const [ min_idx, min_error ] = (batchMinStep.error.v < modelMinStep.error.v) ?
-                [ batch.min_idx + model.raw.steps.length - 1, batchMinStep.error.v ] :
-                [ model.min_idx, model.raw.min_error ]
-            const repeat_idx = batch.repeat_idx !== null ? batch.repeat_idx + model.raw.steps.length - 1 : null
-            const newRawModel: apvd.Model = {
-                steps: model.raw.steps.concat(batch.raw.steps.slice(1)),
-                repeat_idx,
-                min_idx,
-                min_error,
-            }
-            const newModel: Model = {
-                steps,
-                repeat_idx,
-                min_idx,
-                min_error,
-                lastStep: batch.lastStep,
-                raw: newRawModel,
-            }
-            // console.log("newModel:", newModel)
-            setModel(newModel)
-            setStepIdx(newModel.steps.length - 1)
-        },
-        [ model, stepIdx, stepBatchSize, maxErrorRatioStepSize, maxSteps, initialSets, ]
-    )
-
-    const revStep = useCallback(
-        (n?: number) => {
-            if (stepIdx === null) return
-            const newStepIdx = max(0, stepIdx - (n || 1))
-            if (stepIdx > newStepIdx) {
-                console.log("reversing stepIdx to", newStepIdx)
-                setStepIdx(newStepIdx)
-            }
-        },
-        [ stepIdx, ],
-    )
-
-    const cantAdvance = useMemo(
-        () => (model && model.repeat_idx && stepIdx == model.steps.length - 1) || stepIdx == maxSteps,
-        [ model, stepIdx, maxSteps ],
-    )
-
-    const cantReverse = useMemo(() => stepIdx === 0, [ stepIdx ])
 
     // Keyboard shortcuts via use-kbd
-    useAction('playback:step-forward', {
-        label: 'Step forward',
-        group: 'playback',
-        defaultBindings: ['arrowright'],
-        handler: () => {
-            if (cantAdvance) return
-            fwdStep()
-            setRunningState("none")
-        },
-    })
-
-    useAction('playback:step-forward-10', {
-        label: 'Step forward 10',
-        group: 'playback',
-        defaultBindings: ['shift+arrowright'],
-        handler: () => {
-            if (cantAdvance) return
-            fwdStep(10)
-            setRunningState("none")
-        },
-    })
-
-    useAction('playback:go-to-end', {
-        label: 'Go to end',
-        group: 'playback',
-        defaultBindings: ['meta+arrowright'],
-        handler: () => {
-            if (cantAdvance || !model) return
-            setStepIdx(model.steps.length - 1)
-            setRunningState("none")
-        },
-    })
-
-    useAction('playback:step-backward', {
-        label: 'Step backward',
-        group: 'playback',
-        defaultBindings: ['arrowleft'],
-        handler: () => {
-            if (cantReverse) return
-            revStep(1)
-            setRunningState("none")
-        },
-    })
-
-    useAction('playback:step-backward-10', {
-        label: 'Step backward 10',
-        group: 'playback',
-        defaultBindings: ['shift+arrowleft'],
-        handler: () => {
-            if (cantReverse) return
-            revStep(10)
-            setRunningState("none")
-        },
-    })
-
-    useAction('playback:go-to-start', {
-        label: 'Go to start',
-        group: 'playback',
-        defaultBindings: ['meta+arrowleft'],
-        handler: () => {
-            if (cantReverse) return
-            setStepIdx(0)
-            setRunningState("none")
-        },
-    })
-
-    useAction('playback:play-pause', {
-        label: 'Play/pause',
-        group: 'playback',
-        defaultBindings: ['space'],
-        handler: () => {
-            if (cantAdvance) return
-            setRunningState(runningState == "fwd" ? "none" : "fwd")
-        },
-    })
-
-    useAction('playback:play-pause-reverse', {
-        label: 'Play/pause (reverse)',
-        group: 'playback',
-        defaultBindings: ['shift+space'],
-        handler: () => {
-            if (cantReverse) return
-            setRunningState(runningState == "rev" ? "none" : "rev")
-        },
-    })
-
-    useAction('Global:toggle-theme', {
-        label: 'Toggle dark/light mode',
-        group: 'Global',
-        defaultBindings: ['t'],
-        handler: toggleTheme,
+    useKeyboardShortcuts({
+        model,
+        setStepIdx,
+        fwdStep,
+        revStep,
+        runningState,
+        setRunningState,
+        cantAdvance,
+        cantReverse,
+        toggleTheme,
     })
 
     // Run steps
@@ -666,92 +459,15 @@ export function Body() {
     )
 
     const error = useMemo(() => curStep?.error, [ curStep ])
-    const bestStep = useMemo(
-        () => {
-            if (!model) return null
-            return model.steps[model.min_idx]
-        },
-        [ model ],
-    )
+
+    // Note: bestStep is now provided by useTraining hook
+
     const repeatSteps = useMemo(
         (): [number, number] | null => {
             if (!model || !model.repeat_idx || stepIdx === null) return null
             return [ model.repeat_idx, model.steps.length - 1 ]
         },
         [ model, stepIdx ],
-    )
-
-    const [ plotInitialized, setPlotInitialized ] = useState(false)
-    const plot = useMemo(
-        () => {
-            if (!model || stepIdx === null) return
-            const steps = model.steps
-            return <>
-                <Suspense fallback={<div className={css.plot}>Loading plot...</div>}>
-                    <Plot
-                        className={css.plot}
-                        style={plotInitialized ? {} : { display: "none", }}
-                        data={[{
-                            // x: steps.map((_: Step, idx: number) => xlo + idx),
-                            y: steps.map(step => step.error.v),
-                            type: 'scatter',
-                            mode: 'lines',
-                            marker: { color: 'red' },
-                        }]}
-                        layout={{
-                            dragmode: 'pan',
-                            hovermode: 'x',
-                            margin: { t: 0, l: 40, r: 0, b: 40, },
-                            paper_bgcolor: diagramBg,
-                            plot_bgcolor: diagramBg,
-                            font: { color: theme === 'dark' ? '#e4e4e4' : '#212529' },
-                            xaxis: {
-                                title: { text: 'Step' },
-                                rangemode: 'tozero',
-                                gridcolor: theme === 'dark' ? '#3a3a5a' : '#e9ecef',
-                                linecolor: theme === 'dark' ? '#3a3a5a' : '#dee2e6',
-                            },
-                            yaxis: {
-                                title: { text: 'Error' },
-                                type: 'log',
-                                fixedrange: true,
-                                rangemode: 'tozero',
-                                gridcolor: theme === 'dark' ? '#3a3a5a' : '#e9ecef',
-                                linecolor: theme === 'dark' ? '#3a3a5a' : '#dee2e6',
-                            },
-                            shapes: [{
-                                type: 'line',
-                                x0: stepIdx,
-                                x1: stepIdx,
-                                xref: 'x',
-                                y0: 0,
-                                y1: 1,
-                                yref: 'paper',
-                                fillcolor: 'grey',
-                            }]
-                        }}
-                        config={{ displayModeBar: false, responsive: true, }}
-                        onInitialized={() => {
-                            console.log("plot initialized")
-                            setPlotInitialized(true)
-                        }}
-                        onRelayout={(e: any) => {
-                            console.log("relayout:", e)
-                        }}
-                        onHover={(e: any) => {
-                            const vStepIdx = round(e.xvals[0])
-                            setVStepIdx(vStepIdx)
-                        }}
-                    />
-                </Suspense>
-                {!plotInitialized &&
-                    <div className={css.plot}>
-                        Loading plot...
-                    </div>
-                }
-            </>
-        },
-        [ model, stepIdx, plotInitialized, ],
     )
 
     const [ sparkLineStrokeWidth, setSparkLineStrokeWidth ] = useState(1)
@@ -1684,7 +1400,14 @@ export function Body() {
                             tooltip={"Overall error (sum of differences between actual and target region sizes) over time"}
                             onMouseOut={() => setVStepIdx(null)}
                         >
-                            {plot}
+                            <ErrorPlot
+                                model={model}
+                                stepIdx={stepIdx}
+                                errors={modelErrors}
+                                theme={theme}
+                                diagramBg={diagramBg}
+                                setVStepIdx={setVStepIdx}
+                            />
                         </DetailsSection>
                     </div>
                     <div className={col5}>
