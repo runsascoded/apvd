@@ -1,6 +1,7 @@
 import React from "react"
 import OverlayTrigger from 'react-bootstrap/OverlayTrigger'
 import Tooltip from 'react-bootstrap/Tooltip'
+import { Kbd } from 'use-kbd'
 import { tooltipPopperConfig } from "./controls"
 
 type IconProps = {
@@ -57,13 +58,17 @@ export function ExpandCollapseButtons({ expandAll, collapseAll, className }: Exp
         cursor: 'pointer',
         opacity: 0.7,
         transition: 'opacity 0.15s',
-        color: 'inherit',  // Inherit theme text color
+        color: 'inherit',
     }
 
     return (
         <span className={className} style={{ display: 'inline-flex', gap: '2px' }}>
             <OverlayTrigger
-                overlay={<Tooltip>Expand all sections</Tooltip>}
+                overlay={
+                    <Tooltip>
+                        Expand all sections <Kbd action="Global:expand-all" clickable={false} />
+                    </Tooltip>
+                }
                 popperConfig={tooltipPopperConfig}
             >
                 <button
@@ -77,7 +82,11 @@ export function ExpandCollapseButtons({ expandAll, collapseAll, className }: Exp
                 </button>
             </OverlayTrigger>
             <OverlayTrigger
-                overlay={<Tooltip>Collapse all sections</Tooltip>}
+                overlay={
+                    <Tooltip>
+                        Collapse all sections <Kbd action="Global:collapse-all" clickable={false} />
+                    </Tooltip>
+                }
                 popperConfig={tooltipPopperConfig}
             >
                 <button

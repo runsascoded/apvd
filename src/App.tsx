@@ -1,6 +1,6 @@
 import Grid, { GridState } from "./components/grid"
 import React, { Fragment, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { ShortcutsModal, Omnibar, SequenceModal, useOmnibarEndpoint } from 'use-kbd'
+import { ShortcutsModal, Omnibar, SequenceModal, LookupModal, useOmnibarEndpoint } from 'use-kbd'
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts"
 import { PlaybackRenderer } from './components/groupRenderers'
 import { update_log_level } from "apvd-wasm"
@@ -58,6 +58,7 @@ export default function Page() {
             />
             <Omnibar placeholder="Search actions..." />
             <SequenceModal />
+            <LookupModal />
         </>}</Apvd>
         </SettingsProvider>
     )
@@ -435,6 +436,8 @@ export function Body() {
         cantAdvance,
         cantReverse,
         toggleTheme,
+        expandAllSections,
+        collapseAllSections,
     })
 
     // Run steps

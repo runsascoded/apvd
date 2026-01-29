@@ -23,6 +23,9 @@ export type UseKeyboardShortcutsOptions = {
   cantReverse: boolean
   // Theme
   toggleTheme: () => void
+  // Section controls
+  expandAllSections: () => void
+  collapseAllSections: () => void
 }
 
 export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void {
@@ -36,6 +39,8 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
     cantAdvance,
     cantReverse,
     toggleTheme,
+    expandAllSections,
+    collapseAllSections,
   } = options
 
   // Playback shortcuts
@@ -131,5 +136,19 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
     group: 'Global',
     defaultBindings: ['t'],
     handler: toggleTheme,
+  })
+
+  useAction('Global:expand-all', {
+    label: 'Expand all sections',
+    group: 'Global',
+    defaultBindings: ['e'],
+    handler: expandAllSections,
+  })
+
+  useAction('Global:collapse-all', {
+    label: 'Collapse all sections',
+    group: 'Global',
+    defaultBindings: ['shift+e'],
+    handler: collapseAllSections,
   })
 }
