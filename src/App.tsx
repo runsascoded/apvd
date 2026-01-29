@@ -1267,7 +1267,7 @@ export function Body() {
     )
 
     const CopyCurrentURL = () => (
-        <OverlayTrigger overlay={<Tooltip>Copy current layout to clipboard</Tooltip>}>
+        <OverlayTrigger overlay={<Tooltip>Copy link to current layout</Tooltip>}>
             <span className={css.link} onClick={copyCurrentURLClick}>🔗</span>
         </OverlayTrigger>
     )
@@ -1473,7 +1473,7 @@ export function Body() {
                                 />
                             }
                             <div>
-                                <OverlayTrigger overlay={<Tooltip>Copy current layout to clipboard</Tooltip>}>
+                                <OverlayTrigger overlay={<Tooltip>Copy link to current layout</Tooltip>}>
                                     <span>
                                         <ClipboardSvg className={css.clipboardSvg} onClick={() => copyCoordinates(copyCoordinatesType)}/>
                                     </span>
