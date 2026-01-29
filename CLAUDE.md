@@ -5,11 +5,51 @@ Interactive web app for generating area-proportional Venn diagrams using up to 4
 **Live**: https://runsascoded.com/apvd
 **Repo**: https://github.com/runsascoded/apvd
 
+## Branches
+
+This repo uses two branches for different deployment modes:
+
+| Branch | Mode | Description |
+|--------|------|-------------|
+| `server` | **WebSocket backend** | Frontend connects to native Rust server via WebSocket RPC. Better performance, recommended for users. |
+| `static` | WASM Worker | Fully static SPA, runs WASM in a Web Worker. Deployable to GitHub Pages, no server needed. |
+
+Most commits cherry-pick cleanly between branches. Conflicts occur at:
+- `package.json` (different deps: `static` needs `apvd-wasm`, `server` doesn't)
+- Transport config (`createTrainingClient({ transport: "worker" })` vs `"websocket"`)
+- README.md / CLAUDE.md (branch-specific docs)
+
+See also: [static branch], [server branch]
+
+[static branch]: https://github.com/runsascoded/apvd/tree/static
+[server branch]: https://github.com/runsascoded/apvd/tree/server
+
 ## Architecture
 
-Two repos:
-- **apvd** (this repo): Vite/React SPA frontend, visualization, UI
-- **[shapes]** (`../shapes`): Rust→WASM library for math, autodiff, optimization (published as `apvd-wasm`)
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      Frontend (React/Vite)                       │
+├──────────────────────────────────────────────────────────────────┤
+│                      TrainingClient API                          │
+│                      (@apvd/client)                              │
+├─────────────────────────────┬────────────────────────────────────┤
+│   WorkerTransport (static)  │    WebSocketTransport (server)     │
+│   (postMessage to Worker)   │    (RPC to Rust server)            │
+└─────────────────────────────┴────────────────────────────────────┘
+             │                              │
+             ▼                              ▼
+    ┌────────────────┐           ┌─────────────────────┐
+    │  apvd-wasm     │           │  apvd serve         │
+    │  (WASM Worker) │           │  (native Rust)      │
+    └────────────────┘           └─────────────────────┘
+```
+
+**Repos:**
+- **apvd** (this repo): Vite/React frontend, visualization, UI
+- **[shapes]** (`../shapes`): Rust library for math, autodiff, optimization
+  - `apvd-wasm`: WASM build (for `static` branch)
+  - `apvd-core`: Core library (used by both WASM and native server)
+  - `@apvd/client`: TypeScript client with Worker and WebSocket transports
 
 [shapes]: https://github.com/runsascoded/shapes
 
@@ -85,18 +125,61 @@ Example: `#s=Mzx868w...&t=i16,16,4,12,4,3,2&n=Fizz,Buzz,Bazz`
 
 ## Dependencies
 
-Frontend uses:
+Frontend (both branches):
 - vite@6, react@18, typescript@5
 - react-bootstrap, react-plotly.js
 - [use-kbd] for keyboard shortcuts and omnibar
 - [use-prms] for lossy float/binary encoding (URL serialization)
-- apvd-wasm (shapes WASM) via GitHub
+- [@apvd/client] for training client abstraction
 
-Rust uses:
+Branch-specific:
+- `static`: `apvd-wasm` (WASM binary, loaded by Worker)
+- `server`: No WASM dependency (connects to native Rust server)
+
+Rust (shapes repo):
 - num-dual (autodiff), nalgebra (linear algebra)
-- wasm-bindgen, serde-wasm-bindgen, tsify
+- wasm-bindgen, serde-wasm-bindgen, tsify (WASM build)
+- tokio, axum (server build)
 
 [use-kbd]: https://github.com/runsascoded/use-kbd
+[@apvd/client]: https://github.com/runsascoded/shapes/tree/main/client
+
+## Development Workflow
+
+### Working with branches
+
+```bash
+# Switch between modes
+git checkout static   # WASM Worker mode
+git checkout server   # WebSocket backend mode
+
+# Cherry-pick commits across branches
+git checkout server
+git cherry-pick <commit-from-static>
+
+# View differences between branches
+git diff static..server
+```
+
+### Local dependency development
+
+Use [pds] (pnpm-dep-source) to develop against local builds:
+
+```bash
+# Point at local @apvd/client
+pds init ../shapes/client
+pds local @apvd/client
+
+# Point at local apvd-wasm (static branch only)
+pds init ../shapes/apvd-wasm
+pds local apvd-wasm
+
+# Switch back to npm/GitHub versions
+pds npm @apvd/client
+pds gh apvd-wasm
+```
+
+[pds]: https://github.com/runsascoded/pnpm-dep-source
 
 ## Known Issues / TODOs
 
