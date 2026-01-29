@@ -1507,7 +1507,7 @@ export function Body() {
                                                 pushHistoryState({ shapes, newTargets: targets, newSetMetadata: DefaultSetMetadata.slice() })
                                             }
                                         }}
-                                    >🗑️</span>
+                                    >↺</span>
                                 </OverlayTrigger>
                             </div>
                         </DetailsSection>
