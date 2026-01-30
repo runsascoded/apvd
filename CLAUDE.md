@@ -1,6 +1,6 @@
-# APVD - Area-Proportional Venn Diagrams
+# APVD - Area-Proportional Venn Diagrams (`static` branch)
 
-Interactive web app for generating area-proportional Venn diagrams using up to 4 ellipses (or polygons) with gradient-descent optimization.
+Fully static SPA for generating area-proportional Venn diagrams. Runs WASM in a Web Worker - deployable to GitHub Pages with no backend server needed.
 
 **Live**: https://runsascoded.com/apvd
 **Repo**: https://github.com/runsascoded/apvd
@@ -125,21 +125,17 @@ Example: `#s=Mzx868w...&t=i16,16,4,12,4,3,2&n=Fizz,Buzz,Bazz`
 
 ## Dependencies
 
-Frontend (both branches):
+Frontend:
 - vite@6, react@18, typescript@5
 - react-bootstrap, react-plotly.js
 - [use-kbd] for keyboard shortcuts and omnibar
 - [use-prms] for lossy float/binary encoding (URL serialization)
 - [@apvd/client] for training client abstraction
-
-Branch-specific:
-- `static`: `apvd-wasm` (WASM binary, loaded by Worker)
-- `server`: No WASM dependency (connects to native Rust server)
+- `apvd-wasm` (WASM binary, loaded by Worker)
 
 Rust (shapes repo):
 - num-dual (autodiff), nalgebra (linear algebra)
 - wasm-bindgen, serde-wasm-bindgen, tsify (WASM build)
-- tokio, axum (server build)
 
 [use-kbd]: https://github.com/runsascoded/use-kbd
 [@apvd/client]: https://github.com/runsascoded/shapes/tree/main/client
