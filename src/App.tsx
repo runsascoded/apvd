@@ -42,6 +42,7 @@ import { PlaybackControls, FastForwardButtonStandalone } from "./components/Play
 import { HashMap, HistoryState, LabelPoint, LinkItem, Params, ParsedParams, RunningState, ValItem } from "./types"
 import { Ellipses4t, fizzBuzzLink, GridId, initialLayoutKey, layouts, MaxNumShapes, setMetadataKey, shapesKey, targetsKey, VariantCallersPaperLink } from "./lib/constants"
 import { SettingsProvider, useSettings } from "./contexts/SettingsContext"
+import { TrainingClientProvider } from "./contexts/TrainingClientContext"
 import { useTraining } from "./hooks/useTraining"
 import { ErrorPlot } from "./components/ErrorPlot"
 import { ExpandCollapseButtons } from "./components/expand-collapse-icons"
@@ -49,6 +50,7 @@ import { ExpandCollapseButtons } from "./components/expand-collapse-icons"
 export default function Page() {
     return (
         <SettingsProvider>
+        <TrainingClientProvider>
         <Apvd>{() => <>
             <Body />
             <ShortcutsModal
@@ -60,6 +62,7 @@ export default function Page() {
             <SequenceModal />
             <LookupModal />
         </>}</Apvd>
+        </TrainingClientProvider>
         </SettingsProvider>
     )
 }
