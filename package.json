@@ -36,7 +36,13 @@
     "use-kbd": "^0.8.0",
     "use-local-storage-state": "^19.5.0",
     "use-session-storage-state": "^19.0.0",
-    "use-prms": "github:runsascoded/use-prms#cf28edc59fea41899aca2ada69499cd11604f60e"
+    "use-prms": "github:runsascoded/use-prms#cf28edc59fea41899aca2ada69499cd11604f60e",
+    "@apvd/client": "workspace:*"
+  },
+  "pnpm": {
+    "overrides": {
+      "apvd-wasm": "github:runsascoded/shapes#34f256abb241a8b07a7ba3540fa410c98a33fbdf"
+    }
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.6.3",
