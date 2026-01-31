@@ -6,13 +6,12 @@
  */
 
 import { lazy, Suspense, useState, useMemo, useCallback } from "react"
-import { Model } from "../lib/regions"
 import css from "../App.module.scss"
 
 const Plot = lazy(() => import("react-plotly.js"))
 
 export type ErrorPlotProps = {
-  model: Model | null
+  totalSteps: number
   stepIdx: number | null
   errors: number[]
   theme: 'light' | 'dark'
@@ -21,7 +20,7 @@ export type ErrorPlotProps = {
 }
 
 export function ErrorPlot({
-  model,
+  totalSteps,
   stepIdx,
   errors,
   theme,
@@ -31,19 +30,15 @@ export function ErrorPlot({
 
   // Memoize data separately from stepIdx
   const plotData = useMemo(() => {
-    if (!model) return null
-
-    const plotErrors = errors.length > 0
-      ? errors
-      : model.steps.filter(Boolean).map(step => step.error.v)
+    if (totalSteps === 0 || errors.length === 0) return null
 
     return [{
-      y: plotErrors,
+      y: errors,
       type: 'scatter' as const,
       mode: 'lines' as const,
       line: { color: 'red' },
     }]
-  }, [model, errors])
+  }, [totalSteps, errors])
 
   // Layout with step indicator - only re-renders when stepIdx changes significantly
   const plotLayout = useMemo(() => ({
@@ -87,7 +82,7 @@ export function ErrorPlot({
     setPlotInitialized(true)
   }, [])
 
-  if (!model || !plotData) return null
+  if (totalSteps === 0 || !plotData) return null
 
   return (
     <>

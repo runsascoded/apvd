@@ -7,34 +7,26 @@
  * Key differences from useTraining:
  * - No more OPFS paging on frontend (Worker handles tiered keyframes)
  * - Uses client.onProgress() for live updates
- * - Uses client.getStep() for time-travel scrubbing
+ * - Uses client.getStepWithGeometry() for time-travel scrubbing with full geometry
  * - Simpler state management
  *
- * TODO: Full integration requires resolving type mismatch:
- * - Client's StepState only has: stepIndex, error, shapes, isKeyframe
- * - Frontend's Step type needs: regions, components, edges, points, total_area, errors
- *
- * The geometric data (regions, components, etc.) is computed by makeStep() from
- * raw WASM apvd.Step output. To complete the migration, either:
- * 1. Worker returns full apvd.Step data (more bandwidth per step), or
- * 2. Frontend calls WASM to compute regions from shapes for each step
- *
- * For now, useTraining remains the primary hook for the app.
+ * The Worker returns raw WASM step data, which this hook converts to FE types
+ * using makeStep() for proper object references needed by rendering.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import {
-  TrainingClient,
   TrainingHandle,
   ProgressUpdate,
-  StepState,
   Shape,
   InputSpec,
   TargetsMap,
 } from "@apvd/client"
+import * as apvd from "apvd-wasm"
 import { useTrainingClient } from "../contexts/TrainingClientContext"
-import { S, mapShape } from "../lib/shape"
+import { S, mapShape, Set } from "../lib/shape"
 import { Targets } from "../lib/targets"
+import { makeStep, Step } from "../lib/regions"
 import { CircleCoords, Coord, getPolygonCoords, makeVars, Vars, XYRRCoords, XYRRTCoords } from "../lib/vars"
 import { RunningState } from "../types"
 
@@ -58,12 +50,10 @@ export type UseTrainingClientResult = {
   vStepIdx: number | null
   setVStepIdx: (idx: number | null) => void
 
-  // Current step (for display)
-  currentStep: StepState | null
-  currentShapes: Shape[] | null
-  currentError: number | null
+  // Current step (FE Step type with object references for rendering)
+  curStep: Step | null
 
-  // Best step
+  // Best step tracking
   minStep: number | null
   minError: number | null
 
@@ -83,6 +73,21 @@ export type UseTrainingClientResult = {
   totalSteps: number
   vars: Vars | null
   converged: boolean
+
+  // Error data for plotting (accumulated from progress updates)
+  modelErrors: number[]
+}
+
+// Response type from worker's getStepWithGeometry
+// Returns shapes and targets so main thread can call make_step
+interface StepGeometryResponse {
+  stepIndex: number
+  isKeyframe: boolean
+  recomputedFrom?: number
+  shapes: Shape[]
+  error: number
+  targets: TargetsMap
+  inputs: InputSpec[]
 }
 
 export function useTrainingClientHook(options: UseTrainingClientOptions): UseTrainingClientResult {
@@ -106,16 +111,17 @@ export function useTrainingClientHook(options: UseTrainingClientOptions): UseTra
   const [vStepIdx, setVStepIdx] = useState<number | null>(null)
   const [runningState, setRunningState] = useState<RunningState>("none")
 
-  // Current step state (loaded via getStep for time-travel)
-  const [currentStep, setCurrentStep] = useState<StepState | null>(null)
+  // Current step state (FE Step type)
+  const [curStep, setCurStep] = useState<Step | null>(null)
   const [vars, setVars] = useState<Vars | null>(null)
+
+  // Error history for plotting (accumulated from progress updates)
+  const [modelErrors, setModelErrors] = useState<number[]>([])
 
   // Derived state
   const totalSteps = progress?.currentStep ?? 0
   const minStep = progress?.minStep ?? null
   const minError = progress?.minError ?? null
-  const currentError = currentStep?.error ?? progress?.error ?? null
-  const currentShapes = currentStep?.shapes ?? progress?.shapes ?? null
 
   const converged = useMemo(
     () => minError !== null && minError < convergenceThreshold,
@@ -173,6 +179,16 @@ export function useTrainingClientHook(options: UseTrainingClientOptions): UseTra
     const unsubscribe = client.onProgress((update) => {
       setProgress(update)
 
+      // Accumulate errors for plotting
+      // Add error at currentStep index (sparse array, filled on each update)
+      if (update.error !== undefined && update.currentStep !== undefined) {
+        setModelErrors(prev => {
+          const newErrors = [...prev]
+          newErrors[update.currentStep] = update.error
+          return newErrors
+        })
+      }
+
       // Update step index to follow training progress
       if (runningState === "fwd" && update.currentStep > (stepIdx ?? 0)) {
         setStepIdxState(update.currentStep)
@@ -187,38 +203,74 @@ export function useTrainingClientHook(options: UseTrainingClientOptions): UseTra
     return unsubscribe
   }, [client, runningState, stepIdx])
 
-  // Load step when stepIdx changes (for time-travel)
+  // Load step with geometry when stepIdx changes (for time-travel and display)
   useEffect(() => {
     if (!handle || effectiveStepIdx === null) return
     if (effectiveStepIdx > totalSteps) return
+    if (inputs.length === 0) return
 
-    // If we're at the latest step, use progress.shapes directly
-    if (effectiveStepIdx === totalSteps && progress?.shapes) {
-      setCurrentStep({
-        stepIndex: effectiveStepIdx,
-        error: progress.error,
-        shapes: progress.shapes,
-        isKeyframe: false,
-      })
-      return
-    }
-
-    // Otherwise, fetch from Worker
-    client.getStep(handle, effectiveStepIdx).then(step => {
-      setCurrentStep(step)
+    // Fetch shapes from worker, then compute geometry on main thread
+    client.getStepWithGeometry(handle, effectiveStepIdx).then((response) => {
+      // Worker returns shapes and targets, we call make_step on main thread
+      const data = response as unknown as StepGeometryResponse
+      if (data.shapes && data.shapes.length === inputs.length) {
+        // Build new inputs using the structure from `inputs` but with coordinate values from worker
+        const stepInputs: InputSpec[] = inputs.map(([originalShape, trainable], idx) => {
+          const workerShape = data.shapes[idx]
+          // Create new shape with same structure as original but worker's coordinates
+          let newShape: Shape
+          if (workerShape.kind === "Circle") {
+            newShape = {
+              kind: "Circle",
+              c: { x: workerShape.c.x, y: workerShape.c.y },
+              r: workerShape.r as number,
+            }
+          } else if (workerShape.kind === "XYRR") {
+            const r = workerShape.r as { x: number; y: number }
+            newShape = {
+              kind: "XYRR",
+              c: { x: workerShape.c.x, y: workerShape.c.y },
+              r: { x: r.x, y: r.y },
+            }
+          } else if (workerShape.kind === "XYRRT") {
+            const r = workerShape.r as { x: number; y: number }
+            newShape = {
+              kind: "XYRRT",
+              c: { x: workerShape.c.x, y: workerShape.c.y },
+              r: { x: r.x, y: r.y },
+              t: (workerShape as any).t,
+            }
+          } else {
+            // Polygon
+            const vertices = (workerShape as { vertices: Array<{ x: number; y: number }> }).vertices
+            newShape = {
+              kind: "Polygon",
+              vertices: vertices.map(v => ({ x: v.x, y: v.y })),
+            }
+          }
+          return [newShape, trainable] as InputSpec
+        })
+        // Call make_step on main thread to get full geometry
+        const wasmStep = apvd.make_step(stepInputs as any, targetsMap)
+        // Convert to FE Step type
+        const feStep = makeStep(wasmStep, initialSets as Set[])
+        setCurStep(feStep)
+      }
     }).catch(err => {
-      console.error("Failed to get step:", err)
+      console.error("Failed to get step with geometry:", err)
     })
-  }, [client, handle, effectiveStepIdx, totalSteps, progress])
+  }, [client, handle, effectiveStepIdx, totalSteps, initialSets, inputs, targetsMap])
 
   // Start training
   const startTraining = useCallback(async () => {
     if (inputs.length === 0) return
 
     setIsTraining(true)
+    setRunningState("fwd")
     setProgress(null)
-    setCurrentStep(null)
+    setCurStep(null)
     setStepIdxState(0)
+    setModelErrors([])
 
     try {
       const newHandle = await client.startTraining({
@@ -249,12 +301,22 @@ export function useTrainingClientHook(options: UseTrainingClientOptions): UseTra
     setRunningState("none")
   }, [client, handle])
 
-  // Auto-start training when inputs/targets change
+  // Initialize model on load (display initial shapes without starting training)
   useEffect(() => {
-    if (inputs.length > 0 && Object.keys(targetsMap).length > 0) {
-      startTraining()
+    if (inputs.length === 0 || Object.keys(targetsMap).length === 0) return
+    if (curStep !== null) return // Already initialized
+
+    try {
+      // Create WASM step directly on main thread
+      const wasmStep = apvd.make_step(inputs as any, targetsMap)
+      // Convert to frontend Step type
+      const feStep = makeStep(wasmStep, initialSets)
+      setCurStep(feStep)
+      setStepIdxState(0)
+    } catch (err) {
+      console.error("Failed to create initial model:", err)
     }
-  }, [inputs, targetsMap]) // Note: don't include startTraining to avoid infinite loop
+  }, [inputs, targetsMap, curStep, initialSets])
 
   // Forward step
   const fwdStep = useCallback((n: number = 1) => {
@@ -289,9 +351,7 @@ export function useTrainingClientHook(options: UseTrainingClientOptions): UseTra
     setStepIdx,
     vStepIdx,
     setVStepIdx,
-    currentStep,
-    currentShapes,
-    currentError,
+    curStep,
     minStep,
     minError,
     fwdStep,
@@ -305,5 +365,6 @@ export function useTrainingClientHook(options: UseTrainingClientOptions): UseTra
     totalSteps,
     vars,
     converged,
+    modelErrors,
   }
 }

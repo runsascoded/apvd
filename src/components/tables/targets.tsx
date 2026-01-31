@@ -1,8 +1,8 @@
-import {Model, Step} from "../../lib/regions";
+import {Step} from "../../lib/regions";
 import {Dual} from "apvd-wasm"
 import React, {Dispatch, useCallback, useMemo, useState} from "react";
 import css from "../../App.module.scss";
-import {SparkLineCell, SparkLineProps, SparkNum} from "../spark-lines";
+import {SparkLineProps, SparkNum} from "../spark-lines";
 import {S} from "../../lib/shape";
 import {abs} from "../../lib/math";
 import {makeTargets, Target, Targets} from "../../lib/targets";
@@ -26,15 +26,13 @@ export function getNegativeEntries(targets: Targets): Map<string, number> {
 }
 
 export function TargetsTable(
-    { initialSets, targets, setTargets, showDisjointSets, model, curStep, error, stepIdx, hoveredRegion, setHoveredRegion, ...sparkLineProps }: {
+    { initialSets, targets, setTargets, showDisjointSets, curStep, error, hoveredRegion, setHoveredRegion, ...sparkLineProps }: {
         initialSets: S[]
         targets: Targets
         setTargets: Dispatch<Targets>
         showDisjointSets: boolean
-        model: Model
         curStep: Step
         error: Dual
-        stepIdx: number
         hoveredRegion: string | null
         setHoveredRegion: Dispatch<string | null>
     } & SparkLineProps
@@ -103,8 +101,7 @@ export function TargetsTable(
     const [ editingValue, setEditingValue ] = useState<[ string, string ] | null>(null)
     const totalTargetArea = curStep.targets.total_area
     const [ showTargetCurCol, setShowTargetCurCol ] = useState(false)
-    const { showSparkLines, sparklineColors, sparkLineWidth, sparkLineHeight } = sparkLineProps
-    const cellProps = { model, stepIdx, ...sparkLineProps, }
+    const { showSparkLines, sparkLineWidth, sparkLineHeight } = sparkLineProps
 
     // Compute max absolute error for normalizing error bars
     const maxAbsError = useMemo(() => {
@@ -118,8 +115,9 @@ export function TargetsTable(
         return max || 1  // Avoid division by zero
     }, [displayTargets, curStep.errors, totalTargetArea])
 
-    // Only show spark lines if we have more than 1 step (otherwise it's just a flat line)
-    const hasEnoughSteps = model.steps.length > 1
+    // Note: Sparklines are disabled with Worker-based training since we don't have
+    // step history on the main thread. Can be re-enabled with a step history cache.
+    const sparklinesEnabled = false
 
     const targetTableRows = displayTargets.map(([ key, value ]) => {
         const name = targetName(key)
@@ -204,13 +202,8 @@ export function TargetsTable(
                     title={isMissing ? 'Missing region' : isExtra ? 'Extra region' : undefined}
                 />
             </td>
-            {showSparkLines && (hasEnoughSteps
-                ? <SparkLineCell
-                    color={sparklineColors.red}
-                    fn={step => abs(step.errors.get(key)?.error.v || 0)}
-                    {...cellProps}
-                />
-                : <td className={css.sparkLineCell} style={{ width: sparkLineWidth, height: sparkLineHeight }}></td>
+            {showSparkLines && sparklinesEnabled && (
+                <td className={css.sparkLineCell} style={{ width: sparkLineWidth, height: sparkLineHeight }}></td>
             )}
         </tr>
     })
@@ -232,13 +225,8 @@ export function TargetsTable(
                 <td className={css.sparkNum}>{sum}</td>
                 {SparkNum(error.v * totalTargetArea)}
                 <td className={css.errorBarCell}></td>
-                {showSparkLines && (hasEnoughSteps
-                    ? <SparkLineCell
-                        color={sparklineColors.red}
-                        fn={step => step.error.v}
-                        {...cellProps}
-                    />
-                    : <td className={css.sparkLineCell} style={{ width: sparkLineWidth, height: sparkLineHeight }}></td>
+                {showSparkLines && sparklinesEnabled && (
+                    <td className={css.sparkLineCell} style={{ width: sparkLineWidth, height: sparkLineHeight }}></td>
                 )}
             </tr>
             </tbody>

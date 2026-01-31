@@ -39,6 +39,13 @@ export default defineConfig({
   build: {
     outDir: 'dist',
   },
+  worker: {
+    format: 'es',
+    plugins: () => [
+      wasm(),
+      topLevelAwait(),
+    ],
+  },
   css: {
     preprocessorOptions: {
       scss: {

@@ -2,22 +2,23 @@ import {Step} from "../../lib/regions";
 import {Dual} from "apvd-wasm";
 import React, {useMemo} from "react";
 import css from "../../App.module.scss";
-import {SparkLineCell, SparkLineCellProps, SparkNum} from "../spark-lines";
-import {Set, S} from "../../lib/shape";
+import {SparkNum} from "../spark-lines";
+import {S} from "../../lib/shape";
 import {Vars} from "../../lib/vars";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
 
 export function VarsTable(
-    { vars, sets, curStep, error, ...sparkLineCellProps }: {
+    { vars, sets, curStep, error }: {
         vars: Vars
         sets: S[]
         curStep: Step
         error: Dual
-    } & SparkLineCellProps
+    }
 ) {
-    const { showSparkLines} = sparkLineCellProps
-    const { sparklineColors } = sparkLineCellProps
+    // Note: Sparklines are disabled with Worker-based training since we don't have
+    // step history on the main thread. Can be re-enabled with a step history cache.
+    const showSparkLines = false
     const varTableRows = useMemo(
         () => {
             // console.log(`varTableRows: ${initialCircles.length} vs ${circles.length} circles, vars:`, vars.coords.length, vars)
@@ -26,21 +27,11 @@ export function VarsTable(
                 <tr key={varIdx}>
                     <td>{sets[setIdx].name}.{coord}</td>
                     {SparkNum(vars.getVal(curStep, varIdx))}
-                    {showSparkLines && <SparkLineCell
-                        color={sparklineColors.blue}
-                        fn={step => vars.getVal(step, varIdx)}
-                        {...sparkLineCellProps}
-                    />}
                     {SparkNum(-error.d[varIdx])}
-                    {showSparkLines && <SparkLineCell
-                        color={sparklineColors.green}
-                        fn={step => step.error.d[varIdx]}
-                        {...sparkLineCellProps}
-                    />}
                 </tr>
             )
         },
-        [ curStep, vars, sets, showSparkLines, sparklineColors, ]
+        [ curStep, vars, sets, ]
     )
     return (
         <table className={css.sparkLinesTable}>

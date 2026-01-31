@@ -4,7 +4,7 @@ import { ShortcutsModal, Omnibar, SequenceModal, LookupModal, useOmnibarEndpoint
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts"
 import { PlaybackRenderer } from './components/groupRenderers'
 import { update_log_level } from "apvd-wasm"
-import { Model, Region, regionPath, Step } from "./lib/regions"
+import { Region, regionPath, Step } from "./lib/regions"
 import { Point } from "./components/point"
 import css from "./App.module.scss"
 import A from "./components/A"
@@ -43,7 +43,7 @@ import { HashMap, HistoryState, LabelPoint, LinkItem, Params, ParsedParams, Runn
 import { Ellipses4t, fizzBuzzLink, GridId, initialLayoutKey, layouts, MaxNumShapes, setMetadataKey, shapesKey, targetsKey, VariantCallersPaperLink } from "./lib/constants"
 import { SettingsProvider, useSettings } from "./contexts/SettingsContext"
 import { TrainingClientProvider } from "./contexts/TrainingClientContext"
-import { useTraining } from "./hooks/useTraining"
+import { useTrainingClientHook } from "./hooks/useTrainingClient"
 import { ErrorPlot } from "./components/ErrorPlot"
 import { ExpandCollapseButtons } from "./components/expand-collapse-icons"
 
@@ -234,10 +234,8 @@ export function Body() {
         showGrid: [ showGrid, setShowGrid ],
     } = gridState
 
-    // Training state and logic (with OPFS paging for large step counts)
+    // Training state and logic (Worker-based, delegated to @apvd/client)
     const {
-        model,
-        setModel,
         vars,
         stepIdx,
         setStepIdx,
@@ -250,19 +248,15 @@ export function Body() {
         runningState,
         setRunningState,
         curStep: trainingCurStep,
-        getStepFromCache,
-        ensureStepLoaded,
         modelErrors,
-        bestStep,
-        pagedCount,
-        opfsAvailable,
         converged,
-    } = useTraining({
+        totalSteps,
+        minStep,
+        minError,
+    } = useTrainingClientHook({
         initialSets,
         targets,
         maxSteps,
-        stepBatchSize,
-        maxErrorRatioStepSize,
         convergenceThreshold,
     })
 
@@ -352,15 +346,14 @@ export function Body() {
         [ setMetadata ]
     )
 
-    // Save latest `model` to `window`, for debugging
+    // Save latest `curStep` to `window`, for debugging
     useEffect(
         () => {
             if (typeof window !== 'undefined') {
-                window.model = model
                 window.curStep = curStep
             }
         },
-        [ model, curStep ]
+        [ curStep ]
     )
 
     const getHistoryState = useCallback(
@@ -430,7 +423,7 @@ export function Body() {
 
     // Keyboard shortcuts via use-kbd
     useKeyboardShortcuts({
-        model,
+        totalSteps,
         setStepIdx,
         fwdStep,
         revStep,
@@ -447,12 +440,13 @@ export function Body() {
     useEffect(
         () => {
             if (runningState == 'none') return
-            if (!model || stepIdx === null) return
+            if (stepIdx === null) return
             let step: () => void
             const expectedDirection = runningState
             if (runningState == 'fwd') {
-                if (model.repeat_idx && stepIdx + 1 == model.steps.length) {
-                    console.log(`effect: found repeat_idx ${model.repeat_idx}, not running steps`)
+                // Stop at end of computed steps or on convergence
+                if (stepIdx + 1 >= totalSteps || converged) {
+                    console.log(`effect: at end (step ${stepIdx}/${totalSteps}, converged=${converged}), not running steps`)
                     setRunningState("none")
                     return
                 }
@@ -480,27 +474,25 @@ export function Body() {
             );
             return () => clearTimeout(timer)
         },
-        [ runningState, model, stepIdx, fwdStep, revStep, frameLen, ],
+        [ runningState, totalSteps, converged, stepIdx, fwdStep, revStep, frameLen, ],
     )
 
     const error = useMemo(() => curStep?.error, [ curStep ])
 
     // Note: bestStep is now provided by useTraining hook
 
-    const repeatSteps = useMemo(
-        (): [number, number] | null => {
-            if (!model || !model.repeat_idx || stepIdx === null) return null
-            return [ model.repeat_idx, model.steps.length - 1 ]
-        },
-        [ model, stepIdx ],
-    )
+    // Note: repeat detection is not implemented in the Worker-based training.
+    // Convergence is detected via error threshold instead.
+    const repeatSteps: [number, number] | null = null
 
     const [ sparkLineStrokeWidth, setSparkLineStrokeWidth ] = useState(1)
     const [ sparkLineMargin, setSparkLineMargin ] = useState(1)
     const [ sparkLineWidth, setSparkLineWidth ] = useState(80)
     const [ sparkLineHeight, setSparkLineHeight ] = useState(30)
     const sparkLineProps: SparkLineProps = { showSparkLines, sparkLineLimit, sparkLineStrokeWidth, sparkLineMargin, sparkLineWidth, sparkLineHeight, sparklineColors, }
-    const sparkLineCellProps = model && (typeof stepIdx === 'number') && { model, stepIdx, ...sparkLineProps }
+    // Note: Sparklines are disabled with Worker-based training since we don't have
+    // step history on the main thread. Can be re-enabled with a step history cache.
+    const sparkLineCellProps = null
 
     const col5 = "col"
     const col7 = "col"
@@ -1337,10 +1329,11 @@ export function Body() {
                 <div className={"row"}>
                     <div className={`${col6} ${css.controlPanel}`}>
                         <PlaybackControls
-                            model={model}
                             stepIdx={stepIdx}
                             curStep={curStep}
-                            bestStep={bestStep}
+                            totalSteps={totalSteps}
+                            minStep={minStep}
+                            minError={minError}
                             repeatSteps={repeatSteps}
                             error={error}
                             runningState={runningState}
@@ -1383,7 +1376,7 @@ export function Body() {
                             className={css.targets}
                         >
                             {
-                                model && curStep && targets && error && sparkLineCellProps &&
+                                curStep && targets && error &&
                                 <TargetsTable
                                     initialSets={initialSets}
                                     targets={rawTargets}
@@ -1397,7 +1390,7 @@ export function Body() {
                                     error={error}
                                     hoveredRegion={hoveredRegion}
                                     setHoveredRegion={setHoveredRegion}
-                                    {...sparkLineCellProps}
+                                    {...sparkLineProps}
                                 />
                             }
                             <Checkbox
@@ -1432,7 +1425,7 @@ export function Body() {
                             onMouseOut={() => setVStepIdx(null)}
                         >
                             <ErrorPlot
-                                model={model}
+                                totalSteps={totalSteps}
                                 stepIdx={stepIdx}
                                 errors={modelErrors}
                                 theme={theme}
@@ -1528,13 +1521,12 @@ export function Body() {
                             toggle={setVarsShown}
                             tooltip={"Shapes' coordinates: raw values, and overall error gradient with respect to each coordinate"}
                         >{
-                            curStep && vars && sets && error && sparkLineCellProps &&
+                            curStep && vars && sets && error &&
                             <VarsTable
                                 vars={vars}
                                 sets={sets}
                                 curStep={curStep}
                                 error={error}
-                                {...sparkLineCellProps}
                             />
                         }</DetailsSection>
                     </div>

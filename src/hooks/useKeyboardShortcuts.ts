@@ -5,12 +5,11 @@
  */
 
 import { useAction } from 'use-kbd'
-import { Model } from '../lib/regions'
 import { RunningState } from '../types'
 
 export type UseKeyboardShortcutsOptions = {
-  // Model state
-  model: Model | null
+  // Step state
+  totalSteps: number
   // Step control
   setStepIdx: (idx: number) => void
   fwdStep: (n?: number) => void
@@ -30,7 +29,7 @@ export type UseKeyboardShortcutsOptions = {
 
 export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void {
   const {
-    model,
+    totalSteps,
     setStepIdx,
     fwdStep,
     revStep,
@@ -71,8 +70,8 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
     group: 'playback',
     defaultBindings: ['meta+arrowright'],
     handler: () => {
-      if (cantAdvance || !model) return
-      setStepIdx(model.steps.length - 1)
+      if (cantAdvance || totalSteps === 0) return
+      setStepIdx(totalSteps - 1)
       setRunningState("none")
     },
   })

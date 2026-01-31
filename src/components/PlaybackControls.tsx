@@ -2,7 +2,7 @@ import React, { ReactNode, useCallback, useState } from "react"
 import Button from 'react-bootstrap/Button'
 import OverlayTrigger from 'react-bootstrap/OverlayTrigger'
 import Tooltip from 'react-bootstrap/Tooltip'
-import { Model, Step } from "../lib/regions"
+import { Step } from "../lib/regions"
 import { RunningState } from "../types"
 import { getSliderValue } from "./inputs"
 import { useSettings } from "../contexts/SettingsContext"
@@ -50,11 +50,14 @@ function PlaybackButton({ title, hotkey, onClick, disabled, animating, setRunnin
 }
 
 export type PlaybackControlsProps = {
-    // Model state
-    model: Model | null
+    // Step state
     stepIdx: number | null
     curStep: Step | null
-    bestStep: Step | null
+    totalSteps: number
+    // Best step tracking
+    minStep: number | null
+    minError: number | null
+    // Repeat detection (for convergence display)
     repeatSteps: [number, number] | null
     error: { v: number } | null | undefined
     // Running state
@@ -72,10 +75,11 @@ export type PlaybackControlsProps = {
 }
 
 export function PlaybackControls({
-    model,
     stepIdx,
     curStep,
-    bestStep,
+    totalSteps,
+    minStep,
+    minError,
     repeatSteps,
     error,
     runningState,
@@ -134,12 +138,12 @@ export function PlaybackControls({
     return (
         <div className={css.controls}>
             <div className={css.slider}>
-                {model && stepIdx !== null && (
+                {totalSteps > 0 && stepIdx !== null && (
                     <input
                         type="range"
                         value={stepIdx}
                         min={0}
-                        max={model.steps.length - 1}
+                        max={totalSteps - 1}
                         onChange={() => {}}
                         onMouseDown={() => setIsDragging(true)}
                         onMouseUp={() => {
@@ -190,7 +194,7 @@ export function PlaybackControls({
                     ⬅️
                 </PlaybackControl>
                 <PlaybackControl
-                    title={`Advance one ${stepIdx !== null && model && stepIdx + 1 === model.steps.length ? `batch (${stepBatchSize} steps)` : "step"}`}
+                    title={`Advance one ${stepIdx !== null && totalSteps > 0 && stepIdx + 1 === totalSteps ? `batch (${stepBatchSize} steps)` : "step"}`}
                     hotkey="→"
                     onClick={fwdStep}
                     disabled={cantAdvance || stepIdx === maxSteps}
@@ -202,11 +206,11 @@ export function PlaybackControls({
                     title="Jump to last computed step"
                     hotkey="⌘→"
                     onClick={() => {
-                        if (!model) return
-                        setStepIdx(model.steps.length - 1)
+                        if (totalSteps === 0) return
+                        setStepIdx(totalSteps - 1)
                         panZoom()
                     }}
-                    disabled={!model || stepIdx === null || stepIdx + 1 === model.steps.length}
+                    disabled={totalSteps === 0 || stepIdx === null || stepIdx + 1 === totalSteps}
                 >
                     ⏭️
                 </PlaybackControl>
@@ -220,25 +224,25 @@ export function PlaybackControls({
                 </p>
                 <p
                     onTouchStart={e => {
-                        if (!model) return
-                        setStepIdx(model.min_idx)
+                        if (minStep === null) return
+                        setStepIdx(minStep)
                         setRunningState("none")
                         e.stopPropagation()
                     }}
                     onMouseMove={() => {
-                        if (!model || runningState !== 'none') return
-                        setVStepIdx(model.min_idx)
+                        if (minStep === null || runningState !== 'none') return
+                        setVStepIdx(minStep)
                     }}
                     onMouseOut={() => setVStepIdx(null)}
                     onClick={() => {
-                        if (!model) return
-                        setStepIdx(model.min_idx)
+                        if (minStep === null) return
+                        setStepIdx(minStep)
                         setRunningState("none")
                     }}
                 >
-                    {model && curStep && bestStep && (
-                        <span className={stepIdx === model.min_idx && runningState === 'none' && stepIdx > 0 ? css.bestStepActive : ''}>
-                            Best step: {model.min_idx}, error: {(bestStep.error.v * curStep.targets.total_area).toPrecision(3)} ({(bestStep.error.v * 100).toPrecision(3)}%)
+                    {minStep !== null && curStep && minError !== null && (
+                        <span className={stepIdx === minStep && runningState === 'none' && stepIdx > 0 ? css.bestStepActive : ''}>
+                            Best step: {minStep}, error: {(minError * curStep.targets.total_area).toPrecision(3)} ({(minError * 100).toPrecision(3)}%)
                         </span>
                     )}
                 </p>
