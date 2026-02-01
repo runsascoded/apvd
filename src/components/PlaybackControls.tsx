@@ -66,8 +66,8 @@ export type PlaybackControlsProps = {
     // Step control
     setStepIdx: (idx: number) => void
     setVStepIdx: (idx: number | null) => void
-    fwdStep: () => void
-    revStep: () => void
+    fwdStep: (n?: number) => void
+    revStep: (n?: number) => void
     panZoom: () => void
     // Computed flags
     cantAdvance: boolean
@@ -194,9 +194,9 @@ export function PlaybackControls({
                     ⬅️
                 </PlaybackControl>
                 <PlaybackControl
-                    title={`Advance one ${stepIdx !== null && totalSteps > 0 && stepIdx + 1 === totalSteps ? `batch (${stepBatchSize} steps)` : "step"}`}
+                    title={`Advance one batch (${stepBatchSize} steps)`}
                     hotkey="→"
-                    onClick={fwdStep}
+                    onClick={() => fwdStep(stepBatchSize)}
                     disabled={cantAdvance || stepIdx === maxSteps}
                 >
                     ➡️

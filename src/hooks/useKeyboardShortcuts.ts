@@ -10,6 +10,7 @@ import { RunningState } from '../types'
 export type UseKeyboardShortcutsOptions = {
   // Step state
   totalSteps: number
+  stepBatchSize: number
   // Step control
   setStepIdx: (idx: number) => void
   fwdStep: (n?: number) => void
@@ -30,6 +31,7 @@ export type UseKeyboardShortcutsOptions = {
 export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void {
   const {
     totalSteps,
+    stepBatchSize,
     setStepIdx,
     fwdStep,
     revStep,
@@ -44,12 +46,12 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
 
   // Playback shortcuts
   useAction('playback:step-forward', {
-    label: 'Step forward',
+    label: 'Step forward (batch)',
     group: 'playback',
     defaultBindings: ['arrowright'],
     handler: () => {
       if (cantAdvance) return
-      fwdStep()
+      fwdStep(stepBatchSize)
       setRunningState("none")
     },
   })

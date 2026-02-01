@@ -253,10 +253,14 @@ export function Body() {
         totalSteps,
         minStep,
         minError,
+        isComputing,
+        downloadTrace,
     } = useTrainingClientHook({
         initialSets,
         targets,
         maxSteps,
+        stepBatchSize,
+        learningRate: maxErrorRatioStepSize,
         convergenceThreshold,
     })
 
@@ -424,6 +428,7 @@ export function Body() {
     // Keyboard shortcuts via use-kbd
     useKeyboardShortcuts({
         totalSteps,
+        stepBatchSize,
         setStepIdx,
         fwdStep,
         revStep,
@@ -436,7 +441,8 @@ export function Body() {
         collapseAllSections,
     })
 
-    // Run steps
+    // Run steps - animation loop that calls fwdStep/revStep on a timer
+    // fwdStep handles computing more batches when needed
     useEffect(
         () => {
             if (runningState == 'none') return
@@ -444,12 +450,14 @@ export function Body() {
             let step: () => void
             const expectedDirection = runningState
             if (runningState == 'fwd') {
-                // Stop at end of computed steps or on convergence
-                if (stepIdx + 1 >= totalSteps || converged) {
-                    console.log(`effect: at end (step ${stepIdx}/${totalSteps}, converged=${converged}), not running steps`)
+                // Stop only on convergence or reaching maxSteps (cantAdvance handles these)
+                if (converged || stepIdx >= maxSteps) {
+                    console.log(`effect: stopping (step ${stepIdx}/${maxSteps}, converged=${converged})`)
                     setRunningState("none")
                     return
                 }
+                // Don't schedule while computing a batch
+                if (isComputing) return
                 step = fwdStep
             } else {
                 if (stepIdx === 0) {
@@ -474,7 +482,7 @@ export function Body() {
             );
             return () => clearTimeout(timer)
         },
-        [ runningState, totalSteps, converged, stepIdx, fwdStep, revStep, frameLen, ],
+        [ runningState, converged, stepIdx, maxSteps, isComputing, fwdStep, revStep, frameLen, ],
     )
 
     const error = useMemo(() => curStep?.error, [ curStep ])
@@ -1255,16 +1263,26 @@ export function Body() {
                         console.log("setShowSaveModal:", !showSaveModal)
                         e.preventDefault()
                         e.stopPropagation()
-                    }}>💾</span>
+                    }}>📷</span>
                 </OverlayTrigger>
             )},
         [ showSaveModal, effectiveSvgBg, ]
     )
 
     const CopyCurrentURL = () => (
-        <OverlayTrigger overlay={<Tooltip>Copy link to current layout</Tooltip>}>
+        <OverlayTrigger overlay={<Tooltip>Copy link to current layout (full precision)</Tooltip>}>
             <span className={css.link} onClick={copyCurrentURLClick}>🔗</span>
         </OverlayTrigger>
+    )
+
+    // Download training trace
+    const DownloadTraceButton = useCallback(
+        () => (
+            <OverlayTrigger overlay={<Tooltip>Download training trace (JSON)</Tooltip>}>
+                <span className={css.link} onClick={downloadTrace}>↓</span>
+            </OverlayTrigger>
+        ),
+        [downloadTrace]
     )
 
     const SettingsGear = useCallback(
@@ -1353,7 +1371,7 @@ export function Body() {
                             setShowGrid={setShowGrid}
                             summaryButtons={<>
                                 <SaveButton />
-                                <CopyCurrentURL />
+                                <DownloadTraceButton />
                                 <SettingsGear />
                             </>}
                         />
