@@ -1279,7 +1279,7 @@ export function Body() {
     const DownloadTraceButton = useCallback(
         () => (
             <OverlayTrigger overlay={<Tooltip>Download training trace (JSON)</Tooltip>}>
-                <span className={css.link} onClick={downloadTrace}>↓</span>
+                <span className={css.link} onClick={downloadTrace}>⤓</span>
             </OverlayTrigger>
         ),
         [downloadTrace]

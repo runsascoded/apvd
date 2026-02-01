@@ -511,6 +511,14 @@ export function useTrainingClientHook(options: UseTrainingClientOptions): UseTra
     }
   }, [steps, minStep, minError, targetsMap, learningRate, convergenceThreshold, buildKeyframes, modelErrors])
 
+  // Format error to 1 sig fig scientific notation (e.g., 2.3e-8 -> "2e-8")
+  const formatError1sf = (err: number): string => {
+    if (err === 0) return "0"
+    const exp = Math.floor(Math.log10(Math.abs(err)))
+    const mantissa = Math.round(err / Math.pow(10, exp))
+    return `${mantissa}e${exp}`
+  }
+
   // Download trace as JSON file
   const downloadTrace = useCallback(() => {
     const trace = exportTrace()
@@ -523,9 +531,17 @@ export function useTrainingClientHook(options: UseTrainingClientOptions): UseTra
     const blob = new Blob([json], { type: "application/json" })
     const url = URL.createObjectURL(blob)
 
+    // Format: apvd_YYMMDD_x{steps}_{error}.json
+    const now = new Date()
+    const yy = String(now.getFullYear()).slice(-2)
+    const mm = String(now.getMonth() + 1).padStart(2, '0')
+    const dd = String(now.getDate()).padStart(2, '0')
+    const dateStr = `${yy}${mm}${dd}`
+    const errorStr = formatError1sf(trace.minError)
+
     const a = document.createElement("a")
     a.href = url
-    a.download = `apvd-trace-${trace.totalSteps}steps-${new Date().toISOString().slice(0, 10)}.json`
+    a.download = `apvd_${dateStr}_x${trace.totalSteps}_${errorStr}.json`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
