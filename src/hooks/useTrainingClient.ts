@@ -14,6 +14,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Shape, InputSpec, TargetsMap, TrainingHandle } from "@apvd/client"
 import * as apvd from "apvd-wasm"
+import pako from "pako"
 import { useTrainingClient, ContinueTrainingResult } from "../contexts/TrainingClientContext"
 import { S, mapShape, Set } from "../lib/shape"
 import { Targets } from "../lib/targets"
@@ -120,6 +121,8 @@ export type UseTrainingClientResult = {
   // Export/import
   exportTrace: () => TraceExport | null
   downloadTrace: () => void
+  /** Upload and import a trace file (.json or .json.gz) */
+  uploadTrace: () => void
 }
 
 // Local step storage
@@ -515,7 +518,7 @@ export function useTrainingClientHook(options: UseTrainingClientOptions): UseTra
     }
   }, [steps, minStep, minError, targetsMap, learningRate, convergenceThreshold, buildKeyframes, modelErrors])
 
-  // Download trace as JSON file
+  // Download trace as JSON file (optionally gzipped if filename ends with .gz)
   const downloadTrace = useCallback(() => {
     const trace = exportTrace()
     if (!trace) {
@@ -531,18 +534,21 @@ export function useTrainingClientHook(options: UseTrainingClientOptions): UseTra
     const { filename, compress } = generateFilename(traceFilenameTemplate, values)
 
     const json = JSON.stringify(trace, null, 2)
+    const jsonBytes = json.length
 
-    // Handle compression if requested
+    // Handle compression if requested (template ends with .gz)
     let blob: Blob
     let finalFilename = filename
+    let finalBytes: number
     if (compress) {
-      // For now, just use uncompressed - compression would require pako or similar
-      // TODO: Add gzip compression support
-      console.warn("Gzip compression requested but not yet implemented, saving uncompressed")
-      finalFilename = filename.replace(/\.gz$/, '')
-      blob = new Blob([json], { type: "application/json" })
+      const compressed = pako.gzip(json)
+      blob = new Blob([compressed], { type: "application/gzip" })
+      finalFilename = filename
+      finalBytes = compressed.length
     } else {
       blob = new Blob([json], { type: "application/json" })
+      finalFilename = filename
+      finalBytes = jsonBytes
     }
 
     const url = URL.createObjectURL(blob)
@@ -554,8 +560,92 @@ export function useTrainingClientHook(options: UseTrainingClientOptions): UseTra
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
 
-    console.log(`Exported trace: ${trace.totalSteps} steps, ${trace.keyframes.length} keyframes, ${(json.length / 1024).toFixed(1)}KB -> ${finalFilename}`)
+    const sizeInfo = compress
+      ? `${(jsonBytes / 1024).toFixed(1)}KB -> ${(finalBytes / 1024).toFixed(1)}KB (${Math.round(100 * finalBytes / jsonBytes)}%)`
+      : `${(finalBytes / 1024).toFixed(1)}KB`
+    console.log(`Exported trace: ${trace.totalSteps} steps, ${trace.keyframes.length} keyframes, ${sizeInfo} -> ${finalFilename}`)
   }, [exportTrace, steps, traceFilenameTemplate])
+
+  // Upload and import a trace file (.json or .json.gz)
+  const uploadTrace = useCallback(() => {
+    const input = document.createElement("input")
+    input.type = "file"
+    input.accept = ".json,.json.gz,.gz"
+
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (!file) return
+
+      try {
+        let jsonString: string
+
+        if (file.name.endsWith('.gz')) {
+          // Decompress gzipped file
+          const arrayBuffer = await file.arrayBuffer()
+          const decompressed = pako.ungzip(new Uint8Array(arrayBuffer), { to: 'string' })
+          jsonString = decompressed
+        } else {
+          // Read as text
+          jsonString = await file.text()
+        }
+
+        const trace = JSON.parse(jsonString) as TraceExport
+
+        // Validate trace format
+        if (trace.version !== 1) {
+          console.error(`Unsupported trace version: ${trace.version}`)
+          return
+        }
+
+        // Load trace data into state
+        const loadedSteps: StoredStep[] = []
+        const loadedErrors: number[] = trace.errors
+
+        // Build steps from keyframes (sparse) - we only have keyframes, not all steps
+        for (const kf of trace.keyframes) {
+          // Ensure we have entries up to this keyframe
+          while (loadedSteps.length <= kf.stepIndex) {
+            loadedSteps.push({ shapes: [], error: 0 })
+          }
+          loadedSteps[kf.stepIndex] = {
+            shapes: kf.shapes,
+            error: kf.error,
+          }
+        }
+
+        // Fill in missing steps with interpolated/nearest keyframe data
+        // For now, just use the nearest keyframe's shapes
+        let lastShapes: Shape[] = trace.keyframes[0]?.shapes ?? []
+        for (let i = 0; i < loadedErrors.length; i++) {
+          if (!loadedSteps[i] || loadedSteps[i].shapes.length === 0) {
+            // Find nearest keyframe
+            const nearestKf = trace.keyframes.reduce((prev, curr) =>
+              Math.abs(curr.stepIndex - i) < Math.abs(prev.stepIndex - i) ? curr : prev
+            )
+            loadedSteps[i] = {
+              shapes: nearestKf.shapes,
+              error: loadedErrors[i],
+            }
+          }
+          lastShapes = loadedSteps[i].shapes
+        }
+
+        // Update state
+        setSteps(loadedSteps)
+        setModelErrors(loadedErrors)
+        setMinStep(trace.minStep)
+        setMinError(trace.minError)
+        setStepIdxState(0)
+        setRunningState("none")
+
+        console.log(`Imported trace: ${trace.totalSteps} steps, ${trace.keyframes.length} keyframes from ${file.name}`)
+      } catch (err) {
+        console.error("Failed to import trace:", err)
+      }
+    }
+
+    input.click()
+  }, [])
 
   return {
     stepIdx: effectiveStepIdx,
@@ -578,5 +668,6 @@ export function useTrainingClientHook(options: UseTrainingClientOptions): UseTra
     isComputing,
     exportTrace,
     downloadTrace,
+    uploadTrace,
   }
 }

@@ -257,6 +257,7 @@ export function Body() {
         minError,
         isComputing,
         downloadTrace,
+        uploadTrace,
     } = useTrainingClientHook({
         initialSets,
         targets,
@@ -1288,6 +1289,16 @@ export function Body() {
         [downloadTrace]
     )
 
+    // Upload training trace
+    const UploadTraceButton = useCallback(
+        () => (
+            <OverlayTrigger overlay={<Tooltip>Upload training trace (.json or .json.gz)</Tooltip>}>
+                <span className={css.link} onClick={uploadTrace}>⤒</span>
+            </OverlayTrigger>
+        ),
+        [uploadTrace]
+    )
+
     const SettingsGear = useCallback(
         (props: { onClick?: () => void }) => (
             <OverlayTrigger overlay={<Tooltip>Click to {settingsShown ? "hide" : "show"} settings</Tooltip>}>
@@ -1375,6 +1386,7 @@ export function Body() {
                             summaryButtons={<>
                                 <SaveButton />
                                 <DownloadTraceButton />
+                                <UploadTraceButton />
                                 <SettingsGear />
                             </>}
                         />
