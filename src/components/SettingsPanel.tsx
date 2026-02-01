@@ -35,6 +35,8 @@ export function SettingsPanel({ showGrid, setShowGrid, summaryButtons }: Setting
         urlShapesPrecisionScheme, setUrlShapesPrecisionScheme,
         // Misc
         logLevel, setLogLevel,
+        // Reset
+        resetAllSettings,
     } = useSettings()
 
     const [ invalidSvgColor, setInvalidSvgColor ] = useState(false)
@@ -119,6 +121,15 @@ export function SettingsPanel({ showGrid, setShowGrid, summaryButtons }: Setting
                 step={0.05}
                 float={true}
             />
+            <Control label={"Reset settings"}>
+                <button
+                    onClick={resetAllSettings}
+                    title={"Clear all session storage settings and reload with defaults"}
+                    style={{ padding: "2px 8px", cursor: "pointer" }}
+                >
+                    Reset to defaults
+                </button>
+            </Control>
         </Details>
     )
 }

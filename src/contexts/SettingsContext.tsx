@@ -67,7 +67,12 @@ export type MiscSettings = {
     setCopyCoordinatesType: (v: CopyCoordinatesType) => void
 }
 
-export type SettingsContextType = PanelToggles & TrainingSettings & DisplaySettings & UrlSettings & MiscSettings
+export type ResetSettings = {
+    /** Clear all session storage settings and reload the page */
+    resetAllSettings: () => void
+}
+
+export type SettingsContextType = PanelToggles & TrainingSettings & DisplaySettings & UrlSettings & MiscSettings & ResetSettings
 
 const SettingsContext = createContext<SettingsContextType | null>(null)
 
@@ -82,6 +87,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     const [ layoutsShown, setLayoutsShown ] = useSessionStorageState("layoutsShown", { defaultValue: false })
 
     // Training settings
+    // Note: With train(), step_size = error * maxErrorRatioStepSize (error-scaled)
     const [ maxErrorRatioStepSize, setMaxErrorRatioStepSize ] = useSessionStorageState("maxErrorRatioStepSize", { defaultValue: 0.5 })
     const [ maxSteps, setMaxSteps ] = useSessionStorageState("maxSteps", { defaultValue: 10000 })
     const [ stepBatchSize, setStepBatchSize ] = useSessionStorageState("stepBatchSize", { defaultValue: 20 })
@@ -103,6 +109,23 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     // Misc
     const [ logLevel, setLogLevel ] = useSessionStorageState<LogLevel>("logLevel", { defaultValue: "info" })
     const [ copyCoordinatesType, setCopyCoordinatesType ] = useSessionStorageState<CopyCoordinatesType>("copyCoordinatesType", { defaultValue: "JSON" })
+
+    // Reset all settings to defaults
+    const resetAllSettings = () => {
+        // Clear all session storage keys used by this app
+        const keysToRemove = [
+            "settingsShown", "targetsShown", "examplesShown", "errorPlotShown",
+            "varsShown", "shapesShown", "layoutsShown",
+            "maxErrorRatioStepSize", "maxSteps", "stepBatchSize", "convergenceThreshold",
+            "showRegionSizes", "shapeFillOpacity", "autoCenter", "showSparkLines",
+            "sparkLineLimit", "showIntersectionPoints", "svgBackgroundColor",
+            "shapesInUrlFragment", "urlShapesPrecisionScheme",
+            "logLevel", "copyCoordinatesType",
+        ]
+        keysToRemove.forEach(key => sessionStorage.removeItem(key))
+        // Reload to apply defaults
+        window.location.reload()
+    }
 
     const value: SettingsContextType = {
         // Panel toggles
@@ -132,6 +155,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         // Misc
         logLevel, setLogLevel,
         copyCoordinatesType, setCopyCoordinatesType,
+        // Reset
+        resetAllSettings,
     }
 
     return (
