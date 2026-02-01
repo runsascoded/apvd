@@ -514,7 +514,8 @@ export function useTrainingClientHook(options: UseTrainingClientOptions): UseTra
       minStep,
       minError,
       keyframes: buildKeyframes(),
-      errors: modelErrors,
+      // Round errors to 6 significant figures to reduce file size
+      errors: modelErrors.map(e => Number(e.toPrecision(6))),
     }
   }, [steps, minStep, minError, targetsMap, learningRate, convergenceThreshold, buildKeyframes, modelErrors])
 
