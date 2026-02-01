@@ -19,10 +19,31 @@ import type {
   TieredConfig,
 } from "@apvd/client"
 
+// Batch training types
+interface BatchTrainingRequest {
+  inputs: InputSpec[]
+  targets: TargetsMap
+  numSteps: number
+  learningRate?: number
+}
+
+interface BatchStep {
+  stepIndex: number
+  error: number
+  shapes: Shape[]
+}
+
+interface BatchTrainingResult {
+  steps: BatchStep[]
+  minError: number
+  minStepIndex: number
+  finalShapes: Shape[]
+}
+
 // Worker message types (internal to worker)
 interface WorkerRequest {
   id: string
-  type: "createModel" | "train" | "stop" | "getStep" | "getStepWithGeometry" | "getTraceInfo"
+  type: "createModel" | "train" | "stop" | "getStep" | "getStepWithGeometry" | "getTraceInfo" | "trainBatch" | "continueTraining"
   payload: unknown
 }
 
@@ -53,6 +74,55 @@ interface TrainingSession {
 }
 
 const sessions = new Map<string, TrainingSession>()
+
+/**
+ * Extracts plain JS number from a WASM value that may be wrapped in Dual { v: number }.
+ */
+function extractNumber(val: unknown): number {
+  if (typeof val === "number") return val
+  if (val && typeof val === "object" && "v" in val) return (val as { v: number }).v
+  throw new Error(`Cannot extract number from ${JSON.stringify(val)}`)
+}
+
+function extractPoint(pt: unknown): { x: number; y: number } {
+  const p = pt as { x: unknown; y: unknown }
+  return { x: extractNumber(p.x), y: extractNumber(p.y) }
+}
+
+/**
+ * Converts WASM Shape<Dual> to plain Shape<number> by extracting values.
+ */
+function extractShape(wasmShape: unknown): Shape {
+  const s = wasmShape as { kind: string; c?: unknown; r?: unknown; t?: unknown; vertices?: unknown[] }
+  if (s.kind === "Circle") {
+    return {
+      kind: "Circle",
+      c: extractPoint(s.c),
+      r: extractNumber(s.r),
+    }
+  } else if (s.kind === "XYRR") {
+    return {
+      kind: "XYRR",
+      c: extractPoint(s.c),
+      r: extractPoint(s.r),
+    }
+  } else if (s.kind === "XYRRT") {
+    return {
+      kind: "XYRRT",
+      c: extractPoint(s.c),
+      r: extractPoint(s.r),
+      t: extractNumber(s.t),
+    }
+  } else {
+    // Polygon
+    const vertices = (s.vertices ?? []).map(v => extractPoint(v))
+    return { kind: "Polygon", vertices }
+  }
+}
+
+function extractShapes(wasmShapes: unknown[]): Shape[] {
+  return wasmShapes.map(s => extractShape(s))
+}
 
 // Tiered keyframe helpers
 function tier(step: number, b: number): number {
@@ -108,7 +178,7 @@ function sendProgress(
   finalResult?: TrainingResult
 ): void {
   const shapes = session.currentWasmStep
-    ? (session.currentWasmStep as { shapes: Shape[] }).shapes
+    ? extractShapes((session.currentWasmStep as { shapes: unknown[] }).shapes)
     : []
 
   const update: ProgressUpdate = {
@@ -136,7 +206,7 @@ async function handleTrain(id: string, request: TrainingRequest): Promise<void> 
 
   const params = request.params ?? {}
   const maxSteps = params.maxSteps ?? 10000
-  const learningRate = params.learningRate ?? 0.05
+  const learningRate = params.learningRate ?? 0.5
   const convergenceThreshold = params.convergenceThreshold ?? 1e-10
   const progressInterval = params.progressInterval ?? 100
   const bucketSize = 1024 // Default tiered bucket size
@@ -170,9 +240,7 @@ async function handleTrain(id: string, request: TrainingRequest): Promise<void> 
     session.history.push({
       stepIndex: 0,
       error: currentError,
-      shapes: JSON.parse(
-        JSON.stringify((session.currentWasmStep as { shapes: Shape[] }).shapes)
-      ),
+      shapes: extractShapes((session.currentWasmStep as { shapes: unknown[] }).shapes),
     })
     session.btdSteps.push(0)
 
@@ -184,8 +252,10 @@ async function handleTrain(id: string, request: TrainingRequest): Promise<void> 
 
     // Training loop (runs asynchronously after returning handle)
     for (let step = 1; step <= maxSteps && !session.stopped; step++) {
-      // Take a step
-      session.currentWasmStep = getApvd().step(session.currentWasmStep, learningRate)
+      // Error-scaled stepping: step_size = current_error * learningRate
+      const prevError = (session.currentWasmStep as { error: { v: number } }).error.v
+      const scaledStepSize = prevError * learningRate
+      session.currentWasmStep = getApvd().step(session.currentWasmStep, scaledStepSize)
       session.currentStep = step
       currentError = (session.currentWasmStep as { error: { v: number } }).error.v
 
@@ -201,9 +271,7 @@ async function handleTrain(id: string, request: TrainingRequest): Promise<void> 
         session.history.push({
           stepIndex: step,
           error: currentError,
-          shapes: JSON.parse(
-            JSON.stringify((session.currentWasmStep as { shapes: Shape[] }).shapes)
-          ),
+          shapes: extractShapes((session.currentWasmStep as { shapes: unknown[] }).shapes),
         })
       }
 
@@ -236,7 +304,7 @@ async function handleTrain(id: string, request: TrainingRequest): Promise<void> 
       session.history.find((h) => h.stepIndex === nearestKeyframe(session.minStep, bucketSize))
     const bestShapes = minStepEntry
       ? (minStepEntry.shapes as Shape[])
-      : (session.currentWasmStep as { shapes: Shape[] }).shapes
+      : extractShapes((session.currentWasmStep as { shapes: unknown[] }).shapes)
 
     const finalResult: TrainingResult = {
       success: true,
@@ -316,15 +384,18 @@ async function handleGetStep(id: string, handleId: string, stepIndex: number): P
       session.targets
     )
 
-    const learningRate = session.params?.learningRate ?? 0.05
+    const learningRate = session.params?.learningRate ?? 0.5
     for (let i = keyframeEntry.stepIndex; i < stepIndex; i++) {
-      wasmStep = getApvd().step(wasmStep, learningRate)
+      // Error-scaled stepping
+      const prevError = (wasmStep as { error: { v: number } }).error.v
+      const scaledStepSize = prevError * learningRate
+      wasmStep = getApvd().step(wasmStep, scaledStepSize)
     }
 
     const state: StepState = {
       stepIndex,
       error: (wasmStep as { error: { v: number } }).error.v,
-      shapes: (wasmStep as { shapes: Shape[] }).shapes,
+      shapes: extractShapes((wasmStep as { shapes: unknown[] }).shapes),
       isKeyframe: false,
       recomputedFrom: kf,
     }
@@ -428,12 +499,15 @@ async function handleGetStepWithGeometry(
         session.targets
       )
 
-      const learningRate = session.params?.learningRate ?? 0.05
+      const learningRate = session.params?.learningRate ?? 0.5
       for (let i = keyframeEntry.stepIndex; i < stepIndex; i++) {
-        wasmStep = getApvd().step(wasmStep, learningRate)
+        // Error-scaled stepping
+        const prevError = (wasmStep as { error: { v: number } }).error.v
+        const scaledStepSize = prevError * learningRate
+        wasmStep = getApvd().step(wasmStep, scaledStepSize)
       }
 
-      shapes = (wasmStep as { shapes: Shape[] }).shapes
+      shapes = extractShapes((wasmStep as { shapes: unknown[] }).shapes)
       error = (wasmStep as { error: { v: number } }).error.v
       recomputedFrom = kf
     }
@@ -448,6 +522,140 @@ async function handleGetStepWithGeometry(
       error,
       targets: session.targets,
       inputs: session.inputs,
+    }
+
+    respond({ id, type: "result", payload: result })
+  } catch (e) {
+    const errorMessage = e instanceof Error ? e.message : String(e)
+    respond({ id, type: "error", payload: { message: errorMessage } })
+  }
+}
+
+// Handle trainBatch request - stateless batch computation using legacy train()
+// Uses error-scaled stepping which matches main branch behavior
+async function handleTrainBatch(id: string, request: BatchTrainingRequest): Promise<void> {
+  await initWasm()
+
+  const { inputs, targets, numSteps, learningRate = 0.5 } = request
+
+  console.log(`[Worker] trainBatch: numSteps=${numSteps}, learningRate=${learningRate}, inputs.length=${inputs.length}`)
+  console.log(`[Worker] inputs[0]:`, JSON.stringify(inputs[0]))
+  console.log(`[Worker] targets:`, JSON.stringify(targets))
+
+  try {
+    // Create model and train with legacy error-scaled stepping
+    // step_size = error * learningRate (matches main branch's train() call)
+    const wasmModel = getApvd().make_model(inputs as any, targets)
+    console.log(`[Worker] wasmModel created, steps:`, (wasmModel as any).steps?.length)
+
+    const trainedModel = getApvd().train(wasmModel, learningRate, numSteps)
+    console.log(`[Worker] training complete`)
+
+    // Extract steps from trained model
+    const modelSteps = (trainedModel as { steps: unknown[] }).steps
+    const minIdx = (trainedModel as { min_idx: number }).min_idx
+    const minError = (trainedModel as { min_error: number }).min_error
+
+    console.log(`[Worker] modelSteps.length=${modelSteps.length}, minIdx=${minIdx}, minError=${minError}`)
+
+    // Log first few step errors
+    for (let i = 0; i < Math.min(5, modelSteps.length); i++) {
+      const step = modelSteps[i] as { error: { v: number } }
+      console.log(`[Worker] step ${i} error: ${step.error.v}`)
+    }
+
+    const steps: BatchStep[] = modelSteps.map((wasmStep: unknown, i: number) => ({
+      stepIndex: i,
+      error: (wasmStep as { error: { v: number } }).error.v,
+      shapes: extractShapes((wasmStep as { shapes: unknown[] }).shapes),
+    }))
+
+    const result: BatchTrainingResult = {
+      steps,
+      minError,
+      minStepIndex: minIdx,
+      finalShapes: steps[steps.length - 1].shapes,
+    }
+
+    respond({ id, type: "result", payload: result })
+  } catch (e) {
+    const errorMessage = e instanceof Error ? e.message : String(e)
+    respond({ id, type: "error", payload: { message: errorMessage } })
+  }
+}
+
+// Handle continueTraining request - continue a session for more steps
+// Uses train() like prod does - creates a seed model from last step and trains from there
+async function handleContinueTraining(id: string, handleId: string, numSteps: number): Promise<void> {
+  await initWasm()
+
+  const session = sessions.get(handleId)
+  if (!session) {
+    respond({ id, type: "error", payload: { message: `Session ${handleId} not found` } })
+    return
+  }
+
+  const learningRate = session.params?.learningRate ?? 0.5
+  const bucketSize = session.tieredConfig?.bucketSize ?? 1024
+  const startStep = session.currentStep
+
+  try {
+    // Create a seed model from the last step (like prod does)
+    const lastStep = session.currentWasmStep
+    const batchSeed = {
+      steps: [lastStep],
+      repeat_idx: null,
+      min_idx: 0,
+      min_error: (lastStep as { error: { v: number } }).error.v,
+    }
+
+    // Call train() to compute the batch - this handles error-scaled stepping correctly
+    const trainedModel = getApvd().train(batchSeed, learningRate, numSteps)
+    const modelSteps = (trainedModel as { steps: unknown[] }).steps
+    const batchMinIdx = (trainedModel as { min_idx: number }).min_idx
+    const batchMinError = (trainedModel as { min_error: number }).min_error
+
+    // Collect per-step data for return (skip first step as it duplicates last)
+    const batchSteps: Array<{ stepIndex: number; error: number; shapes: Shape[] }> = []
+
+    for (let i = 1; i < modelSteps.length; i++) {
+      const wasmStep = modelSteps[i]
+      const stepIndex = startStep + i
+      const error = (wasmStep as { error: { v: number } }).error.v
+      const shapes = extractShapes((wasmStep as { shapes: unknown[] }).shapes)
+
+      batchSteps.push({ stepIndex, error, shapes })
+
+      // Store keyframe in session history if tiered storage says so
+      if (isKeyframe(stepIndex, bucketSize)) {
+        session.history.push({ stepIndex, error, shapes })
+      }
+    }
+
+    // Update session state with final step
+    const finalStep = modelSteps[modelSteps.length - 1]
+    session.currentWasmStep = finalStep
+    session.currentStep = startStep + modelSteps.length - 1
+
+    // Update best step tracking
+    const absoluteBatchMinStep = startStep + batchMinIdx
+    if (batchMinError < session.minError) {
+      session.minError = batchMinError
+      session.minStep = absoluteBatchMinStep
+      session.btdSteps.push(absoluteBatchMinStep)
+    }
+
+    const currentError = (finalStep as { error: { v: number } }).error.v
+    const currentShapes = extractShapes((finalStep as { shapes: unknown[] }).shapes)
+
+    const result = {
+      totalSteps: session.currentStep,
+      currentStep: session.currentStep,
+      minError: session.minError,
+      minStep: session.minStep,
+      currentShapes,
+      currentError,
+      steps: batchSteps,
     }
 
     respond({ id, type: "result", payload: result })
@@ -489,6 +697,15 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       case "getTraceInfo": {
         const { handleId } = payload as { handleId: string }
         handleGetTraceInfo(id, handleId)
+        break
+      }
+      case "trainBatch": {
+        await handleTrainBatch(id, payload as BatchTrainingRequest)
+        break
+      }
+      case "continueTraining": {
+        const { handleId, numSteps } = payload as { handleId: string; numSteps: number }
+        await handleContinueTraining(id, handleId, numSteps)
         break
       }
       default:

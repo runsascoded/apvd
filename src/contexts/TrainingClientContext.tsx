@@ -8,7 +8,7 @@
 import React, { createContext, useContext, useMemo, useEffect, useRef } from "react"
 import * as apvd from "apvd-wasm"
 import type {
-  TrainingClient,
+  TrainingClient as BaseTrainingClient,
   TrainingRequest,
   TrainingHandle,
   ProgressUpdate,
@@ -24,10 +24,70 @@ import type {
 // Check if we're in development mode
 const isDev = import.meta.env.DEV
 
+// Extended TrainingClient with session-based and batch APIs
+export interface TrainingClient extends BaseTrainingClient {
+  trainBatch(request: BatchTrainingRequest): Promise<BatchTrainingResult>
+  /** Continue training an existing session for more steps */
+  continueTraining(handle: TrainingHandle, numSteps: number): Promise<ContinueTrainingResult>
+}
+
+export interface ContinueTrainingResult {
+  /** New total step count */
+  totalSteps: number
+  /** Current step index */
+  currentStep: number
+  /** Best error seen so far */
+  minError: number
+  /** Step where best error was achieved */
+  minStep: number
+  /** Shapes at current step */
+  currentShapes: Shape[]
+  /** Current error */
+  currentError: number
+  /** Per-step data for sparklines and history */
+  steps: Array<{
+    stepIndex: number
+    error: number
+    shapes: Shape[]
+  }>
+}
+
+// Batch training types
+export interface BatchTrainingRequest {
+  /** Current shapes with trainability flags */
+  inputs: InputSpec[]
+  /** Target region sizes */
+  targets: TargetsMap
+  /** Number of steps to compute */
+  numSteps: number
+  /** Learning rate (default: 0.05) */
+  learningRate?: number
+}
+
+export interface BatchStep {
+  /** Relative index within this batch (0 to numSteps-1) */
+  stepIndex: number
+  /** Error at this step */
+  error: number
+  /** Shape coordinates at this step */
+  shapes: Shape[]
+}
+
+export interface BatchTrainingResult {
+  /** All computed steps */
+  steps: BatchStep[]
+  /** Minimum error in this batch */
+  minError: number
+  /** Index of step with minimum error (within batch) */
+  minStepIndex: number
+  /** Final shapes (convenience for next batch input) */
+  finalShapes: Shape[]
+}
+
 // Worker message types (matching the worker's protocol)
 interface WorkerRequest {
   id: string
-  type: "train" | "stop" | "getStep" | "getStepWithGeometry" | "createModel" | "getTraceInfo"
+  type: "train" | "stop" | "getStep" | "getStepWithGeometry" | "createModel" | "getTraceInfo" | "trainBatch" | "continueTraining"
   payload: unknown
 }
 
@@ -107,6 +167,14 @@ function createWorkerClient(worker: Worker): TrainingClient {
 
     async getTraceInfo(handle: TrainingHandle): Promise<TraceInfo> {
       return sendRequest("getTraceInfo", { handleId: handle.id })
+    },
+
+    async trainBatch(request: BatchTrainingRequest): Promise<BatchTrainingResult> {
+      return sendRequest("trainBatch", request)
+    },
+
+    async continueTraining(handle: TrainingHandle, numSteps: number): Promise<ContinueTrainingResult> {
+      return sendRequest("continueTraining", { handleId: handle.id, numSteps })
     },
 
     onProgress(callback: (update: ProgressUpdate) => void): Unsubscribe {
@@ -240,7 +308,7 @@ function createMainThreadClient(): TrainingClient {
       const id = `session-${++sessionCounter}`
       const params = request.params ?? {}
       const maxSteps = params.maxSteps ?? 10000
-      const learningRate = params.learningRate ?? 0.05
+      const learningRate = params.learningRate ?? 0.5
       const convergenceThreshold = params.convergenceThreshold ?? 1e-10
       const progressInterval = params.progressInterval ?? 100
 
@@ -280,7 +348,10 @@ function createMainThreadClient(): TrainingClient {
       // Run training loop asynchronously
       ;(async () => {
         for (let step = 1; step <= maxSteps && !session.stopped; step++) {
-          session.currentWasmStep = apvd.step(session.currentWasmStep, learningRate)
+          // Error-scaled stepping: step_size = current_error * learningRate
+          const prevError = (session.currentWasmStep as { error: { v: number } }).error.v
+          const scaledStepSize = prevError * learningRate
+          session.currentWasmStep = apvd.step(session.currentWasmStep, scaledStepSize)
           session.currentStep = step
           currentError = (session.currentWasmStep as { error: { v: number } }).error.v
 
@@ -364,9 +435,12 @@ function createMainThreadClient(): TrainingClient {
           shapes.map(s => [s, Array(s.kind === "Circle" ? 3 : s.kind === "XYRR" ? 4 : 5).fill(true)]) as any,
           session.targets
         )
-        const learningRate = session.params?.learningRate ?? 0.05
+        const learningRate = session.params?.learningRate ?? 0.5
         for (let i = nearestEntry.stepIndex; i < stepIndex; i++) {
-          wasmStep = apvd.step(wasmStep, learningRate)
+          // Error-scaled stepping
+          const prevError = (wasmStep as { error: { v: number } }).error.v
+          const scaledStepSize = prevError * learningRate
+          wasmStep = apvd.step(wasmStep, scaledStepSize)
         }
         shapes = extractShapes((wasmStep as { shapes: unknown[] }).shapes)
         error = (wasmStep as { error: { v: number } }).error.v
@@ -389,6 +463,115 @@ function createMainThreadClient(): TrainingClient {
       return {
         totalSteps: session.currentStep,
         btdSteps: session.btdSteps,
+      }
+    },
+
+    async trainBatch(request: BatchTrainingRequest): Promise<BatchTrainingResult> {
+      const { inputs, targets, numSteps, learningRate = 0.5 } = request
+
+      // Create initial step
+      let wasmStep = apvd.make_step(inputs as any, targets)
+      const steps: BatchStep[] = [{
+        stepIndex: 0,
+        error: (wasmStep as { error: { v: number } }).error.v,
+        shapes: extractShapes((wasmStep as { shapes: unknown[] }).shapes),
+      }]
+
+      let minError = steps[0].error
+      let minStepIndex = 0
+
+      // Compute remaining steps with error-scaled stepping
+      for (let i = 1; i < numSteps; i++) {
+        const prevError = (wasmStep as { error: { v: number } }).error.v
+        const scaledStepSize = prevError * learningRate
+        wasmStep = apvd.step(wasmStep, scaledStepSize)
+        const error = (wasmStep as { error: { v: number } }).error.v
+        const shapes = extractShapes((wasmStep as { shapes: unknown[] }).shapes)
+
+        steps.push({ stepIndex: i, error, shapes })
+
+        if (error < minError) {
+          minError = error
+          minStepIndex = i
+        }
+
+        // Yield periodically for responsiveness
+        if (i % 100 === 0) {
+          await new Promise(resolve => setTimeout(resolve, 0))
+        }
+      }
+
+      return {
+        steps,
+        minError,
+        minStepIndex,
+        finalShapes: steps[steps.length - 1].shapes,
+      }
+    },
+
+    async continueTraining(handle: TrainingHandle, numSteps: number): Promise<ContinueTrainingResult> {
+      const session = sessions.get(handle.id)
+      if (!session) throw new Error(`Session ${handle.id} not found`)
+
+      const learningRate = session.params?.learningRate ?? 0.5
+      const startStep = session.currentStep
+
+      // Create a seed model from the last step (like prod does)
+      const lastStep = session.currentWasmStep
+      const batchSeed = {
+        steps: [lastStep],
+        repeat_idx: null,
+        min_idx: 0,
+        min_error: (lastStep as { error: { v: number } }).error.v,
+      }
+
+      // Call train() to compute the batch - this handles error-scaled stepping correctly
+      const trainedModel = apvd.train(batchSeed, learningRate, numSteps)
+      const modelSteps = (trainedModel as { steps: unknown[] }).steps
+      const batchMinIdx = (trainedModel as { min_idx: number }).min_idx
+      const batchMinError = (trainedModel as { min_error: number }).min_error
+
+      // Collect per-step data for return (skip first step as it duplicates last)
+      const batchSteps: Array<{ stepIndex: number; error: number; shapes: Shape[] }> = []
+
+      for (let i = 1; i < modelSteps.length; i++) {
+        const wasmStep = modelSteps[i]
+        const stepIndex = startStep + i
+        const error = (wasmStep as { error: { v: number } }).error.v
+        const shapes = extractShapes((wasmStep as { shapes: unknown[] }).shapes)
+
+        batchSteps.push({ stepIndex, error, shapes })
+
+        // Store keyframes periodically in session history
+        if (stepIndex % 1024 === 0) {
+          session.history.push({ stepIndex, error, shapes })
+        }
+      }
+
+      // Update session state with final step
+      const finalStep = modelSteps[modelSteps.length - 1]
+      session.currentWasmStep = finalStep
+      session.currentStep = startStep + modelSteps.length - 1
+
+      // Update best step tracking
+      const absoluteBatchMinStep = startStep + batchMinIdx
+      if (batchMinError < session.minError) {
+        session.minError = batchMinError
+        session.minStep = absoluteBatchMinStep
+        session.btdSteps.push(absoluteBatchMinStep)
+      }
+
+      const currentError = (finalStep as { error: { v: number } }).error.v
+      const currentShapes = extractShapes((finalStep as { shapes: unknown[] }).shapes)
+
+      return {
+        totalSteps: session.currentStep,
+        currentStep: session.currentStep,
+        minError: session.minError,
+        minStep: session.minStep,
+        currentShapes,
+        currentError,
+        steps: batchSteps,
       }
     },
 

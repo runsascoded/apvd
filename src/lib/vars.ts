@@ -120,7 +120,6 @@ export function makeVars(initialSets: S[]) {
             coords.push([shapeIdx, shapeVar])
         })
     })
-    console.log(`${coords.length} coords`)
 
     function getVal(step: Step, varIdx: number): number | null {
         const [setIdx, coord] = coords[varIdx]
