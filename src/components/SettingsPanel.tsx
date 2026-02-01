@@ -1,9 +1,10 @@
-import React, { ReactNode, useState } from "react"
+import React, { ReactNode, useState, useMemo } from "react"
 import { useSettings } from "../contexts/SettingsContext"
 import { Details } from "./Details"
 import { Checkbox, Control, Number, Select } from "./controls"
 import { EditableText } from "./editable-text"
 import { precisionSchemes } from "../lib/shapes-buffer"
+import { TEMPLATE_VARS, validateTemplate, DEFAULT_TEMPLATE } from "../lib/trace-filename"
 import A from "./A"
 import css from "../App.module.scss"
 
@@ -35,11 +36,32 @@ export function SettingsPanel({ showGrid, setShowGrid, summaryButtons }: Setting
         urlShapesPrecisionScheme, setUrlShapesPrecisionScheme,
         // Misc
         logLevel, setLogLevel,
+        // Export
+        traceFilenameTemplate, setTraceFilenameTemplate,
         // Reset
         resetAllSettings,
     } = useSettings()
 
     const [ invalidSvgColor, setInvalidSvgColor ] = useState(false)
+
+    // Validate template and track invalid variables
+    const invalidVars = useMemo(() => validateTemplate(traceFilenameTemplate), [traceFilenameTemplate])
+    const hasInvalidVars = invalidVars.length > 0
+
+    // Build tooltip content for template help
+    const templateTooltip = useMemo(() => (
+        <div style={{ textAlign: "left" }}>
+            <p style={{ marginBottom: "8px" }}>Filename template for trace downloads. Variables:</p>
+            <ul style={{ margin: 0, paddingLeft: "16px" }}>
+                {Object.entries(TEMPLATE_VARS).map(([name, desc]) => (
+                    <li key={name}><code>${name}</code> - {desc}</li>
+                ))}
+            </ul>
+            <p style={{ marginTop: "8px", marginBottom: 0 }}>
+                Default: <code>{DEFAULT_TEMPLATE}</code>
+            </p>
+        </div>
+    ), [])
 
     return (
         <Details
@@ -121,6 +143,18 @@ export function SettingsPanel({ showGrid, setShowGrid, summaryButtons }: Setting
                 step={0.05}
                 float={true}
             />
+            <Control label={"Trace filename"} tooltip={templateTooltip}>
+                <EditableText
+                    className={`${css.traceFilenameInput} ${hasInvalidVars ? css.invalid : ""}`}
+                    defaultValue={traceFilenameTemplate}
+                    onChange={setTraceFilenameTemplate}
+                />
+                {hasInvalidVars && (
+                    <span className={css.invalidVarsHint} title={`Unknown: $${invalidVars.join(", $")}`}>
+                        ?
+                    </span>
+                )}
+            </Control>
             <Control label={"Reset settings"}>
                 <button
                     onClick={resetAllSettings}

@@ -20,6 +20,7 @@ import { Targets } from "../lib/targets"
 import { makeStep, Step } from "../lib/regions"
 import { CircleCoords, Coord, getPolygonCoords, makeVars, Vars, XYRRCoords, XYRRTCoords } from "../lib/vars"
 import { RunningState } from "../types"
+import { buildTemplateValues, generateFilename, DEFAULT_TEMPLATE } from "../lib/trace-filename"
 
 /**
  * Extracts plain JS number from a WASM value that may be wrapped in Dual { v: number }.
@@ -77,6 +78,8 @@ export type UseTrainingClientOptions = {
   stepBatchSize: number
   learningRate: number
   convergenceThreshold: number
+  /** Template for trace download filename. See lib/trace-filename.ts for available variables. */
+  traceFilenameTemplate?: string
 }
 
 export type UseTrainingClientResult = {
@@ -158,6 +161,7 @@ export function useTrainingClientHook(options: UseTrainingClientOptions): UseTra
     stepBatchSize,
     learningRate,
     convergenceThreshold,
+    traceFilenameTemplate = DEFAULT_TEMPLATE,
   } = options
 
   const client = useTrainingClient()
@@ -511,14 +515,6 @@ export function useTrainingClientHook(options: UseTrainingClientOptions): UseTra
     }
   }, [steps, minStep, minError, targetsMap, learningRate, convergenceThreshold, buildKeyframes, modelErrors])
 
-  // Format error to 1 sig fig scientific notation (e.g., 2.3e-8 -> "2e-8")
-  const formatError1sf = (err: number): string => {
-    if (err === 0) return "0"
-    const exp = Math.floor(Math.log10(Math.abs(err)))
-    const mantissa = Math.round(err / Math.pow(10, exp))
-    return `${mantissa}e${exp}`
-  }
-
   // Download trace as JSON file
   const downloadTrace = useCallback(() => {
     const trace = exportTrace()
@@ -527,28 +523,39 @@ export function useTrainingClientHook(options: UseTrainingClientOptions): UseTra
       return
     }
 
+    // Get shape types for template
+    const shapeTypes = steps[0]?.shapes.map(s => s.kind as "Circle" | "XYRR" | "XYRRT" | "Polygon") ?? []
+
+    // Build template values and generate filename
+    const values = buildTemplateValues(trace.totalSteps, trace.minError, shapeTypes)
+    const { filename, compress } = generateFilename(traceFilenameTemplate, values)
+
     const json = JSON.stringify(trace, null, 2)
-    const blob = new Blob([json], { type: "application/json" })
+
+    // Handle compression if requested
+    let blob: Blob
+    let finalFilename = filename
+    if (compress) {
+      // For now, just use uncompressed - compression would require pako or similar
+      // TODO: Add gzip compression support
+      console.warn("Gzip compression requested but not yet implemented, saving uncompressed")
+      finalFilename = filename.replace(/\.gz$/, '')
+      blob = new Blob([json], { type: "application/json" })
+    } else {
+      blob = new Blob([json], { type: "application/json" })
+    }
+
     const url = URL.createObjectURL(blob)
-
-    // Format: apvd_YYMMDD_x{steps}_{error}.json
-    const now = new Date()
-    const yy = String(now.getFullYear()).slice(-2)
-    const mm = String(now.getMonth() + 1).padStart(2, '0')
-    const dd = String(now.getDate()).padStart(2, '0')
-    const dateStr = `${yy}${mm}${dd}`
-    const errorStr = formatError1sf(trace.minError)
-
     const a = document.createElement("a")
     a.href = url
-    a.download = `apvd_${dateStr}_x${trace.totalSteps}_${errorStr}.json`
+    a.download = finalFilename
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
 
-    console.log(`Exported trace: ${trace.totalSteps} steps, ${trace.keyframes.length} keyframes, ${(json.length / 1024).toFixed(1)}KB`)
-  }, [exportTrace])
+    console.log(`Exported trace: ${trace.totalSteps} steps, ${trace.keyframes.length} keyframes, ${(json.length / 1024).toFixed(1)}KB -> ${finalFilename}`)
+  }, [exportTrace, steps, traceFilenameTemplate])
 
   return {
     stepIdx: effectiveStepIdx,

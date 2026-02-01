@@ -2,6 +2,7 @@ import React, { createContext, useContext, ReactNode } from "react"
 import useSessionStorageState from "use-session-storage-state"
 import { LogLevel } from "../components/apvd"
 import { CopyCoordinatesType } from "../components/tables/shapes"
+import { DEFAULT_TEMPLATE } from "../lib/trace-filename"
 
 // Panel visibility toggles
 export type PanelToggles = {
@@ -67,12 +68,18 @@ export type MiscSettings = {
     setCopyCoordinatesType: (v: CopyCoordinatesType) => void
 }
 
+// Export settings
+export type ExportSettings = {
+    traceFilenameTemplate: string
+    setTraceFilenameTemplate: (v: string) => void
+}
+
 export type ResetSettings = {
     /** Clear all session storage settings and reload the page */
     resetAllSettings: () => void
 }
 
-export type SettingsContextType = PanelToggles & TrainingSettings & DisplaySettings & UrlSettings & MiscSettings & ResetSettings
+export type SettingsContextType = PanelToggles & TrainingSettings & DisplaySettings & UrlSettings & MiscSettings & ExportSettings & ResetSettings
 
 const SettingsContext = createContext<SettingsContextType | null>(null)
 
@@ -110,6 +117,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     const [ logLevel, setLogLevel ] = useSessionStorageState<LogLevel>("logLevel", { defaultValue: "info" })
     const [ copyCoordinatesType, setCopyCoordinatesType ] = useSessionStorageState<CopyCoordinatesType>("copyCoordinatesType", { defaultValue: "JSON" })
 
+    // Export settings
+    const [ traceFilenameTemplate, setTraceFilenameTemplate ] = useSessionStorageState<string>("traceFilenameTemplate", { defaultValue: DEFAULT_TEMPLATE })
+
     // Reset all settings to defaults
     const resetAllSettings = () => {
         // Clear all session storage keys used by this app
@@ -121,6 +131,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             "sparkLineLimit", "showIntersectionPoints", "svgBackgroundColor",
             "shapesInUrlFragment", "urlShapesPrecisionScheme",
             "logLevel", "copyCoordinatesType",
+            "traceFilenameTemplate",
         ]
         keysToRemove.forEach(key => sessionStorage.removeItem(key))
         // Reload to apply defaults
@@ -155,6 +166,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         // Misc
         logLevel, setLogLevel,
         copyCoordinatesType, setCopyCoordinatesType,
+        // Export
+        traceFilenameTemplate, setTraceFilenameTemplate,
         // Reset
         resetAllSettings,
     }

@@ -108,6 +108,8 @@ export function Body() {
         svgBackgroundColor, setSvgBackgroundColor,
         // Misc
         copyCoordinatesType, setCopyCoordinatesType,
+        // Export
+        traceFilenameTemplate,
     } = settings
 
     useEffect(
@@ -262,6 +264,7 @@ export function Body() {
         stepBatchSize,
         learningRate: maxErrorRatioStepSize,
         convergenceThreshold,
+        traceFilenameTemplate,
     })
 
     const [ frameLen, setFrameLen ] = useState(0)

@@ -65,6 +65,30 @@
     background-color: #fcc;
   }
 }
+.traceFilenameInput {
+  max-width: 16em;
+  font-family: monospace;
+  font-size: 0.9em;
+  padding: 0 0.5em;
+  &.invalid {
+    background-color: #fcc;
+    border-color: #c00;
+  }
+}
+.invalidVarsHint {
+  display: inline-block;
+  margin-left: 4px;
+  width: 16px;
+  height: 16px;
+  line-height: 16px;
+  text-align: center;
+  background-color: #c00;
+  color: white;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: help;
+}
 .body {
   width: 100%;
   padding: 0 0.8em;
