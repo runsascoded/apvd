@@ -167,14 +167,6 @@ export const ThreePentagons: InitialLayout = [
     regularPolygon(5, 0, 0.6, 1.0, -Math.PI / 2),
 ]
 
-// Four overlapping hexagons in a square arrangement
-export const FourHexagons: InitialLayout = [
-    regularPolygon(6, -0.6, -0.6, 1.0, 0),
-    regularPolygon(6, 0.6, -0.6, 1.0, 0),
-    regularPolygon(6, 0.6, 0.6, 1.0, 0),
-    regularPolygon(6, -0.6, 0.6, 1.0, 0),
-]
-
 // Three hexagons in triangular arrangement (ensures all 7 regions)
 // Centers form equilateral triangle: top, bottom-left, bottom-right
 const hexCenterDist = 0.8  // distance from origin to each center (must be < polygon radius for overlap)
@@ -208,18 +200,35 @@ function elongatedPolygon(n: number, cx: number, cy: number, rx: number, ry: num
     return { vertices }
 }
 
-// Four hexagons mimicking the 4-ellipse Venn layout
-// Hexagons (6 sides) may not have enough vertices to achieve all 15 regions
-const vennR = 2  // elongation ratio (same as ellipse layout)
-export const FourHexagonsVenn: InitialLayout = [
-    elongatedHexagon(c0, c1, 1, vennR),
-    elongatedHexagon(1 + c0, c1, 1, vennR),
-    elongatedHexagon(c1, 1 + c0, vennR, 1),
-    elongatedHexagon(c1, c0, vennR, 1),
+// Elongation ratio for Venn-style layouts (same as ellipse layout)
+const vennR = 2
+
+// Four pentagons (5-gons) in the 4-ellipse Venn pattern
+export const FourPentagons: InitialLayout = [
+    elongatedPolygon(5, c0, c1, 1, vennR),
+    elongatedPolygon(5, 1 + c0, c1, 1, vennR),
+    elongatedPolygon(5, c1, 1 + c0, vennR, 1),
+    elongatedPolygon(5, c1, c0, vennR, 1),
+]
+
+// Four hexagons (6-gons) in the 4-ellipse Venn pattern
+export const FourHexagons: InitialLayout = [
+    elongatedPolygon(6, c0, c1, 1, vennR),
+    elongatedPolygon(6, 1 + c0, c1, 1, vennR),
+    elongatedPolygon(6, c1, 1 + c0, vennR, 1),
+    elongatedPolygon(6, c1, c0, vennR, 1),
+]
+
+// Four octagons (8-gons) in the 4-ellipse Venn pattern
+export const FourOctagons: InitialLayout = [
+    elongatedPolygon(8, c0, c1, 1, vennR),
+    elongatedPolygon(8, 1 + c0, c1, 1, vennR),
+    elongatedPolygon(8, c1, 1 + c0, vennR, 1),
+    elongatedPolygon(8, c1, c0, vennR, 1),
 ]
 
 // Four 12-gons (dodecagons) - better ellipse approximation
-export const FourDodecagonsVenn: InitialLayout = [
+export const FourDodecagons: InitialLayout = [
     elongatedPolygon(12, c0, c1, 1, vennR),
     elongatedPolygon(12, 1 + c0, c1, 1, vennR),
     elongatedPolygon(12, c1, 1 + c0, vennR, 1),
@@ -227,7 +236,7 @@ export const FourDodecagonsVenn: InitialLayout = [
 ]
 
 // Four 20-gons (icosagons) - close ellipse approximation, should achieve all 15 regions
-export const FourIcosagonsVenn: InitialLayout = [
+export const FourIcosagons: InitialLayout = [
     elongatedPolygon(20, c0, c1, 1, vennR),
     elongatedPolygon(20, 1 + c0, c1, 1, vennR),
     elongatedPolygon(20, c1, 1 + c0, vennR, 1),

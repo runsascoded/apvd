@@ -3,7 +3,7 @@ import A from "../components/A"
 import { ValItem } from "../types"
 import {
     CirclesFixed, CirclesFlexible, Disjoint, Ellipses4, Ellipses4t,
-    FourDodecagonsVenn, FourHexagons, FourHexagonsVenn, FourIcosagonsVenn,
+    FourDodecagons, FourHexagons, FourIcosagons, FourOctagons, FourPentagons,
     InitialLayout, Nested, ThreeHexagons, ThreePentagons, toShape,
     TriangleCircle, TwoPentagonsOneHexagon, TwoTriangles
 } from "./layout"
@@ -37,10 +37,11 @@ export const layouts: ValItem<InitialLayout>[] = [
     { name: "Triangle + Circle", val: TriangleCircle, description: "A circle and an overlapping triangle (polygon test)" },
     { name: "Two Triangles", val: TwoTriangles, description: "Two overlapping triangles (Star of David pattern)" },
     { name: "Three Pentagons", val: ThreePentagons, description: "Three overlapping pentagons in a triangular arrangement" },
-    { name: "Three Hexagons", val: ThreeHexagons, description: "Three hexagons in a row (like a classic Venn diagram)" },
-    { name: "Four Hexagons", val: FourHexagons, description: "Four overlapping hexagons in a square arrangement" },
-    { name: "Four Hexagons (Venn)", val: FourHexagonsVenn, description: "Four elongated hexagons (6-gons) in the 4-ellipse Venn pattern" },
-    { name: "Four 12-gons (Venn)", val: FourDodecagonsVenn, description: "Four elongated dodecagons (12-gons) - better ellipse approximation" },
-    { name: "Four 20-gons (Venn)", val: FourIcosagonsVenn, description: "Four elongated icosagons (20-gons) - close ellipse approximation, should achieve all 15 regions" },
+    { name: "Three Hexagons", val: ThreeHexagons, description: "Three hexagons in a triangular arrangement" },
+    { name: "Four 5-gons", val: FourPentagons, description: "Four elongated pentagons" },
+    { name: "Four 6-gons", val: FourHexagons, description: "Four elongated hexagons" },
+    { name: "Four 8-gons", val: FourOctagons, description: "Four elongated octagons" },
+    { name: "Four 12-gons", val: FourDodecagons, description: "Four elongated dodecagons" },
+    { name: "Four 20-gons", val: FourIcosagons, description: "Four elongated icosagons" },
     { name: "2 Pentagons + Hexagon", val: TwoPentagonsOneHexagon, description: "Two pentagons and a hexagon (mixed polygon test)" },
 ]
