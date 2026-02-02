@@ -151,13 +151,10 @@ export function Body() {
         n: [ urlSetMetadata, setUrlSetMetadata ],
     }: ParsedParams = parseHashParams({ params })
 
-    // Track if we've consumed URL shapes (to avoid re-consuming on re-render)
-    const urlShapesConsumedRef = useRef(false)
-
     const [ initialShapes, setInitialShapes ] = useState<Shapes>(() => {
         // URL shapes take precedence over sessionStorage
-        if (urlFragmentShapes && !urlShapesConsumedRef.current) {
-            urlShapesConsumedRef.current = true
+        // (useState initializers only run on mount, so no guard needed)
+        if (urlFragmentShapes) {
             return urlFragmentShapes.shapes
         }
         const str = sessionStorage.getItem(shapesKey)
@@ -251,11 +248,13 @@ export function Body() {
         setRunningState,
         curStep: trainingCurStep,
         modelErrors,
+        regionErrorHistory,
         converged,
         totalSteps,
         minStep,
         minError,
         isComputing,
+        trainingMetrics,
         downloadTrace,
         uploadTrace,
     } = useTrainingClientHook({
@@ -1377,6 +1376,8 @@ export function Body() {
                             panZoom={panZoom}
                             cantAdvance={cantAdvance}
                             cantReverse={cantReverse}
+                            trainingMetrics={trainingMetrics}
+                            isComputing={isComputing}
                         />
                     </div>
                     <div className={`${col6} ${css.settings}`}>
@@ -1423,6 +1424,7 @@ export function Body() {
                                     error={error}
                                     hoveredRegion={hoveredRegion}
                                     setHoveredRegion={setHoveredRegion}
+                                    regionErrorHistory={regionErrorHistory}
                                     {...sparkLineProps}
                                 />
                             }

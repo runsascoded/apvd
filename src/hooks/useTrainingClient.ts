@@ -83,6 +83,20 @@ export type UseTrainingClientOptions = {
   traceFilenameTemplate?: string
 }
 
+// Training performance metrics
+export interface TrainingMetrics {
+  // Rolling average of recent batches
+  stepsPerSecond: number
+  // Last batch timing
+  lastBatchSteps: number
+  lastBatchDurationMs: number
+  // Total stats
+  totalSteps: number
+  totalDurationMs: number
+  // Training start time
+  trainingStartTime: number | null
+}
+
 export type UseTrainingClientResult = {
   // Step navigation
   stepIdx: number | null
@@ -115,8 +129,14 @@ export type UseTrainingClientResult = {
   // Error data for plotting
   modelErrors: number[]
 
+  // Sparkline data: per-region error history (regionKey -> array of error values)
+  regionErrorHistory: Record<string, number[]>
+
   // Loading state
   isComputing: boolean
+
+  // Performance metrics
+  trainingMetrics: TrainingMetrics | null
 
   // Export/import
   exportTrace: () => TraceExport | null
@@ -156,6 +176,25 @@ export interface TraceExport {
   errors: number[]
 }
 
+// HMR state preservation
+interface HmrData {
+  steps: StoredStep[]
+  modelErrors: number[]
+  regionErrorHistory: Record<string, number[]>
+  minStep: number | null
+  minError: number | null
+  stepIdx: number | null
+  trainingMetrics: TrainingMetrics | null
+}
+
+// Get HMR-preserved data if available
+function getHmrData(): HmrData | null {
+  if (import.meta.hot?.data?.trainingState) {
+    return import.meta.hot.data.trainingState as HmrData
+  }
+  return null
+}
+
 export function useTrainingClientHook(options: UseTrainingClientOptions): UseTrainingClientResult {
   const {
     initialSets,
@@ -169,19 +208,25 @@ export function useTrainingClientHook(options: UseTrainingClientOptions): UseTra
 
   const client = useTrainingClient()
 
+  // Get HMR-preserved state (only on initial mount)
+  const hmrData = useMemo(() => getHmrData(), [])
+
   // Session handle (for session-based training)
+  // Note: session is lost on HMR since Worker may be recreated, but we preserve computed steps
   const [sessionHandle, setSessionHandle] = useState<TrainingHandle | null>(null)
 
   // Step history (stored locally for display and sparklines)
-  const [steps, setSteps] = useState<StoredStep[]>([])
-  const [modelErrors, setModelErrors] = useState<number[]>([])
+  const [steps, setSteps] = useState<StoredStep[]>(() => hmrData?.steps ?? [])
+  const [modelErrors, setModelErrors] = useState<number[]>(() => hmrData?.modelErrors ?? [])
+  // Per-region error history for sparklines (regionKey -> array of error values)
+  const [regionErrorHistory, setRegionErrorHistory] = useState<Record<string, number[]>>(() => hmrData?.regionErrorHistory ?? {})
 
   // Best step tracking
-  const [minStep, setMinStep] = useState<number | null>(null)
-  const [minError, setMinError] = useState<number | null>(null)
+  const [minStep, setMinStep] = useState<number | null>(() => hmrData?.minStep ?? null)
+  const [minError, setMinError] = useState<number | null>(() => hmrData?.minError ?? null)
 
   // Step navigation
-  const [stepIdx, setStepIdxState] = useState<number | null>(null)
+  const [stepIdx, setStepIdxState] = useState<number | null>(() => hmrData?.stepIdx ?? null)
   const [vStepIdx, setVStepIdx] = useState<number | null>(null)
   const [runningState, setRunningState] = useState<RunningState>("none")
 
@@ -191,8 +236,28 @@ export function useTrainingClientHook(options: UseTrainingClientOptions): UseTra
   // Loading state
   const [isComputing, setIsComputing] = useState(false)
 
+  // Training performance metrics
+  const [trainingMetrics, setTrainingMetrics] = useState<TrainingMetrics | null>(() => hmrData?.trainingMetrics ?? null)
+
   // Ref to track current inputs for session creation
   const currentInputsRef = useRef<InputSpec[]>([])
+
+  // HMR: Save state before module is replaced
+  useEffect(() => {
+    if (import.meta.hot) {
+      import.meta.hot.dispose((data) => {
+        data.trainingState = {
+          steps,
+          modelErrors,
+          regionErrorHistory,
+          minStep,
+          minError,
+          stepIdx,
+          trainingMetrics,
+        } as HmrData
+      })
+    }
+  }, [steps, modelErrors, regionErrorHistory, minStep, minError, stepIdx, trainingMetrics])
 
   // Derived state
   const totalSteps = steps.length
@@ -293,6 +358,7 @@ export function useTrainingClientHook(options: UseTrainingClientOptions): UseTra
       setSessionHandle(null)
       setSteps([])
       setModelErrors([])
+      setRegionErrorHistory({})
       setMinStep(null)
       setMinError(null)
       setStepIdxState(null)
@@ -426,7 +492,33 @@ export function useTrainingClientHook(options: UseTrainingClientOptions): UseTra
     setIsComputing(true)
 
     try {
+      // Measure training time
+      const batchStart = performance.now()
+
       const result: ContinueTrainingResult = await client.continueTraining(sessionHandle, actualBatchSize)
+
+      const batchEnd = performance.now()
+      const batchDurationMs = batchEnd - batchStart
+      const batchStepsPerSec = (result.steps.length / batchDurationMs) * 1000
+
+      // Update training metrics with exponential moving average
+      setTrainingMetrics(prev => {
+        const alpha = 0.3
+        const prevRate = prev?.stepsPerSecond ?? batchStepsPerSec
+        const newRate = alpha * batchStepsPerSec + (1 - alpha) * prevRate
+        const startTime = prev?.trainingStartTime ?? batchStart
+        const totalMs = batchEnd - startTime
+        const totalStepsComputed = (prev?.totalSteps ?? 0) + result.steps.length
+
+        return {
+          stepsPerSecond: newRate,
+          lastBatchSteps: result.steps.length,
+          lastBatchDurationMs: batchDurationMs,
+          totalSteps: totalStepsComputed,
+          totalDurationMs: totalMs,
+          trainingStartTime: startTime,
+        }
+      })
 
       // Add all computed steps to local history (for sparklines and time-travel)
       const newSteps: StoredStep[] = result.steps.map(s => ({
@@ -435,6 +527,20 @@ export function useTrainingClientHook(options: UseTrainingClientOptions): UseTra
       }))
       setSteps(prev => [...prev, ...newSteps])
       setModelErrors(prev => [...prev, ...result.steps.map(s => s.error)])
+
+      // Accumulate region error history from sparklineData
+      if (result.sparklineData?.regionErrors) {
+        setRegionErrorHistory(prev => {
+          const updated = { ...prev }
+          for (const [key, values] of Object.entries(result.sparklineData!.regionErrors)) {
+            if (!updated[key]) {
+              updated[key] = []
+            }
+            updated[key] = [...updated[key], ...values]
+          }
+          return updated
+        })
+      }
 
       // Update best step tracking from session
       if (result.minError < (minError ?? Infinity)) {
@@ -470,12 +576,29 @@ export function useTrainingClientHook(options: UseTrainingClientOptions): UseTra
     [stepIdx]
   )
 
-  // Build tiered keyframes from steps (power-of-2 indices)
+  // Tiered keyframe helpers (match worker's bucket-based tiering)
+  const BUCKET_SIZE = 1024
+
+  const tier = useCallback((step: number): number => {
+    if (step < 2 * BUCKET_SIZE) return 0
+    return Math.floor(Math.log2(step / BUCKET_SIZE))
+  }, [])
+
+  const resolution = useCallback((t: number): number => {
+    return Math.pow(2, t)
+  }, [])
+
+  const isKeyframe = useCallback((step: number): boolean => {
+    const t = tier(step)
+    const res = resolution(t)
+    return step % res === 0
+  }, [tier, resolution])
+
+  // Build tiered keyframes from steps (bucket-based tiering, same as worker)
   const buildKeyframes = useCallback(() => {
     const keyframes: TraceExport["keyframes"] = []
     for (let i = 0; i < steps.length; i++) {
-      // Include step 0, 1, 2, 4, 8, 16, ... (powers of 2 and their neighbors)
-      if (i === 0 || i === 1 || (i > 1 && (i & (i - 1)) === 0)) {
+      if (isKeyframe(i)) {
         keyframes.push({
           stepIndex: i,
           error: steps[i].error,
@@ -493,7 +616,7 @@ export function useTrainingClientHook(options: UseTrainingClientOptions): UseTra
       })
     }
     return keyframes
-  }, [steps])
+  }, [steps, isKeyframe])
 
   // Export trace data
   const exportTrace = useCallback((): TraceExport | null => {
@@ -666,7 +789,9 @@ export function useTrainingClientHook(options: UseTrainingClientOptions): UseTra
     vars,
     converged,
     modelErrors,
+    regionErrorHistory,
     isComputing,
+    trainingMetrics,
     exportTrace,
     downloadTrace,
     uploadTrace,
