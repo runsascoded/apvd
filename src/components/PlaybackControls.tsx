@@ -6,6 +6,8 @@ import { Step } from "../lib/regions"
 import { RunningState } from "../types"
 import { getSliderValue } from "./inputs"
 import { useSettings } from "../contexts/SettingsContext"
+import { TrainingMetrics } from "../hooks/useTrainingClient"
+import { TimingDisplay } from "./TimingDisplay"
 import css from "../App.module.scss"
 
 // Individual playback button component
@@ -72,6 +74,9 @@ export type PlaybackControlsProps = {
     // Computed flags
     cantAdvance: boolean
     cantReverse: boolean
+    // Training metrics (optional)
+    trainingMetrics?: TrainingMetrics | null
+    isComputing?: boolean
 }
 
 export function PlaybackControls({
@@ -91,6 +96,8 @@ export function PlaybackControls({
     panZoom,
     cantAdvance,
     cantReverse,
+    trainingMetrics,
+    isComputing,
 }: PlaybackControlsProps) {
     const { stepBatchSize, maxSteps } = useSettings()
 
@@ -221,6 +228,11 @@ export function PlaybackControls({
                     {curStep && error && (
                         <span>, error: {(error.v * curStep.targets.total_area).toPrecision(3)}</span>
                     )}
+                    <TimingDisplay
+                        trainingMetrics={trainingMetrics ?? null}
+                        runningState={runningState}
+                        isComputing={isComputing ?? false}
+                    />
                 </p>
                 <p
                     onTouchStart={e => {
