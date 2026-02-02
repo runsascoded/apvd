@@ -110,6 +110,8 @@ export type UseTrainingClientResult = {
   // Best step tracking
   minStep: number | null
   minError: number | null
+  /** History of best steps for error plot visualization */
+  bestStepHistory: { step: number, error: number }[]
 
   // Navigation
   fwdStep: (n?: number) => void
@@ -176,6 +178,33 @@ export interface TraceExport {
   errors: number[]
 }
 
+// V2 trace format (CLI output) - uses btd/interval keyframes instead of dense errors
+export interface TraceExportV2 {
+  version: 2
+  created: string
+  config: {
+    inputs: InputSpec[]
+    targets: TargetsMap
+    learningRate: number
+    convergenceThreshold: number
+  }
+  // Best-to-date keyframes (steps where error improved)
+  btdKeyframes: Array<{
+    stepIndex: number
+    shapes: Shape[]
+    error: number | null
+  }>
+  // Interval keyframes (evenly-spaced for reconstruction)
+  intervalKeyframes: Array<{
+    stepIndex: number
+    shapes: Shape[]
+    error: number | null
+  }>
+  totalSteps: number
+  minError: number
+  minStep: number
+}
+
 // HMR state preservation
 interface HmrData {
   steps: StoredStep[]
@@ -183,6 +212,7 @@ interface HmrData {
   regionErrorHistory: Record<string, number[]>
   minStep: number | null
   minError: number | null
+  bestStepHistory: { step: number, error: number }[]
   stepIdx: number | null
   trainingMetrics: TrainingMetrics | null
 }
@@ -224,6 +254,7 @@ export function useTrainingClientHook(options: UseTrainingClientOptions): UseTra
   // Best step tracking
   const [minStep, setMinStep] = useState<number | null>(() => hmrData?.minStep ?? null)
   const [minError, setMinError] = useState<number | null>(() => hmrData?.minError ?? null)
+  const [bestStepHistory, setBestStepHistory] = useState<{ step: number, error: number }[]>(() => hmrData?.bestStepHistory ?? [])
 
   // Step navigation
   const [stepIdx, setStepIdxState] = useState<number | null>(() => hmrData?.stepIdx ?? null)
@@ -252,12 +283,13 @@ export function useTrainingClientHook(options: UseTrainingClientOptions): UseTra
           regionErrorHistory,
           minStep,
           minError,
+          bestStepHistory,
           stepIdx,
           trainingMetrics,
         } as HmrData
       })
     }
-  }, [steps, modelErrors, regionErrorHistory, minStep, minError, stepIdx, trainingMetrics])
+  }, [steps, modelErrors, regionErrorHistory, minStep, minError, bestStepHistory, stepIdx, trainingMetrics])
 
   // Derived state
   const totalSteps = steps.length
@@ -361,6 +393,7 @@ export function useTrainingClientHook(options: UseTrainingClientOptions): UseTra
       setRegionErrorHistory({})
       setMinStep(null)
       setMinError(null)
+      setBestStepHistory([])
       setStepIdxState(null)
       setCurStep(null)
       setRunningState("none")
@@ -546,6 +579,8 @@ export function useTrainingClientHook(options: UseTrainingClientOptions): UseTra
       if (result.minError < (minError ?? Infinity)) {
         setMinError(result.minError)
         setMinStep(result.minStep)
+        // Track best step history for error plot visualization
+        setBestStepHistory(prev => [...prev, { step: result.minStep, error: result.minError }])
       }
 
       // Jump to end of new batch (like prod does)
@@ -713,56 +748,120 @@ export function useTrainingClientHook(options: UseTrainingClientOptions): UseTra
           jsonString = await file.text()
         }
 
-        const trace = JSON.parse(jsonString) as TraceExport
+        const raw = JSON.parse(jsonString)
+        const version = raw.version as number
 
-        // Validate trace format
-        if (trace.version !== 1) {
-          console.error(`Unsupported trace version: ${trace.version}`)
-          return
-        }
+        let loadedSteps: StoredStep[] = []
+        let loadedErrors: number[] = []
+        let minStep: number
+        let minError: number
+        let totalSteps: number
+        let keyframeCount: number
 
-        // Load trace data into state
-        const loadedSteps: StoredStep[] = []
-        const loadedErrors: number[] = trace.errors
+        if (version === 1) {
+          // V1 format: TraceExport with dense errors[]
+          const trace = raw as TraceExport
+          loadedErrors = trace.errors
+          minStep = trace.minStep
+          minError = trace.minError
+          totalSteps = trace.totalSteps
 
-        // Build steps from keyframes (sparse) - we only have keyframes, not all steps
-        for (const kf of trace.keyframes) {
-          // Ensure we have entries up to this keyframe
-          while (loadedSteps.length <= kf.stepIndex) {
-            loadedSteps.push({ shapes: [], error: 0 })
-          }
-          loadedSteps[kf.stepIndex] = {
-            shapes: kf.shapes,
-            error: kf.error,
-          }
-        }
-
-        // Fill in missing steps with interpolated/nearest keyframe data
-        // For now, just use the nearest keyframe's shapes
-        let lastShapes: Shape[] = trace.keyframes[0]?.shapes ?? []
-        for (let i = 0; i < loadedErrors.length; i++) {
-          if (!loadedSteps[i] || loadedSteps[i].shapes.length === 0) {
-            // Find nearest keyframe
-            const nearestKf = trace.keyframes.reduce((prev, curr) =>
-              Math.abs(curr.stepIndex - i) < Math.abs(prev.stepIndex - i) ? curr : prev
-            )
-            loadedSteps[i] = {
-              shapes: nearestKf.shapes,
-              error: loadedErrors[i],
+          // Build steps from keyframes (sparse)
+          for (const kf of trace.keyframes) {
+            while (loadedSteps.length <= kf.stepIndex) {
+              loadedSteps.push({ shapes: [], error: 0 })
+            }
+            loadedSteps[kf.stepIndex] = {
+              shapes: kf.shapes,
+              error: kf.error,
             }
           }
-          lastShapes = loadedSteps[i].shapes
+
+          // Fill in missing steps with nearest keyframe shapes
+          for (let i = 0; i < loadedErrors.length; i++) {
+            if (!loadedSteps[i] || loadedSteps[i].shapes.length === 0) {
+              const nearestKf = trace.keyframes.reduce((prev, curr) =>
+                Math.abs(curr.stepIndex - i) < Math.abs(prev.stepIndex - i) ? curr : prev
+              )
+              loadedSteps[i] = {
+                shapes: nearestKf.shapes,
+                error: loadedErrors[i],
+              }
+            }
+          }
+          keyframeCount = trace.keyframes.length
+        } else if (version === 2) {
+          // V2 format: TraceExportV2 with btd/interval keyframes
+          const trace = raw as TraceExportV2
+          minStep = trace.minStep
+          minError = trace.minError
+          totalSteps = trace.totalSteps
+
+          // Merge and sort all keyframes by stepIndex
+          const allKeyframes = [...trace.btdKeyframes, ...trace.intervalKeyframes]
+            .sort((a, b) => a.stepIndex - b.stepIndex)
+          keyframeCount = allKeyframes.length
+
+          // Build sparse steps from keyframes
+          for (const kf of allKeyframes) {
+            while (loadedSteps.length <= kf.stepIndex) {
+              loadedSteps.push({ shapes: [], error: 0 })
+            }
+            loadedSteps[kf.stepIndex] = {
+              shapes: kf.shapes,
+              error: kf.error ?? 0,
+            }
+          }
+
+          // Build errors array from keyframes (sparse - only keyframe errors)
+          // Fill totalSteps entries, interpolating between keyframes
+          for (let i = 0; i < totalSteps; i++) {
+            // Find surrounding keyframes
+            let prevKf = allKeyframes[0]
+            let nextKf = allKeyframes[allKeyframes.length - 1]
+            for (const kf of allKeyframes) {
+              if (kf.stepIndex <= i) prevKf = kf
+              if (kf.stepIndex >= i && kf.stepIndex < nextKf.stepIndex) {
+                nextKf = kf
+                break
+              }
+            }
+
+            if (prevKf.stepIndex === nextKf.stepIndex || i === prevKf.stepIndex) {
+              loadedErrors[i] = prevKf.error ?? 0
+            } else if (i === nextKf.stepIndex) {
+              loadedErrors[i] = nextKf.error ?? 0
+            } else {
+              // Linear interpolation between keyframes
+              const t = (i - prevKf.stepIndex) / (nextKf.stepIndex - prevKf.stepIndex)
+              loadedErrors[i] = (prevKf.error ?? 0) * (1 - t) + (nextKf.error ?? 0) * t
+            }
+
+            // Fill missing step shapes with nearest keyframe
+            if (!loadedSteps[i] || loadedSteps[i].shapes.length === 0) {
+              const nearestKf = allKeyframes.reduce((prev, curr) =>
+                Math.abs(curr.stepIndex - i) < Math.abs(prev.stepIndex - i) ? curr : prev
+              )
+              loadedSteps[i] = {
+                shapes: nearestKf.shapes,
+                error: loadedErrors[i],
+              }
+            }
+          }
+        } else {
+          console.error(`Unsupported trace version: ${version}`)
+          return
         }
 
         // Update state
         setSteps(loadedSteps)
         setModelErrors(loadedErrors)
-        setMinStep(trace.minStep)
-        setMinError(trace.minError)
+        setMinStep(minStep)
+        setMinError(minError)
         setStepIdxState(0)
         setRunningState("none")
 
-        console.log(`Imported trace: ${trace.totalSteps} steps, ${trace.keyframes.length} keyframes from ${file.name}`)
+        console.log(`Imported trace v${version}: ${totalSteps} steps, ${keyframeCount} keyframes from ${file.name}`)
       } catch (err) {
         console.error("Failed to import trace:", err)
       }
@@ -779,6 +878,7 @@ export function useTrainingClientHook(options: UseTrainingClientOptions): UseTra
     curStep,
     minStep,
     minError,
+    bestStepHistory,
     fwdStep,
     revStep,
     cantAdvance,

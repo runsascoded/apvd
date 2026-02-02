@@ -108,6 +108,7 @@ export function Body() {
         svgBackgroundColor, setSvgBackgroundColor,
         // Misc
         copyCoordinatesType, setCopyCoordinatesType,
+        logXAxis, setLogXAxis,
         // Export
         traceFilenameTemplate,
     } = settings
@@ -253,6 +254,7 @@ export function Body() {
         totalSteps,
         minStep,
         minError,
+        bestStepHistory,
         isComputing,
         trainingMetrics,
         downloadTrace,
@@ -1466,6 +1468,8 @@ export function Body() {
                                 theme={theme}
                                 diagramBg={diagramBg}
                                 setVStepIdx={setVStepIdx}
+                                logXAxis={logXAxis}
+                                bestStepHistory={bestStepHistory}
                             />
                         </DetailsSection>
                     </div>

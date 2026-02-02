@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@apvd/client": "workspace:*",
+    "@rdub/agg-plot": "workspace:*",
     "@types/pako": "^2.0.4",
     "apvd-wasm": "github:runsascoded/shapes#34f256abb241a8b07a7ba3540fa410c98a33fbdf",
     "bootstrap": "^5.3.3",

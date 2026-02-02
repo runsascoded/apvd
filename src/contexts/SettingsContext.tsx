@@ -50,6 +50,8 @@ export type DisplaySettings = {
     setShowIntersectionPoints: (v: boolean) => void
     svgBackgroundColor: string
     setSvgBackgroundColor: (v: string) => void
+    logXAxis: boolean
+    setLogXAxis: (v: boolean) => void
 }
 
 // URL/persistence settings
@@ -108,6 +110,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     const [ sparkLineLimit, setSparkLineLimit ] = useSessionStorageState("sparkLineLimit", { defaultValue: 40 })
     const [ showIntersectionPoints, setShowIntersectionPoints ] = useSessionStorageState("showIntersectionPoints", { defaultValue: false })
     const [ svgBackgroundColor, setSvgBackgroundColor ] = useSessionStorageState<string>("svgBackgroundColor", { defaultValue: "" })
+    const [ logXAxis, setLogXAxis ] = useSessionStorageState("logXAxis", { defaultValue: false })
 
     // URL settings
     const [ stateInUrlFragment, setStateInUrlFragment ] = useSessionStorageState<boolean>("shapesInUrlFragment", { defaultValue: true })
@@ -128,7 +131,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             "varsShown", "shapesShown", "layoutsShown",
             "maxErrorRatioStepSize", "maxSteps", "stepBatchSize", "convergenceThreshold",
             "showRegionSizes", "shapeFillOpacity", "autoCenter", "showSparkLines",
-            "sparkLineLimit", "showIntersectionPoints", "svgBackgroundColor",
+            "sparkLineLimit", "showIntersectionPoints", "svgBackgroundColor", "logXAxis",
             "shapesInUrlFragment", "urlShapesPrecisionScheme",
             "logLevel", "copyCoordinatesType",
             "traceFilenameTemplate",
@@ -160,6 +163,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         sparkLineLimit, setSparkLineLimit,
         showIntersectionPoints, setShowIntersectionPoints,
         svgBackgroundColor, setSvgBackgroundColor,
+        logXAxis, setLogXAxis,
         // URL
         stateInUrlFragment, setStateInUrlFragment,
         urlShapesPrecisionScheme, setUrlShapesPrecisionScheme,
@@ -221,5 +225,6 @@ export function useDisplaySettings(): DisplaySettings {
         sparkLineLimit: ctx.sparkLineLimit, setSparkLineLimit: ctx.setSparkLineLimit,
         showIntersectionPoints: ctx.showIntersectionPoints, setShowIntersectionPoints: ctx.setShowIntersectionPoints,
         svgBackgroundColor: ctx.svgBackgroundColor, setSvgBackgroundColor: ctx.setSvgBackgroundColor,
+        logXAxis: ctx.logXAxis, setLogXAxis: ctx.setLogXAxis,
     }
 }

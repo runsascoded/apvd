@@ -307,6 +307,13 @@
       width: 15em;
       height: 15em;
     }
+    .aggregationControl {
+      font-size: 0.85em;
+      padding: 0.3em 0;
+      label {
+        margin-right: 1em;
+      }
+    }
     .stats {
       width: auto;
     }

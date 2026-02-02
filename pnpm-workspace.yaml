@@ -1,3 +1,4 @@
 packages:
   - .
   - ../../shapes/client
+  - ../../../js/agg-plot
