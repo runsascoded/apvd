@@ -4,6 +4,38 @@ import {Sparklines, SparklinesLine} from "react-sparklines";
 import {max} from "../lib/math";
 import React from "react";
 
+/** Sparkline cell that takes pre-computed array of values (for Worker-based training) */
+export function ArraySparkLineCell(
+    { data, color, sparkLineLimit, sparkLineStrokeWidth, sparkLineMargin, sparkLineWidth, sparkLineHeight, className = '', }: {
+        data: number[]
+        color: string
+        className?: string
+    } & SparkLineProps
+) {
+    // Take most recent sparkLineLimit values, pad with first value if needed
+    let displayData = data.slice(-sparkLineLimit)
+    if (displayData.length < sparkLineLimit && displayData.length > 0) {
+        displayData = [...Array(sparkLineLimit - displayData.length).fill(displayData[0]), ...displayData]
+    }
+    if (displayData.length === 0) {
+        return <td className={className} style={{ width: sparkLineWidth, height: sparkLineHeight }}></td>
+    }
+    return <td className={className}>
+        <Sparklines
+            data={displayData}
+            limit={sparkLineLimit}
+            width={40} height={20}
+            svgWidth={sparkLineWidth} svgHeight={sparkLineHeight}
+            margin={sparkLineMargin}
+        >
+            <SparklinesLine
+                color={color}
+                style={{strokeWidth: sparkLineStrokeWidth,}}
+            />
+        </Sparklines>
+    </td>
+}
+
 export const SparkNum = (v: number | null | undefined, className: string = '') =>
     <td className={`${css.sparkNum} ${className}`}>
         <span>{v === null || v === undefined ? '' : v.toPrecision(4)}</span>

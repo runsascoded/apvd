@@ -2,7 +2,7 @@ import {Step} from "../../lib/regions";
 import {Dual} from "apvd-wasm"
 import React, {Dispatch, useCallback, useMemo, useState} from "react";
 import css from "../../App.module.scss";
-import {SparkLineProps, SparkNum} from "../spark-lines";
+import {ArraySparkLineCell, SparkLineProps, SparkNum} from "../spark-lines";
 import {S} from "../../lib/shape";
 import {abs} from "../../lib/math";
 import {makeTargets, Target, Targets} from "../../lib/targets";
@@ -26,7 +26,7 @@ export function getNegativeEntries(targets: Targets): Map<string, number> {
 }
 
 export function TargetsTable(
-    { initialSets, targets, setTargets, showDisjointSets, curStep, error, hoveredRegion, setHoveredRegion, ...sparkLineProps }: {
+    { initialSets, targets, setTargets, showDisjointSets, curStep, error, hoveredRegion, setHoveredRegion, regionErrorHistory, ...sparkLineProps }: {
         initialSets: S[]
         targets: Targets
         setTargets: Dispatch<Targets>
@@ -35,6 +35,8 @@ export function TargetsTable(
         error: Dual
         hoveredRegion: string | null
         setHoveredRegion: Dispatch<string | null>
+        /** Per-region error history for sparklines (regionKey -> array of error values) */
+        regionErrorHistory: Record<string, number[]>
     } & SparkLineProps
 ) {
     // console.log(`TargetsTable: ${initialShapes.length} shapes`)
@@ -101,7 +103,7 @@ export function TargetsTable(
     const [ editingValue, setEditingValue ] = useState<[ string, string ] | null>(null)
     const totalTargetArea = curStep.targets.total_area
     const [ showTargetCurCol, setShowTargetCurCol ] = useState(false)
-    const { showSparkLines, sparkLineWidth, sparkLineHeight } = sparkLineProps
+    const { showSparkLines, sparkLineWidth, sparkLineHeight, sparklineColors } = sparkLineProps
 
     // Compute max absolute error for normalizing error bars
     const maxAbsError = useMemo(() => {
@@ -115,9 +117,8 @@ export function TargetsTable(
         return max || 1  // Avoid division by zero
     }, [displayTargets, curStep.errors, totalTargetArea])
 
-    // Note: Sparklines are disabled with Worker-based training since we don't have
-    // step history on the main thread. Can be re-enabled with a step history cache.
-    const sparklinesEnabled = false
+    // Sparklines are enabled when we have region error history data
+    const hasRegionHistory = Object.keys(regionErrorHistory).length > 0
 
     const targetTableRows = displayTargets.map(([ key, value ]) => {
         const name = targetName(key)
@@ -202,8 +203,13 @@ export function TargetsTable(
                     title={isMissing ? 'Missing region' : isExtra ? 'Extra region' : undefined}
                 />
             </td>
-            {showSparkLines && sparklinesEnabled && (
-                <td className={css.sparkLineCell} style={{ width: sparkLineWidth, height: sparkLineHeight }}></td>
+            {showSparkLines && (hasRegionHistory
+                ? <ArraySparkLineCell
+                    data={regionErrorHistory[key] || []}
+                    color={sparklineColors.red}
+                    {...sparkLineProps}
+                />
+                : <td className={css.sparkLineCell} style={{ width: sparkLineWidth, height: sparkLineHeight }}></td>
             )}
         </tr>
     })
@@ -225,7 +231,7 @@ export function TargetsTable(
                 <td className={css.sparkNum}>{sum}</td>
                 {SparkNum(error.v * totalTargetArea)}
                 <td className={css.errorBarCell}></td>
-                {showSparkLines && sparklinesEnabled && (
+                {showSparkLines && (
                     <td className={css.sparkLineCell} style={{ width: sparkLineWidth, height: sparkLineHeight }}></td>
                 )}
             </tr>

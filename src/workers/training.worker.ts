@@ -618,13 +618,41 @@ async function handleContinueTraining(id: string, handleId: string, numSteps: nu
     // Collect per-step data for return (skip first step as it duplicates last)
     const batchSteps: Array<{ stepIndex: number; error: number; shapes: Shape[] }> = []
 
+    // Sparkline data: gradients and per-region errors
+    const sparklineGradients: number[][] = []
+    const sparklineRegionErrors: Record<string, number[]> = {}
+
     for (let i = 1; i < modelSteps.length; i++) {
-      const wasmStep = modelSteps[i]
+      const wasmStep = modelSteps[i] as {
+        error: { v: number; d: number[] }
+        shapes: unknown[]
+        errors: Map<string, { error: { v: number } }> | Record<string, { error: { v: number } }>
+      }
       const stepIndex = startStep + i
-      const error = (wasmStep as { error: { v: number } }).error.v
-      const shapes = extractShapes((wasmStep as { shapes: unknown[] }).shapes)
+      const error = wasmStep.error.v
+      const shapes = extractShapes(wasmStep.shapes)
 
       batchSteps.push({ stepIndex, error, shapes })
+
+      // Extract gradients for sparklines
+      sparklineGradients.push(wasmStep.error.d || [])
+
+      // Extract per-region errors for sparklines
+      // Keep the full key format (e.g., "0-1-" or "0*1*") to match targets table
+      const errors = wasmStep.errors
+      if (errors) {
+        const errorEntries = errors instanceof Map ? errors.entries() : Object.entries(errors)
+        for (const [regionKey, regionErr] of errorEntries) {
+          if (!sparklineRegionErrors[regionKey]) {
+            sparklineRegionErrors[regionKey] = []
+          }
+          // Pad with zeros if we're behind
+          while (sparklineRegionErrors[regionKey].length < i - 1) {
+            sparklineRegionErrors[regionKey].push(0)
+          }
+          sparklineRegionErrors[regionKey].push((regionErr as { error: { v: number } }).error.v)
+        }
+      }
 
       // Store keyframe in session history if tiered storage says so
       if (isKeyframe(stepIndex, bucketSize)) {
@@ -656,6 +684,11 @@ async function handleContinueTraining(id: string, handleId: string, numSteps: nu
       currentShapes,
       currentError,
       steps: batchSteps,
+      sparklineData: {
+        errors: batchSteps.map(s => s.error),
+        gradients: sparklineGradients,
+        regionErrors: sparklineRegionErrors,
+      },
     }
 
     respond({ id, type: "result", payload: result })

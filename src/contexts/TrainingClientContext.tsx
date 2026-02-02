@@ -31,6 +31,16 @@ export interface TrainingClient extends BaseTrainingClient {
   continueTraining(handle: TrainingHandle, numSteps: number): Promise<ContinueTrainingResult>
 }
 
+/** Sparkline data for visualization */
+export interface SparklineData {
+  /** Error values for each step in the batch */
+  errors: number[]
+  /** Gradient vectors for each step (gradients[stepIdx][varIdx]) */
+  gradients: number[][]
+  /** Per-region error values for each step (regionErrors[regionKey][stepIdx]) */
+  regionErrors: Record<string, number[]>
+}
+
 export interface ContinueTrainingResult {
   /** New total step count */
   totalSteps: number
@@ -50,6 +60,8 @@ export interface ContinueTrainingResult {
     error: number
     shapes: Shape[]
   }>
+  /** Sparkline-ready data for visualization */
+  sparklineData?: SparklineData
 }
 
 // Batch training types
@@ -82,6 +94,8 @@ export interface BatchTrainingResult {
   minStepIndex: number
   /** Final shapes (convenience for next batch input) */
   finalShapes: Shape[]
+  /** Sparkline-ready data for visualization */
+  sparklineData: SparklineData
 }
 
 // Worker message types (matching the worker's protocol)
@@ -480,6 +494,28 @@ function createMainThreadClient(): TrainingClient {
       let minError = steps[0].error
       let minStepIndex = 0
 
+      // Sparkline data tracking
+      const sparklineGradients: number[][] = []
+      const sparklineRegionErrors: Record<string, number[]> = {}
+
+      // Extract initial gradients and region errors
+      // Keep the full key format (e.g., "0-1-" or "0*1*") to match targets table
+      const initialStep = wasmStep as {
+        error: { v: number; d?: number[] }
+        errors: Map<string, { error: { v: number } }> | Record<string, { error: { v: number } }>
+      }
+      sparklineGradients.push(initialStep.error.d || [])
+      const initialErrors = initialStep.errors
+      if (initialErrors) {
+        const errorEntries = initialErrors instanceof Map ? initialErrors.entries() : Object.entries(initialErrors)
+        for (const [regionKey, regionErr] of errorEntries) {
+          if (!sparklineRegionErrors[regionKey]) {
+            sparklineRegionErrors[regionKey] = []
+          }
+          sparklineRegionErrors[regionKey].push((regionErr as { error: { v: number } }).error.v)
+        }
+      }
+
       // Compute remaining steps with error-scaled stepping
       for (let i = 1; i < numSteps; i++) {
         const prevError = (wasmStep as { error: { v: number } }).error.v
@@ -495,6 +531,27 @@ function createMainThreadClient(): TrainingClient {
           minStepIndex = i
         }
 
+        // Extract sparkline data
+        const stepData = wasmStep as {
+          error: { v: number; d?: number[] }
+          errors: Map<string, { error: { v: number } }> | Record<string, { error: { v: number } }>
+        }
+        // Extract sparkline data - keep full key format to match targets table
+        sparklineGradients.push(stepData.error.d || [])
+        const stepErrors = stepData.errors
+        if (stepErrors) {
+          const errorEntries = stepErrors instanceof Map ? stepErrors.entries() : Object.entries(stepErrors)
+          for (const [regionKey, regionErr] of errorEntries) {
+            if (!sparklineRegionErrors[regionKey]) {
+              sparklineRegionErrors[regionKey] = []
+            }
+            while (sparklineRegionErrors[regionKey].length < i) {
+              sparklineRegionErrors[regionKey].push(0)
+            }
+            sparklineRegionErrors[regionKey].push((regionErr as { error: { v: number } }).error.v)
+          }
+        }
+
         // Yield periodically for responsiveness
         if (i % 100 === 0) {
           await new Promise(resolve => setTimeout(resolve, 0))
@@ -506,6 +563,11 @@ function createMainThreadClient(): TrainingClient {
         minError,
         minStepIndex,
         finalShapes: steps[steps.length - 1].shapes,
+        sparklineData: {
+          errors: steps.map(s => s.error),
+          gradients: sparklineGradients,
+          regionErrors: sparklineRegionErrors,
+        },
       }
     },
 
@@ -534,13 +596,38 @@ function createMainThreadClient(): TrainingClient {
       // Collect per-step data for return (skip first step as it duplicates last)
       const batchSteps: Array<{ stepIndex: number; error: number; shapes: Shape[] }> = []
 
+      // Sparkline data tracking
+      const sparklineGradients: number[][] = []
+      const sparklineRegionErrors: Record<string, number[]> = {}
+
       for (let i = 1; i < modelSteps.length; i++) {
-        const wasmStep = modelSteps[i]
+        const wasmStep = modelSteps[i] as {
+          error: { v: number; d?: number[] }
+          shapes: unknown[]
+          errors: Map<string, { error: { v: number } }> | Record<string, { error: { v: number } }>
+        }
         const stepIndex = startStep + i
-        const error = (wasmStep as { error: { v: number } }).error.v
-        const shapes = extractShapes((wasmStep as { shapes: unknown[] }).shapes)
+        const error = wasmStep.error.v
+        const shapes = extractShapes(wasmStep.shapes)
 
         batchSteps.push({ stepIndex, error, shapes })
+
+        // Extract sparkline data
+        // Extract sparkline data - keep full key format to match targets table
+        sparklineGradients.push(wasmStep.error.d || [])
+        const stepErrors = wasmStep.errors
+        if (stepErrors) {
+          const errorEntries = stepErrors instanceof Map ? stepErrors.entries() : Object.entries(stepErrors)
+          for (const [regionKey, regionErr] of errorEntries) {
+            if (!sparklineRegionErrors[regionKey]) {
+              sparklineRegionErrors[regionKey] = []
+            }
+            while (sparklineRegionErrors[regionKey].length < i - 1) {
+              sparklineRegionErrors[regionKey].push(0)
+            }
+            sparklineRegionErrors[regionKey].push((regionErr as { error: { v: number } }).error.v)
+          }
+        }
 
         // Store keyframes periodically in session history
         if (stepIndex % 1024 === 0) {
@@ -572,6 +659,11 @@ function createMainThreadClient(): TrainingClient {
         currentShapes,
         currentError,
         steps: batchSteps,
+        sparklineData: {
+          errors: batchSteps.map(s => s.error),
+          gradients: sparklineGradients,
+          regionErrors: sparklineRegionErrors,
+        },
       }
     },
 
