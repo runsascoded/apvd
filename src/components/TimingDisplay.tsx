@@ -1,12 +1,9 @@
 import { useMemo } from "react"
 import { OverlayTrigger, Tooltip } from "react-bootstrap"
 import { TrainingMetrics } from "../hooks/useTrainingClient"
-import { RunningState } from "../types"
 
 interface TimingDisplayProps {
   trainingMetrics: TrainingMetrics | null
-  runningState: RunningState
-  isComputing: boolean
 }
 
 function formatRate(rate: number): string {
@@ -23,9 +20,7 @@ function formatDuration(ms: number): string {
   return `${(ms / 1000).toFixed(1)}s`
 }
 
-export function TimingDisplay({ trainingMetrics, runningState, isComputing }: TimingDisplayProps) {
-  const isTraining = runningState === "fwd" || isComputing
-
+export function TimingDisplay({ trainingMetrics }: TimingDisplayProps) {
   const tooltipContent = useMemo(() => {
     if (!trainingMetrics) return null
 
@@ -54,8 +49,8 @@ export function TimingDisplay({ trainingMetrics, runningState, isComputing }: Ti
     )
   }, [trainingMetrics])
 
-  // Only show when training and we have metrics
-  if (!isTraining || !trainingMetrics) {
+  // Show whenever we have metrics (not just when training)
+  if (!trainingMetrics) {
     return null
   }
 

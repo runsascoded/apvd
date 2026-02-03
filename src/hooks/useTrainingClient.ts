@@ -97,6 +97,19 @@ export interface TrainingMetrics {
   trainingStartTime: number | null
 }
 
+// Trace storage statistics
+export interface TraceStats {
+  totalSteps: number
+  keyframeCount: number
+  compressionRatio: number
+  // Estimated storage sizes in bytes
+  errorsBytes: number
+  keyframesBytes: number
+  totalBytes: number
+  // Bucket size used for tiering
+  bucketSize: number
+}
+
 export type UseTrainingClientResult = {
   // Step navigation
   stepIdx: number | null
@@ -145,6 +158,9 @@ export type UseTrainingClientResult = {
   downloadTrace: () => void
   /** Upload and import a trace file (.json or .json.gz) */
   uploadTrace: () => void
+
+  // Trace storage statistics
+  traceStats: TraceStats | null
 }
 
 // Local step storage
@@ -539,9 +555,9 @@ export function useTrainingClientHook(options: UseTrainingClientOptions): UseTra
         const alpha = 0.3
         const prevRate = prev?.stepsPerSecond ?? batchStepsPerSec
         const newRate = alpha * batchStepsPerSec + (1 - alpha) * prevRate
-        const startTime = prev?.trainingStartTime ?? batchStart
-        const totalMs = batchEnd - startTime
         const totalStepsComputed = (prev?.totalSteps ?? 0) + result.steps.length
+        // Accumulate only actual compute time (not wall-clock time including pauses)
+        const totalMs = (prev?.totalDurationMs ?? 0) + batchDurationMs
 
         return {
           stepsPerSecond: newRate,
@@ -549,7 +565,7 @@ export function useTrainingClientHook(options: UseTrainingClientOptions): UseTra
           lastBatchDurationMs: batchDurationMs,
           totalSteps: totalStepsComputed,
           totalDurationMs: totalMs,
-          trainingStartTime: startTime,
+          trainingStartTime: prev?.trainingStartTime ?? batchStart,
         }
       })
 
@@ -870,6 +886,47 @@ export function useTrainingClientHook(options: UseTrainingClientOptions): UseTra
     input.click()
   }, [])
 
+  // Compute trace storage statistics
+  const traceStats = useMemo((): TraceStats | null => {
+    if (steps.length === 0) return null
+
+    // Count keyframes using the same logic as buildKeyframes
+    let keyframeCount = 0
+    for (let i = 0; i < steps.length; i++) {
+      if (isKeyframe(i)) {
+        keyframeCount++
+      }
+    }
+    // Always include the last step if not already a keyframe
+    const lastIdx = steps.length - 1
+    if (lastIdx > 0 && !isKeyframe(lastIdx)) {
+      keyframeCount++
+    }
+
+    // Estimate storage sizes
+    // Errors: 8 bytes per float64, but we round to 6 sig figs so ~7 chars avg in JSON
+    const errorsBytes = steps.length * 7
+
+    // Keyframes: estimate based on shape complexity
+    // Each shape has ~5-20 numbers depending on type, ~8 chars each in JSON
+    const numShapes = steps[0]?.shapes.length ?? 0
+    const avgCoordsPerShape = 10 // rough estimate
+    const keyframeShapeBytes = numShapes * avgCoordsPerShape * 8
+    const keyframesBytes = keyframeCount * (keyframeShapeBytes + 20) // +20 for stepIndex, error
+
+    const totalBytes = errorsBytes + keyframesBytes
+
+    return {
+      totalSteps: steps.length,
+      keyframeCount,
+      compressionRatio: steps.length / Math.max(1, keyframeCount),
+      errorsBytes,
+      keyframesBytes,
+      totalBytes,
+      bucketSize: BUCKET_SIZE,
+    }
+  }, [steps, isKeyframe])
+
   return {
     stepIdx: effectiveStepIdx,
     setStepIdx,
@@ -895,5 +952,6 @@ export function useTrainingClientHook(options: UseTrainingClientOptions): UseTra
     exportTrace,
     downloadTrace,
     uploadTrace,
+    traceStats,
   }
 }

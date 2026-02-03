@@ -257,6 +257,7 @@ export function Body() {
         bestStepHistory,
         isComputing,
         trainingMetrics,
+        traceStats,
         downloadTrace,
         uploadTrace,
     } = useTrainingClientHook({
@@ -1380,6 +1381,7 @@ export function Body() {
                             cantReverse={cantReverse}
                             trainingMetrics={trainingMetrics}
                             isComputing={isComputing}
+                            traceStats={traceStats}
                         />
                     </div>
                     <div className={`${col6} ${css.settings}`}>

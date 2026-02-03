@@ -6,8 +6,9 @@ import { Step } from "../lib/regions"
 import { RunningState } from "../types"
 import { getSliderValue } from "./inputs"
 import { useSettings } from "../contexts/SettingsContext"
-import { TrainingMetrics } from "../hooks/useTrainingClient"
+import { TrainingMetrics, TraceStats } from "../hooks/useTrainingClient"
 import { TimingDisplay } from "./TimingDisplay"
+import { TraceStatsDisplay } from "./TraceStatsDisplay"
 import css from "../App.module.scss"
 
 // Individual playback button component
@@ -77,6 +78,8 @@ export type PlaybackControlsProps = {
     // Training metrics (optional)
     trainingMetrics?: TrainingMetrics | null
     isComputing?: boolean
+    // Trace storage statistics
+    traceStats?: TraceStats | null
 }
 
 export function PlaybackControls({
@@ -98,6 +101,7 @@ export function PlaybackControls({
     cantReverse,
     trainingMetrics,
     isComputing,
+    traceStats,
 }: PlaybackControlsProps) {
     const { stepBatchSize, maxSteps } = useSettings()
 
@@ -228,11 +232,6 @@ export function PlaybackControls({
                     {curStep && error && (
                         <span>, error: {(error.v * curStep.targets.total_area).toPrecision(3)}</span>
                     )}
-                    <TimingDisplay
-                        trainingMetrics={trainingMetrics ?? null}
-                        runningState={runningState}
-                        isComputing={isComputing ?? false}
-                    />
                 </p>
                 <p
                     onTouchStart={e => {
@@ -257,6 +256,10 @@ export function PlaybackControls({
                             Best step: {minStep}, error: {(minError * curStep.targets.total_area).toPrecision(3)} ({(minError * 100).toPrecision(3)}%)
                         </span>
                     )}
+                </p>
+                <p>
+                    <TimingDisplay trainingMetrics={trainingMetrics ?? null} />
+                    <TraceStatsDisplay traceStats={traceStats ?? null} />
                 </p>
                 {repeatSteps && stepIdx === repeatSteps[1] ? (
                     <p className={css.repeatSteps}>♻️ Step {repeatSteps[1]} repeats step {repeatSteps[0]}</p>
