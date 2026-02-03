@@ -22,6 +22,7 @@ import { makeStep, Step } from "../lib/regions"
 import { CircleCoords, Coord, getPolygonCoords, makeVars, Vars, XYRRCoords, XYRRTCoords } from "../lib/vars"
 import { RunningState } from "../types"
 import { buildTemplateValues, generateFilename, DEFAULT_TEMPLATE } from "../lib/trace-filename"
+import { traceStorage, TraceData } from "../lib/trace-storage"
 
 /**
  * Extracts plain JS number from a WASM value that may be wrapped in Dual { v: number }.
@@ -161,6 +162,12 @@ export type UseTrainingClientResult = {
 
   // Trace storage statistics
   traceStats: TraceStats | null
+
+  // OPFS trace persistence
+  /** Save current trace to OPFS */
+  saveTraceToStorage: (name?: string) => Promise<void>
+  /** Load a trace from OPFS by ID */
+  loadTraceFromStorage: (traceId: string) => Promise<void>
 }
 
 // Local step storage
@@ -927,6 +934,99 @@ export function useTrainingClientHook(options: UseTrainingClientOptions): UseTra
     }
   }, [steps, isKeyframe])
 
+  // Save current trace to OPFS storage
+  const saveTraceToStorage = useCallback(async (name?: string) => {
+    const trace = exportTrace()
+    if (!trace) {
+      throw new Error("No trace data to save")
+    }
+    await traceStorage.save(trace, name)
+  }, [exportTrace])
+
+  // Load a trace from OPFS storage and restore state
+  const loadTraceFromStorage = useCallback(async (traceId: string) => {
+    const trace = await traceStorage.load(traceId) as TraceData
+
+    // Determine version and extract data
+    const version = "version" in trace ? trace.version : 1
+    let loadedSteps: StoredStep[]
+    let loadedErrors: number[]
+    let loadedMinStep: number
+    let loadedMinError: number
+    let keyframeCount: number
+
+    if (version === 2) {
+      // V2 format: btd/interval keyframes
+      const v2 = trace as TraceExportV2
+      loadedMinStep = v2.minStep
+      loadedMinError = v2.minError
+
+      // Combine keyframes
+      const allKeyframes = [...v2.btdKeyframes, ...v2.intervalKeyframes]
+        .sort((a, b) => a.stepIndex - b.stepIndex)
+      keyframeCount = allKeyframes.length
+
+      // Build steps from keyframes (sparse)
+      loadedSteps = []
+      loadedErrors = []
+      let lastShapes: Shape[] = allKeyframes[0]?.shapes ?? []
+
+      for (let i = 0; i <= v2.totalSteps - 1; i++) {
+        const kf = allKeyframes.find(k => k.stepIndex === i)
+        if (kf) {
+          loadedSteps.push({ shapes: kf.shapes, error: kf.error ?? 0 })
+          loadedErrors.push(kf.error ?? 0)
+          lastShapes = kf.shapes
+        } else {
+          // Interpolate: use last known shapes, estimate error
+          const nearestKf = allKeyframes.reduce((prev, curr) =>
+            Math.abs(curr.stepIndex - i) < Math.abs(prev.stepIndex - i) ? curr : prev
+          )
+          loadedSteps.push({ shapes: nearestKf.shapes, error: nearestKf.error ?? 0 })
+          loadedErrors.push(nearestKf.error ?? 0)
+        }
+      }
+    } else {
+      // V1 format: dense errors + sparse keyframes
+      const v1 = trace as TraceExport
+      loadedErrors = v1.errors
+      loadedMinStep = v1.minStep
+      loadedMinError = v1.minError
+      keyframeCount = v1.keyframes.length
+
+      // Build steps from keyframes
+      loadedSteps = []
+      let lastShapes: Shape[] = v1.keyframes[0]?.shapes ?? []
+
+      for (let i = 0; i < loadedErrors.length; i++) {
+        const kf = v1.keyframes.find(k => k.stepIndex === i)
+        if (kf) {
+          loadedSteps.push({ shapes: kf.shapes, error: kf.error })
+          lastShapes = kf.shapes
+        } else {
+          // Use nearest keyframe's shapes
+          const nearestKf = v1.keyframes.reduce((prev, curr) =>
+            Math.abs(curr.stepIndex - i) < Math.abs(prev.stepIndex - i) ? curr : prev
+          )
+          loadedSteps.push({ shapes: nearestKf.shapes, error: loadedErrors[i] })
+        }
+      }
+    }
+
+    // Update state
+    setSteps(loadedSteps)
+    setModelErrors(loadedErrors)
+    setMinStep(loadedMinStep)
+    setMinError(loadedMinError)
+    setBestStepHistory([{ step: loadedMinStep, error: loadedMinError }])
+    setStepIdxState(0)
+    setRunningState("none")
+    setRegionErrorHistory({})
+    setTrainingMetrics(null)
+
+    console.log(`Loaded trace from OPFS: ${loadedSteps.length} steps, ${keyframeCount} keyframes`)
+  }, [])
+
   return {
     stepIdx: effectiveStepIdx,
     setStepIdx,
@@ -953,5 +1053,7 @@ export function useTrainingClientHook(options: UseTrainingClientOptions): UseTra
     downloadTrace,
     uploadTrace,
     traceStats,
+    saveTraceToStorage,
+    loadTraceFromStorage,
   }
 }

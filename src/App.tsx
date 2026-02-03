@@ -46,6 +46,7 @@ import { TrainingClientProvider } from "./contexts/TrainingClientContext"
 import { useTrainingClientHook } from "./hooks/useTrainingClient"
 import { ErrorPlot } from "./components/ErrorPlot"
 import { ExpandCollapseButtons } from "./components/expand-collapse-icons"
+import { TraceManager } from "./components/TraceManager"
 
 export default function Page() {
     return (
@@ -260,6 +261,8 @@ export function Body() {
         traceStats,
         downloadTrace,
         uploadTrace,
+        saveTraceToStorage,
+        loadTraceFromStorage,
     } = useTrainingClientHook({
         initialSets,
         targets,
@@ -1392,6 +1395,12 @@ export function Body() {
                                 <SaveButton />
                                 <DownloadTraceButton />
                                 <UploadTraceButton />
+                                <TraceManager
+                                    onLoad={loadTraceFromStorage}
+                                    onSave={saveTraceToStorage}
+                                    hasUnsavedChanges={totalSteps > 0}
+                                    totalSteps={totalSteps}
+                                />
                                 <SettingsGear />
                             </>}
                         />
