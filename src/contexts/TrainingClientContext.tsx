@@ -201,6 +201,26 @@ function createWorkerClient(worker: Worker): TrainingClient {
       pendingRequests.clear()
       progressCallbacks.clear()
     },
+
+    // Trace persistence stubs (OPFS support planned - see specs/trace-persistence.md)
+    async loadTrace(): Promise<never> {
+      throw new Error("loadTrace not implemented in static FE - use uploadTrace() for file import")
+    },
+    async loadSavedTrace(): Promise<never> {
+      throw new Error("loadSavedTrace not implemented - OPFS persistence planned")
+    },
+    async saveTrace(): Promise<never> {
+      throw new Error("saveTrace not implemented - OPFS persistence planned")
+    },
+    async listTraces(): Promise<never> {
+      throw new Error("listTraces not implemented - OPFS persistence planned")
+    },
+    async renameTrace(): Promise<never> {
+      throw new Error("renameTrace not implemented - OPFS persistence planned")
+    },
+    async deleteTrace(): Promise<never> {
+      throw new Error("deleteTrace not implemented - OPFS persistence planned")
+    },
   }
 }
 
@@ -675,6 +695,26 @@ function createMainThreadClient(): TrainingClient {
     disconnect(): void {
       sessions.clear()
       progressCallbacks.clear()
+    },
+
+    // Trace persistence stubs (OPFS support planned - see specs/trace-persistence.md)
+    async loadTrace(): Promise<never> {
+      throw new Error("loadTrace not implemented in static FE - use uploadTrace() for file import")
+    },
+    async loadSavedTrace(): Promise<never> {
+      throw new Error("loadSavedTrace not implemented - OPFS persistence planned")
+    },
+    async saveTrace(): Promise<never> {
+      throw new Error("saveTrace not implemented - OPFS persistence planned")
+    },
+    async listTraces(): Promise<never> {
+      throw new Error("listTraces not implemented - OPFS persistence planned")
+    },
+    async renameTrace(): Promise<never> {
+      throw new Error("renameTrace not implemented - OPFS persistence planned")
+    },
+    async deleteTrace(): Promise<never> {
+      throw new Error("deleteTrace not implemented - OPFS persistence planned")
     },
   }
 }

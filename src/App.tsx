@@ -1473,6 +1473,12 @@ export function Body() {
                                 logXAxis={logXAxis}
                                 bestStepHistory={bestStepHistory}
                             />
+                            <Checkbox
+                                label={"Log X-axis"}
+                                tooltip={"Use logarithmic scale for the X-axis (step number)"}
+                                checked={logXAxis}
+                                setChecked={setLogXAxis}
+                            />
                         </DetailsSection>
                     </div>
                     <div className={col5}>

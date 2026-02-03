@@ -31,7 +31,6 @@ export function SettingsPanel({ showGrid, setShowGrid, summaryButtons }: Setting
         showSparkLines, setShowSparkLines,
         sparkLineLimit, setSparkLineLimit,
         svgBackgroundColor, setSvgBackgroundColor,
-        logXAxis, setLogXAxis,
         // URL
         stateInUrlFragment, setStateInUrlFragment,
         urlShapesPrecisionScheme, setUrlShapesPrecisionScheme,
@@ -83,7 +82,6 @@ export function SettingsPanel({ showGrid, setShowGrid, summaryButtons }: Setting
             <Checkbox label={"Auto-center"} checked={autoCenter} setChecked={setAutoCenter} />
             <Checkbox label={"State in URL"} checked={stateInUrlFragment} setChecked={setStateInUrlFragment} />
             <Checkbox label={"Region sizes"} checked={showRegionSizes} setChecked={setShowRegionSizes} />
-            <Checkbox label={"Log X-axis"} tooltip={"Use logarithmic scale for X-axis in error plot"} checked={logXAxis} setChecked={setLogXAxis} />
             <Select
                 label={"URL shapes precision"}
                 tooltip={<>
