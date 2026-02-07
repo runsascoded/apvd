@@ -12,8 +12,11 @@ importers:
         specifier: workspace:*
         version: link:../../shapes/client
       '@apvd/wasm':
-        specifier: workspace:*
+        specifier: link:../../shapes/apvd-wasm/pkg
         version: link:../../shapes/apvd-wasm/pkg
+      '@apvd/worker':
+        specifier: workspace:*
+        version: link:../../shapes/apvd-wasm/ts
       '@rdub/agg-plot':
         specifier: workspace:*
         version: link:../../../js/agg-plot
@@ -148,7 +151,17 @@ importers:
         specifier: ^2
         version: 2.1.9(@types/node@22.19.7)(sass@1.97.2)(terser@5.46.0)
 
-  ../../shapes/apvd-wasm/pkg: {}
+  ../../shapes/apvd-wasm/ts:
+    devDependencies:
+      '@apvd/client':
+        specifier: workspace:*
+        version: link:../../client
+      '@apvd/wasm':
+        specifier: file:../pkg
+        version: file:../../shapes/apvd-wasm/pkg
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
 
   ../../shapes/client:
     devDependencies:
@@ -160,6 +173,9 @@ packages:
 
   '@adobe/css-tools@4.4.4':
     resolution: {integrity: sha512-Elp+iwUx5rN5+Y8xLt5/GRoG20WGoDCQ/1Fb+1LiGtvwbDavuSk0jhD/eZdckHAuzcDzccnkv+rEjyWfRx18gg==}
+
+  '@apvd/wasm@file:../../shapes/apvd-wasm/pkg':
+    resolution: {directory: ../../shapes/apvd-wasm/pkg, type: directory}
 
   '@babel/code-frame@7.28.6':
     resolution: {integrity: sha512-JYgintcMjRiCvS8mMECzaEn+m3PfoQiyqukOMCCVQtoJGYJw8j/8LBJEiqkHLkfwCcs74E3pbAUFNg7d9VNJ+Q==}
@@ -3046,6 +3062,8 @@ packages:
 snapshots:
 
   '@adobe/css-tools@4.4.4': {}
+
+  '@apvd/wasm@file:../../shapes/apvd-wasm/pkg': {}
 
   '@babel/code-frame@7.28.6':
     dependencies:

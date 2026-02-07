@@ -13,6 +13,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Shape, InputSpec, TargetsMap, TrainingHandle } from "@apvd/client"
+import { extractShapes, isKeyframe } from "@apvd/worker"
 import * as apvd from "@apvd/wasm"
 import pako from "pako"
 import { useTrainingClient, ContinueTrainingResult } from "../contexts/TrainingClientContext"
@@ -24,54 +25,7 @@ import { RunningState } from "../types"
 import { buildTemplateValues, generateFilename, DEFAULT_TEMPLATE } from "../lib/trace-filename"
 import { traceStorage, TraceData } from "../lib/trace-storage"
 
-/**
- * Extracts plain JS number from a WASM value that may be wrapped in Dual { v: number }.
- */
-function extractNumber(val: unknown): number {
-  if (typeof val === "number") return val
-  if (val && typeof val === "object" && "v" in val) return (val as { v: number }).v
-  throw new Error(`Cannot extract number from ${JSON.stringify(val)}`)
-}
-
-function extractPoint(pt: unknown): { x: number; y: number } {
-  const p = pt as { x: unknown; y: unknown }
-  return { x: extractNumber(p.x), y: extractNumber(p.y) }
-}
-
-/**
- * Converts WASM Shape<Dual> to plain Shape<number> by extracting values.
- */
-function extractShape(wasmShape: unknown): Shape {
-  const s = wasmShape as { kind: string; c?: unknown; r?: unknown; t?: unknown; vertices?: unknown[] }
-  if (s.kind === "Circle") {
-    return {
-      kind: "Circle",
-      c: extractPoint(s.c),
-      r: extractNumber(s.r),
-    }
-  } else if (s.kind === "XYRR") {
-    return {
-      kind: "XYRR",
-      c: extractPoint(s.c),
-      r: extractPoint(s.r),
-    }
-  } else if (s.kind === "XYRRT") {
-    return {
-      kind: "XYRRT",
-      c: extractPoint(s.c),
-      r: extractPoint(s.r),
-      t: extractNumber(s.t),
-    }
-  } else {
-    // Polygon
-    const vertices = (s.vertices ?? []).map(v => extractPoint(v))
-    return { kind: "Polygon", vertices }
-  }
-}
-
-function extractShapes(wasmShapes: unknown[]): Shape[] {
-  return wasmShapes.map(s => extractShape(s))
-}
+const BUCKET_SIZE = 1024
 
 export type UseTrainingClientOptions = {
   initialSets: S[]
@@ -634,29 +588,11 @@ export function useTrainingClientHook(options: UseTrainingClientOptions): UseTra
     [stepIdx]
   )
 
-  // Tiered keyframe helpers (match worker's bucket-based tiering)
-  const BUCKET_SIZE = 1024
-
-  const tier = useCallback((step: number): number => {
-    if (step < 2 * BUCKET_SIZE) return 0
-    return Math.floor(Math.log2(step / BUCKET_SIZE))
-  }, [])
-
-  const resolution = useCallback((t: number): number => {
-    return Math.pow(2, t)
-  }, [])
-
-  const isKeyframe = useCallback((step: number): boolean => {
-    const t = tier(step)
-    const res = resolution(t)
-    return step % res === 0
-  }, [tier, resolution])
-
   // Build tiered keyframes from steps (bucket-based tiering, same as worker)
   const buildKeyframes = useCallback(() => {
     const keyframes: TraceExport["keyframes"] = []
     for (let i = 0; i < steps.length; i++) {
-      if (isKeyframe(i)) {
+      if (isKeyframe(i, BUCKET_SIZE)) {
         keyframes.push({
           stepIndex: i,
           error: steps[i].error,
@@ -674,7 +610,7 @@ export function useTrainingClientHook(options: UseTrainingClientOptions): UseTra
       })
     }
     return keyframes
-  }, [steps, isKeyframe])
+  }, [steps])
 
   // Export trace data
   const exportTrace = useCallback((): TraceExport | null => {
@@ -900,13 +836,13 @@ export function useTrainingClientHook(options: UseTrainingClientOptions): UseTra
     // Count keyframes using the same logic as buildKeyframes
     let keyframeCount = 0
     for (let i = 0; i < steps.length; i++) {
-      if (isKeyframe(i)) {
+      if (isKeyframe(i, BUCKET_SIZE)) {
         keyframeCount++
       }
     }
     // Always include the last step if not already a keyframe
     const lastIdx = steps.length - 1
-    if (lastIdx > 0 && !isKeyframe(lastIdx)) {
+    if (lastIdx > 0 && !isKeyframe(lastIdx, BUCKET_SIZE)) {
       keyframeCount++
     }
 
@@ -932,7 +868,7 @@ export function useTrainingClientHook(options: UseTrainingClientOptions): UseTra
       totalBytes,
       bucketSize: BUCKET_SIZE,
     }
-  }, [steps, isKeyframe])
+  }, [steps])
 
   // Save current trace to OPFS storage
   const saveTraceToStorage = useCallback(async (name?: string) => {

@@ -1,4 +1,5 @@
 packages:
   - .
   - ../../shapes/client
+  - ../../shapes/apvd-wasm/ts
   - ../../../js/agg-plot

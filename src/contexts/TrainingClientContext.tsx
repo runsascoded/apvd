@@ -19,7 +19,13 @@ import type {
   InputSpec,
   TargetsMap,
   Shape,
+  BatchTrainingRequest,
+  BatchTrainingResult,
+  BatchStep,
+  ContinueTrainingResult,
+  SparklineData,
 } from "@apvd/client"
+import { WorkerTrainingClient, extractShapes } from "@apvd/worker"
 
 // Check if we're in development mode
 const isDev = import.meta.env.DEV
@@ -31,251 +37,8 @@ export interface TrainingClient extends BaseTrainingClient {
   continueTraining(handle: TrainingHandle, numSteps: number): Promise<ContinueTrainingResult>
 }
 
-/** Sparkline data for visualization */
-export interface SparklineData {
-  /** Error values for each step in the batch */
-  errors: number[]
-  /** Gradient vectors for each step (gradients[stepIdx][varIdx]) */
-  gradients: number[][]
-  /** Per-region error values for each step (regionErrors[regionKey][stepIdx]) */
-  regionErrors: Record<string, number[]>
-}
-
-export interface ContinueTrainingResult {
-  /** New total step count */
-  totalSteps: number
-  /** Current step index */
-  currentStep: number
-  /** Best error seen so far */
-  minError: number
-  /** Step where best error was achieved */
-  minStep: number
-  /** Shapes at current step */
-  currentShapes: Shape[]
-  /** Current error */
-  currentError: number
-  /** Per-step data for sparklines and history */
-  steps: Array<{
-    stepIndex: number
-    error: number
-    shapes: Shape[]
-  }>
-  /** Sparkline-ready data for visualization */
-  sparklineData?: SparklineData
-}
-
-// Batch training types
-export interface BatchTrainingRequest {
-  /** Current shapes with trainability flags */
-  inputs: InputSpec[]
-  /** Target region sizes */
-  targets: TargetsMap
-  /** Number of steps to compute */
-  numSteps: number
-  /** Learning rate (default: 0.05) */
-  learningRate?: number
-}
-
-export interface BatchStep {
-  /** Relative index within this batch (0 to numSteps-1) */
-  stepIndex: number
-  /** Error at this step */
-  error: number
-  /** Shape coordinates at this step */
-  shapes: Shape[]
-}
-
-export interface BatchTrainingResult {
-  /** All computed steps */
-  steps: BatchStep[]
-  /** Minimum error in this batch */
-  minError: number
-  /** Index of step with minimum error (within batch) */
-  minStepIndex: number
-  /** Final shapes (convenience for next batch input) */
-  finalShapes: Shape[]
-  /** Sparkline-ready data for visualization */
-  sparklineData: SparklineData
-}
-
-// Worker message types (matching the worker's protocol)
-interface WorkerRequest {
-  id: string
-  type: "train" | "stop" | "getStep" | "getStepWithGeometry" | "createModel" | "getTraceInfo" | "trainBatch" | "continueTraining"
-  payload: unknown
-}
-
-interface WorkerResponse {
-  id: string
-  type: "result" | "error" | "progress"
-  payload: unknown
-}
-
-/**
- * Creates a TrainingClient that wraps a Worker instance directly.
- */
-function createWorkerClient(worker: Worker): TrainingClient {
-  const pendingRequests = new Map<string, {
-    resolve: (value: unknown) => void
-    reject: (error: Error) => void
-  }>()
-  const progressCallbacks = new Set<(update: ProgressUpdate) => void>()
-  let requestIdCounter = 0
-
-  worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
-    const { id, type, payload } = event.data
-
-    if (type === "progress") {
-      const update = payload as ProgressUpdate
-      progressCallbacks.forEach(cb => cb(update))
-      return
-    }
-
-    const pending = pendingRequests.get(id)
-    if (pending) {
-      pendingRequests.delete(id)
-      if (type === "error") {
-        pending.reject(new Error((payload as { message: string }).message))
-      } else {
-        pending.resolve(payload)
-      }
-    }
-  }
-
-  worker.onerror = (error) => {
-    console.error("Worker error:", error)
-  }
-
-  function sendRequest<T>(type: WorkerRequest["type"], payload: unknown): Promise<T> {
-    return new Promise((resolve, reject) => {
-      const id = `req-${++requestIdCounter}`
-      pendingRequests.set(id, {
-        resolve: resolve as (value: unknown) => void,
-        reject,
-      })
-      worker.postMessage({ id, type, payload } as WorkerRequest)
-    })
-  }
-
-  return {
-    async createModel(inputs: InputSpec[], targets: TargetsMap): Promise<StepStateWithGeometry> {
-      return sendRequest("createModel", { inputs, targets })
-    },
-
-    async startTraining(request: TrainingRequest): Promise<TrainingHandle> {
-      const result = await sendRequest<{ handle: TrainingHandle }>("train", request)
-      return result.handle
-    },
-
-    async stopTraining(handle: TrainingHandle): Promise<void> {
-      await sendRequest("stop", { handleId: handle.id })
-    },
-
-    async getStep(handle: TrainingHandle, stepIndex: number): Promise<StepState> {
-      return sendRequest("getStep", { handleId: handle.id, stepIndex })
-    },
-
-    async getStepWithGeometry(handle: TrainingHandle, stepIndex: number): Promise<StepStateWithGeometry> {
-      return sendRequest("getStepWithGeometry", { handleId: handle.id, stepIndex })
-    },
-
-    async getTraceInfo(handle: TrainingHandle): Promise<TraceInfo> {
-      return sendRequest("getTraceInfo", { handleId: handle.id })
-    },
-
-    async trainBatch(request: BatchTrainingRequest): Promise<BatchTrainingResult> {
-      return sendRequest("trainBatch", request)
-    },
-
-    async continueTraining(handle: TrainingHandle, numSteps: number): Promise<ContinueTrainingResult> {
-      return sendRequest("continueTraining", { handleId: handle.id, numSteps })
-    },
-
-    onProgress(callback: (update: ProgressUpdate) => void): Unsubscribe {
-      progressCallbacks.add(callback)
-      return () => progressCallbacks.delete(callback)
-    },
-
-    disconnect(): void {
-      worker.terminate()
-      pendingRequests.clear()
-      progressCallbacks.clear()
-    },
-
-    // Trace persistence stubs (OPFS support planned - see specs/trace-persistence.md)
-    async loadTrace(): Promise<never> {
-      throw new Error("loadTrace not implemented in static FE - use uploadTrace() for file import")
-    },
-    async loadSavedTrace(): Promise<never> {
-      throw new Error("loadSavedTrace not implemented - OPFS persistence planned")
-    },
-    async saveTrace(): Promise<never> {
-      throw new Error("saveTrace not implemented - OPFS persistence planned")
-    },
-    async listTraces(): Promise<never> {
-      throw new Error("listTraces not implemented - OPFS persistence planned")
-    },
-    async renameTrace(): Promise<never> {
-      throw new Error("renameTrace not implemented - OPFS persistence planned")
-    },
-    async deleteTrace(): Promise<never> {
-      throw new Error("deleteTrace not implemented - OPFS persistence planned")
-    },
-    async listSampleTraces(): Promise<never> {
-      throw new Error("listSampleTraces not implemented in static FE")
-    },
-    async loadSampleTrace(): Promise<never> {
-      throw new Error("loadSampleTrace not implemented in static FE")
-    },
-  }
-}
-
-/**
- * Extracts plain JS coordinate values from a WASM shape.
- * WASM shapes may have Dual number wrappers like { v: number }.
- */
-function extractNumber(val: unknown): number {
-  if (typeof val === "number") return val
-  if (val && typeof val === "object" && "v" in val) return (val as { v: number }).v
-  throw new Error(`Cannot extract number from ${JSON.stringify(val)}`)
-}
-
-function extractPoint(pt: unknown): { x: number; y: number } {
-  const p = pt as { x: unknown; y: unknown }
-  return { x: extractNumber(p.x), y: extractNumber(p.y) }
-}
-
-function extractShape(wasmShape: unknown): Shape {
-  const s = wasmShape as { kind: string; c?: unknown; r?: unknown; t?: unknown; vertices?: unknown[] }
-  if (s.kind === "Circle") {
-    return {
-      kind: "Circle",
-      c: extractPoint(s.c),
-      r: extractNumber(s.r),
-    }
-  } else if (s.kind === "XYRR") {
-    return {
-      kind: "XYRR",
-      c: extractPoint(s.c),
-      r: extractPoint(s.r),
-    }
-  } else if (s.kind === "XYRRT") {
-    return {
-      kind: "XYRRT",
-      c: extractPoint(s.c),
-      r: extractPoint(s.r),
-      t: extractNumber(s.t),
-    }
-  } else {
-    // Polygon
-    const vertices = (s.vertices ?? []).map(v => extractPoint(v))
-    return { kind: "Polygon", vertices }
-  }
-}
-
-function extractShapes(wasmShapes: unknown[]): Shape[] {
-  return wasmShapes.map(s => extractShape(s))
-}
+// Re-export types used by downstream hooks/components
+export type { ContinueTrainingResult, SparklineData, BatchTrainingRequest, BatchStep, BatchTrainingResult }
 
 /**
  * Creates a TrainingClient that runs on the main thread (for dev mode).
@@ -525,7 +288,6 @@ function createMainThreadClient(): TrainingClient {
       const sparklineRegionErrors: Record<string, number[]> = {}
 
       // Extract initial gradients and region errors
-      // Keep the full key format (e.g., "0-1-" or "0*1*") to match targets table
       const initialStep = wasmStep as {
         error: { v: number; d?: number[] }
         errors: Map<string, { error: { v: number } }> | Record<string, { error: { v: number } }>
@@ -562,7 +324,6 @@ function createMainThreadClient(): TrainingClient {
           error: { v: number; d?: number[] }
           errors: Map<string, { error: { v: number } }> | Record<string, { error: { v: number } }>
         }
-        // Extract sparkline data - keep full key format to match targets table
         sparklineGradients.push(stepData.error.d || [])
         const stepErrors = stepData.errors
         if (stepErrors) {
@@ -604,7 +365,7 @@ function createMainThreadClient(): TrainingClient {
       const learningRate = session.params?.learningRate ?? 0.5
       const startStep = session.currentStep
 
-      // Create a seed model from the last step (like prod does)
+      // Create a seed model from the last step
       const lastStep = session.currentWasmStep
       const batchSeed = {
         steps: [lastStep],
@@ -613,13 +374,13 @@ function createMainThreadClient(): TrainingClient {
         min_error: (lastStep as { error: { v: number } }).error.v,
       }
 
-      // Call train() to compute the batch - this handles error-scaled stepping correctly
+      // Call train() to compute the batch
       const trainedModel = apvd.train(batchSeed, learningRate, numSteps)
       const modelSteps = (trainedModel as { steps: unknown[] }).steps
       const batchMinIdx = (trainedModel as { min_idx: number }).min_idx
       const batchMinError = (trainedModel as { min_error: number }).min_error
 
-      // Collect per-step data for return (skip first step as it duplicates last)
+      // Collect per-step data (skip first step as it duplicates last)
       const batchSteps: Array<{ stepIndex: number; error: number; shapes: Shape[] }> = []
 
       // Sparkline data tracking
@@ -638,8 +399,6 @@ function createMainThreadClient(): TrainingClient {
 
         batchSteps.push({ stepIndex, error, shapes })
 
-        // Extract sparkline data
-        // Extract sparkline data - keep full key format to match targets table
         sparklineGradients.push(wasmStep.error.d || [])
         const stepErrors = wasmStep.errors
         if (stepErrors) {
@@ -748,12 +507,11 @@ export function TrainingClientProvider({ children }: { children: React.ReactNode
         console.log("[TrainingClient] Using main thread client (dev mode)")
         clientRef.current = createMainThreadClient()
       } else {
-        // Production: use Worker client
+        // Production: use Worker client from @apvd/worker
         console.log("[TrainingClient] Using Worker client (production mode)")
-        // Dynamic import to avoid dev server issues
         import("../workers/training.worker?worker").then(({ default: TrainingWorker }) => {
           const worker = new TrainingWorker()
-          clientRef.current = createWorkerClient(worker)
+          clientRef.current = new WorkerTrainingClient(worker) as unknown as TrainingClient
         })
         // Return main thread client initially, will be replaced when Worker loads
         clientRef.current = createMainThreadClient()
