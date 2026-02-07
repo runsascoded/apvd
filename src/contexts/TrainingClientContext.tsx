@@ -6,7 +6,7 @@
  */
 
 import React, { createContext, useContext, useMemo, useEffect, useRef } from "react"
-import * as apvd from "apvd-wasm"
+import * as apvd from "@apvd/wasm"
 import type {
   TrainingClient as BaseTrainingClient,
   TrainingRequest,
@@ -220,6 +220,12 @@ function createWorkerClient(worker: Worker): TrainingClient {
     },
     async deleteTrace(): Promise<never> {
       throw new Error("deleteTrace not implemented - OPFS persistence planned")
+    },
+    async listSampleTraces(): Promise<never> {
+      throw new Error("listSampleTraces not implemented in static FE")
+    },
+    async loadSampleTrace(): Promise<never> {
+      throw new Error("loadSampleTrace not implemented in static FE")
     },
   }
 }
@@ -715,6 +721,12 @@ function createMainThreadClient(): TrainingClient {
     },
     async deleteTrace(): Promise<never> {
       throw new Error("deleteTrace not implemented - OPFS persistence planned")
+    },
+    async listSampleTraces(): Promise<never> {
+      throw new Error("listSampleTraces not implemented in static FE")
+    },
+    async loadSampleTrace(): Promise<never> {
+      throw new Error("loadSampleTrace not implemented in static FE")
     },
   }
 }

@@ -1,5 +1,5 @@
 import {Step} from "../../lib/regions";
-import {Dual} from "apvd-wasm"
+import {Dual} from "@apvd/wasm"
 import React, {Dispatch, useCallback, useMemo, useState} from "react";
 import css from "../../App.module.scss";
 import {ArraySparkLineCell, SparkLineProps, SparkNum} from "../spark-lines";

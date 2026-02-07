@@ -3,7 +3,7 @@ import React, { Fragment, ReactNode, useCallback, useEffect, useMemo, useRef, us
 import { ShortcutsModal, Omnibar, SequenceModal, LookupModal, useOmnibarEndpoint } from 'use-kbd'
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts"
 import { PlaybackRenderer } from './components/groupRenderers'
-import { update_log_level } from "apvd-wasm"
+import { update_log_level } from "@apvd/wasm"
 import { Region, regionPath, Step } from "./lib/regions"
 import { Point } from "./components/point"
 import css from "./App.module.scss"
@@ -1029,6 +1029,7 @@ export function Body() {
                 {' '}<HashLink hash={"#t=i5,3,1&n=Multiples+of+3=3,Multiples+of+5=5"}>{`{3, 5}`}</HashLink>
                 ,{' '}<HashLink hash={"#t=i35,21,7,15,5,3,1&n=Multiples+of+3=3,Multiples+of+5=5,Multiples+of+7=7"}>{`{3, 5, 7}`}</HashLink>
                 ,{' '}<HashLink hash={"#t=i105,70,35,42,21,14,7,30,15,10,5,6,3,2,1&n=Multiples+of+2=2,Multiples+of+3=3,Multiples+of+5=5,Multiples+of+7=7"}>{`{2, 3, 5, 7}`}</HashLink>
+                ,{' '}<HashLink hash={"#t=i8855,5313,1771,3795,1265,759,253,2415,805,483,161,345,115,69,23,1155,385,231,77,165,55,33,11,105,35,21,7,15,5,3,1&n=Multiples+of+3=3,Multiples+of+5=5,Multiples+of+7=7,Multiples+of+11=11,Multiples+of+23=23"}>{`{3, 5, 7, 11, 23}`}</HashLink>
             </span>,
         }, {
             name: "Variant callers",
@@ -1064,6 +1065,13 @@ export function Body() {
             description: <>Example from Ben Frederickson's blog post, <A href={"https://www.benfrederickson.com/venn-diagrams-with-d3.js/"}>"Venn Diagrams with D3.js"</A>.</>,
             children: <span>
                 <HashLink hash={"#t=i16,16,4,12,4,3,2&s=5zg0000200b4001KSA00i900000800g00&n=,,"}>"Venn Diagrams with D3.js"</HashLink>
+            </span>
+        }, {
+            name: "5-Set Test Cases",
+            description: <>Synthetic 5-set examples for testing 31-region Venn diagram layouts.</>,
+            children: <span>
+                <HashLink hash={"#t=21,10,11,5,2,2,1,7,0,0,0,3,0,3,0,11,4,0,0,0,0,0,2,3,0,0,0,6,1,1,1&n=A,B,C,D,E"}>Example 1</HashLink>
+                ,{' '}<HashLink hash={"#t=21,10,11,5,6,3,3,2,0,0,0,3,1,0,0,7,3,1,0,2,0,1,0,2,1,0,1,1,0,0,0&n=A,B,C,D,E"}>Example 2</HashLink>
             </span>
         }
     ]
@@ -1130,6 +1138,7 @@ export function Body() {
         { id: 'fizz-3-5', label: 'Fizz Buzz: {3, 5}', hash: '#t=i5,3,1&n=Multiples+of+3=3,Multiples+of+5=5', group: 'Fizz Buzz' },
         { id: 'fizz-3-5-7', label: 'Fizz Buzz: {3, 5, 7}', hash: '#t=i35,21,7,15,5,3,1&n=Multiples+of+3=3,Multiples+of+5=5,Multiples+of+7=7', group: 'Fizz Buzz' },
         { id: 'fizz-2-3-5-7', label: 'Fizz Buzz: {2, 3, 5, 7}', hash: '#t=i105,70,35,42,21,14,7,30,15,10,5,6,3,2,1&n=Multiples+of+2=2,Multiples+of+3=3,Multiples+of+5=5,Multiples+of+7=7', group: 'Fizz Buzz' },
+        { id: 'fizz-3-5-7-11-23', label: 'Fizz Buzz: {3, 5, 7, 11, 23}', hash: '#t=i8855,5313,1771,3795,1265,759,253,2415,805,483,161,345,115,69,23,1155,385,231,77,165,55,33,11,105,35,21,7,15,5,3,1&n=Multiples+of+3=3,Multiples+of+5=5,Multiples+of+7=7,Multiples+of+11=11,Multiples+of+23=23', group: 'Fizz Buzz' },
         { id: 'variant-callers', label: 'Variant Callers', hash: '#t=633,618,112,187,0,14,1,319,13,55,17,21,0,9,36&n=VarScan,SomaticSniper,Strelka=T@#99f,JSM2@orange', group: 'Examples' },
         { id: 'variant-callers-best', label: 'Variant Callers (best)', hash: '#s=Mzx868wSrqe62oBeRfH2WUHakKB1OeVQltXVsxzG7xr1hF4oblIulnX_D1OLV6jNkgSlDvFN0OqgyD3OUuvX_X_5HhRUwN1mnF1uXKhW4bbNv4zNby2cxv2iiFbpHovsstMTrteKR4hgh43U5qPl9TqywzTQ4efn1ARs8VrIS_u6Ew57sD7lVHg&t=633,618,112,187,0,14,1,319,13,55,17,21,0,9,36&n=VarScan,SomaticSniper,Strelka=T@#99f,JSM2@orange', group: 'Examples' },
         { id: 'mpower', label: 'MPower', hash: '#t=42,15,16,10,10,12,25,182,60,23,13,44,13,18,11&n=KRAS,STK11,KEAP1=P,TP53', group: 'Examples' },
@@ -1141,6 +1150,8 @@ export function Body() {
         { id: 'zhang-f', label: 'Zhang 2014 Fig. 7F', hash: '#t=331,63,21,1,0,0,2,88,77,13,80,6,181,1,1644&n=Simulation@#99f,Cuffdiff2,DESeq@#f99,edgeR@orange', group: 'Zhang 2014' },
         { id: 'zhang-f-best', label: 'Zhang 2014 Fig. 7F (best)', hash: '#t=331,63,21,1,0,0,2,88,77,13,80,6,181,1,1644&n=Simulation@#99f,Cuffdiff2,DESeq@#f99,edgeR@orange&s=MB338Q9DnKg_lC49IjUVEzmKsO8mQ6dhETFZi7x2gOAYpX4goJWRqKd0e_8WJPog2nm0bsUU2IVkhjK5WwIsdMycjSkoz0PJuyq7cdXN0cnqKBPoRCX2ecj6dr4sA-0LA6nKlMEKu4gux-1ioITfDBxjKok5trrPfC4W0Q9uecOaeAfYDVPgngg', group: 'Zhang 2014' },
         { id: 'ben-fred', label: 'Venn Diagrams with D3.js', hash: '#t=i16,16,4,12,4,3,2&s=5zg0000200b4001KSA00i900000800g00&n=,,', group: 'Examples' },
+        { id: '5set-example1', label: '5-Set Example 1', hash: '#t=21,10,11,5,2,2,1,7,0,0,0,3,0,3,0,11,4,0,0,0,0,0,2,3,0,0,0,6,1,1,1&n=A,B,C,D,E', group: '5-Set' },
+        { id: '5set-example2', label: '5-Set Example 2', hash: '#t=21,10,11,5,6,3,3,2,0,0,0,3,1,0,0,7,3,1,0,2,0,1,0,2,1,0,1,1,0,0,0&n=A,B,C,D,E', group: '5-Set' },
     ], [])
 
     useOmnibarEndpoint('examples', {
@@ -1288,7 +1299,7 @@ export function Body() {
     const DownloadTraceButton = useCallback(
         () => (
             <OverlayTrigger overlay={<Tooltip>Download training trace (JSON)</Tooltip>}>
-                <span className={css.link} onClick={downloadTrace}>⤓</span>
+                <span className={css.link} onClick={e => { e.stopPropagation(); downloadTrace() }}>⤓</span>
             </OverlayTrigger>
         ),
         [downloadTrace]
@@ -1298,7 +1309,7 @@ export function Body() {
     const UploadTraceButton = useCallback(
         () => (
             <OverlayTrigger overlay={<Tooltip>Upload training trace (.json or .json.gz)</Tooltip>}>
-                <span className={css.link} onClick={uploadTrace}>⤒</span>
+                <span className={css.link} onClick={e => { e.stopPropagation(); uploadTrace() }}>⤒</span>
             </OverlayTrigger>
         ),
         [uploadTrace]

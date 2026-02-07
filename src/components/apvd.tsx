@@ -1,5 +1,5 @@
 import {ReactNode, useEffect, useState} from "react";
-import init_apvd, {init_logs, update_log_level} from "apvd-wasm";
+import init_apvd, {init_logs, update_log_level} from "@apvd/wasm";
 
 export type LogLevel = "debug" | "info" | "warn" | "error"
 

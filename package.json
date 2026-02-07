@@ -22,7 +22,7 @@
     "@apvd/client": "workspace:*",
     "@rdub/agg-plot": "workspace:*",
     "@types/pako": "^2.0.4",
-    "apvd-wasm": "github:runsascoded/shapes#34f256abb241a8b07a7ba3540fa410c98a33fbdf",
+    "@apvd/wasm": "workspace:*",
     "bootstrap": "^5.3.3",
     "d3-svg-to-png": "^0.3.1",
     "lodash": "^4.17.21",
@@ -42,11 +42,7 @@
     "use-prms": "github:runsascoded/use-prms#cf28edc59fea41899aca2ada69499cd11604f60e",
     "use-session-storage-state": "^19.0.0"
   },
-  "pnpm": {
-    "overrides": {
-      "apvd-wasm": "github:runsascoded/shapes#34f256abb241a8b07a7ba3540fa410c98a33fbdf"
-    }
-  },
+  "pnpm": {},
   "devDependencies": {
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",

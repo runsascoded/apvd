@@ -1,4 +1,4 @@
-import {R2} from "apvd-wasm";
+import {R2} from "@apvd/wasm";
 import {abs, cos, max, sin} from "./math";
 import {Param} from "./params";
 import ShapesBuffer, {Opts, ShapesParam} from "./shapes-buffer";
@@ -42,6 +42,7 @@ export const DefaultSetMetadata = [
     { name: "B", abbrev: "B", color: 'green' , },
     { name: "C", abbrev: "C", color: 'orange', },
     { name: "D", abbrev: "D", color: '#99f'  , },  // blue
+    { name: "E", abbrev: "E", color: '#f9f'  , },  // magenta
 ]
 
 export const setMetadataParam: Param<SetMetadata | null> = {

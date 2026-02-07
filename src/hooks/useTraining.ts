@@ -9,8 +9,8 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react"
-import * as apvd from "apvd-wasm"
-import { train } from "apvd-wasm"
+import * as apvd from "@apvd/wasm"
+import { train } from "@apvd/wasm"
 import { makeModel, makeStep, Model, Step } from "../lib/regions"
 import { S, Set } from "../lib/shape"
 import { Target, Targets } from "../lib/targets"

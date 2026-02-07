@@ -148,12 +148,12 @@ function nearestKeyframe(step: number, b: number): number {
 
 // Initialize WASM - use dynamic import to help Vite's dev server
 let wasmReady = false
-let apvd: typeof import("apvd-wasm") | null = null
+let apvd: typeof import("@apvd/wasm") | null = null
 
 async function initWasm(): Promise<void> {
   if (wasmReady && apvd) return
   // Dynamic import for WASM module - works better with Vite dev server
-  const wasmModule = await import("apvd-wasm")
+  const wasmModule = await import("@apvd/wasm")
   await wasmModule.default() // Call init function
   wasmModule.init_logs()
   apvd = wasmModule

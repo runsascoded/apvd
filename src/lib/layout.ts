@@ -1,4 +1,4 @@
-import {R2} from "apvd-wasm";
+import {R2} from "@apvd/wasm";
 import * as Shapes from "./shape"
 import {pi2, pi4, sq3, sqrt} from "./math";
 import {rotate} from "./shape";
@@ -200,6 +200,37 @@ function elongatedPolygon(n: number, cx: number, cy: number, rx: number, ry: num
     return { vertices }
 }
 
+// Non-convex blob polygon for 5-set Venn diagrams.
+// Mild cardioid (limacon) shape: r = 1 + dent * cos(theta)
+// - dent > 0 makes the shape wider at the pole (outer tip) and narrower
+//   at the anti-pole (inner side facing center), creating a gentle concavity.
+// - Combined with elongation (height > width) this creates the kidney/bean
+//   shapes seen in Zhang 2014's 5-set Venn diagrams.
+function blobPolygon(
+    n: number,
+    cx: number, cy: number,
+    width: number, height: number,
+    dent: number,
+    rotation: number = 0,
+): Polygon {
+    const vertices: R2<number>[] = []
+    const cos_r = Math.cos(rotation)
+    const sin_r = Math.sin(rotation)
+    for (let i = 0; i < n; i++) {
+        const theta = (2 * Math.PI * i) / n
+        const cosT = Math.cos(theta)
+        const sinT = Math.sin(theta)
+        const r = 1 + dent * cosT
+        const px = sinT * width * r
+        const py = cosT * height * r
+        vertices.push({
+            x: cx + px * cos_r - py * sin_r,
+            y: cy + px * sin_r + py * cos_r,
+        })
+    }
+    return { vertices }
+}
+
 // Elongation ratio for Venn-style layouts (same as ellipse layout)
 const vennR = 2
 
@@ -242,3 +273,50 @@ export const FourIcosagons: InitialLayout = [
     elongatedPolygon(20, c1, 1 + c0, vennR, 1),
     elongatedPolygon(20, c1, c0, vennR, 1),
 ]
+
+// =============================================================================
+// 5-shape layouts: pentagonal arrangement for 31-region Venn diagrams
+// =============================================================================
+
+// 5 shapes evenly spaced on a regular pentagon (72° apart, starting from top)
+// Each shape is an elongated polygon oriented radially (major axis pointing toward center)
+function fiveShapeLayout(n: number, dist: number, rx: number, ry: number): InitialLayout {
+    return Array.from({ length: 5 }, (_, i) => {
+        const angle = Math.PI / 2 + (2 * Math.PI * i) / 5  // start from top, go counterclockwise
+        const cx = dist * Math.cos(angle)
+        const cy = dist * Math.sin(angle)
+        // Orient major axis pointing toward center (rotation = angle + π/2 for tangential,
+        // or angle + π for radial toward center, but elongatedPolygon's rx is horizontal by default,
+        // so we rotate by angle - π/2 to point the major axis radially)
+        const rotation = angle - Math.PI / 2
+        return elongatedPolygon(n, cx, cy, rx, ry, rotation)
+    })
+}
+
+// Five 8-gons (octagons) in pentagonal arrangement
+export const FiveOctagons: InitialLayout = fiveShapeLayout(8, 0.5, 0.45, 1.3)
+
+// Five 12-gons (dodecagons) in pentagonal arrangement
+// dist=0.5, rx=0.45, ry=1.3: each shape extends from -0.8 to +1.8 radially,
+// passing well through center. Non-adjacent distance ≈ 0.95, shape width = 0.9,
+// giving substantial overlap for all 31 regions.
+export const FiveDodecagons: InitialLayout = fiveShapeLayout(12, 0.5, 0.45, 1.3)
+
+// 5-blob layout: mild cardioid blobs arranged on a pentagon.
+// Each blob's +y axis (outer tip) points outward from the diagram center.
+function fiveBlobLayout(
+    n: number, dist: number,
+    width: number, height: number,
+    dent: number,
+): InitialLayout {
+    return Array.from({ length: 5 }, (_, i) => {
+        const angle = Math.PI / 2 + (2 * Math.PI * i) / 5
+        const cx = dist * Math.cos(angle)
+        const cy = dist * Math.sin(angle)
+        return blobPolygon(n, cx, cy, width, height, dent, angle)
+    })
+}
+
+// Five mild cardioid blobs: gently non-convex, elongated
+// dist=0.2 ensures non-adjacent triples overlap (31/31 regions in Rust Scene analysis)
+export const FiveBlobs: InitialLayout = fiveBlobLayout(15, 0.2, 0.7, 1.5, 0.15)

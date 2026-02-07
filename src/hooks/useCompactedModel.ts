@@ -10,7 +10,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import * as apvd from "apvd-wasm"
+import * as apvd from "@apvd/wasm"
 import { makeStep, Model, Step } from "../lib/regions"
 import { Set } from "../lib/shape"
 import { PagedArray } from "../lib/paged-array"

@@ -1,4 +1,4 @@
-import * as apvd from "apvd-wasm";
+import * as apvd from "@apvd/wasm";
 import {fromEntries} from "./objs";
 import {Param} from "./params";
 

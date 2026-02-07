@@ -13,7 +13,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Shape, InputSpec, TargetsMap, TrainingHandle } from "@apvd/client"
-import * as apvd from "apvd-wasm"
+import * as apvd from "@apvd/wasm"
 import pako from "pako"
 import { useTrainingClient, ContinueTrainingResult } from "../contexts/TrainingClientContext"
 import { S, mapShape, Set } from "../lib/shape"

@@ -1,5 +1,5 @@
 import {Step} from "../../lib/regions";
-import {Dual} from "apvd-wasm";
+import {Dual} from "@apvd/wasm";
 import React, {useMemo} from "react";
 import css from "../../App.module.scss";
 import {SparkNum} from "../spark-lines";

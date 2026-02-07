@@ -1,4 +1,4 @@
-import {Circle, Dual, XYRR, XYRRT} from "apvd-wasm";
+import {Circle, Dual, XYRR, XYRRT} from "@apvd/wasm";
 import {Step} from "./regions";
 import {Polygon, S} from "./shape";
 

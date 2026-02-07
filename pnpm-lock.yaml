@@ -4,9 +4,6 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-overrides:
-  apvd-wasm: github:runsascoded/shapes#34f256abb241a8b07a7ba3540fa410c98a33fbdf
-
 importers:
 
   .:
@@ -14,15 +11,15 @@ importers:
       '@apvd/client':
         specifier: workspace:*
         version: link:../../shapes/client
+      '@apvd/wasm':
+        specifier: workspace:*
+        version: link:../../shapes/apvd-wasm/pkg
       '@rdub/agg-plot':
         specifier: workspace:*
         version: link:../../../js/agg-plot
       '@types/pako':
         specifier: ^2.0.4
         version: 2.0.4
-      apvd-wasm:
-        specifier: github:runsascoded/shapes#34f256abb241a8b07a7ba3540fa410c98a33fbdf
-        version: https://codeload.github.com/runsascoded/shapes/tar.gz/34f256abb241a8b07a7ba3540fa410c98a33fbdf
       bootstrap:
         specifier: ^5.3.3
         version: 5.3.8(@popperjs/core@2.11.8)
@@ -150,6 +147,8 @@ importers:
       vitest:
         specifier: ^2
         version: 2.1.9(@types/node@22.19.7)(sass@1.97.2)(terser@5.46.0)
+
+  ../../shapes/apvd-wasm/pkg: {}
 
   ../../shapes/client:
     devDependencies:
@@ -1225,10 +1224,6 @@ packages:
   ansi-styles@5.2.0:
     resolution: {integrity: sha512-Cxwpt2SfTzTtXcfOlzGEee8O+c+MmUgGrNiBcXnuWxuFJHe6a5Hz7qwhwe5OgaSYI0IJvkLqWX1ASG+cJOkEiA==}
     engines: {node: '>=10'}
-
-  apvd-wasm@https://codeload.github.com/runsascoded/shapes/tar.gz/34f256abb241a8b07a7ba3540fa410c98a33fbdf:
-    resolution: {tarball: https://codeload.github.com/runsascoded/shapes/tar.gz/34f256abb241a8b07a7ba3540fa410c98a33fbdf}
-    version: 0.1.0-dist.afbbedd
 
   argparse@2.0.1:
     resolution: {integrity: sha512-8+9WqebbFzpX9OR+Wa6O29asIogeRMzcGtAINdpMHHyAg10f05aSFVBbcEqGf/PXw1EjAZ+q2/bEBg3DvurK3Q==}
@@ -4020,8 +4015,6 @@ snapshots:
       color-convert: 2.0.1
 
   ansi-styles@5.2.0: {}
-
-  apvd-wasm@https://codeload.github.com/runsascoded/shapes/tar.gz/34f256abb241a8b07a7ba3540fa410c98a33fbdf: {}
 
   argparse@2.0.1: {}
 
