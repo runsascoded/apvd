@@ -3,6 +3,7 @@ import A from "../components/A"
 import { ValItem } from "../types"
 import {
     CirclesFixed, CirclesFlexible, Disjoint, Ellipses4, Ellipses4t,
+    FiveBlobs, FiveDodecagons, FiveOctagons,
     FourDodecagons, FourHexagons, FourIcosagons, FourOctagons, FourPentagons,
     InitialLayout, Nested, ThreeHexagons, ThreePentagons, toShape,
     TriangleCircle, TwoPentagonsOneHexagon, TwoTriangles
@@ -44,4 +45,8 @@ export const layouts: ValItem<InitialLayout>[] = [
     { name: "Four 12-gons", val: FourDodecagons, description: "Four elongated dodecagons" },
     { name: "Four 20-gons", val: FourIcosagons, description: "Four elongated icosagons" },
     { name: "2 Pentagons + Hexagon", val: TwoPentagonsOneHexagon, description: "Two pentagons and a hexagon (mixed polygon test)" },
+    // 5-shape layouts (31 regions)
+    { name: "Five 8-gons", val: FiveOctagons, description: "Five elongated octagons in pentagonal arrangement (31 regions)" },
+    { name: "Five 12-gons", val: FiveDodecagons, description: "Five elongated dodecagons in pentagonal arrangement (31 regions)" },
+    { name: "Five Blobs", val: FiveBlobs, description: "Five asymmetric blob shapes with larger outer lobes for better region visibility (31 regions)" },
 ]

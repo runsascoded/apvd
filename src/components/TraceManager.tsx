@@ -1,11 +1,25 @@
 /**
- * TraceManager - UI for managing saved traces in OPFS.
+ * TraceManager - UI for managing saved traces in OPFS, with sample trace loading.
  */
 
 import { useState, useEffect, useCallback } from "react"
 import { OverlayTrigger, Tooltip, Modal, Button } from "react-bootstrap"
-import { traceStorage, TraceMeta, TraceStorage } from "../lib/trace-storage"
+import { traceStorage, TraceMeta, TraceStorage, TraceData } from "../lib/trace-storage"
 import css from "../App.module.scss"
+
+/** Summary of a sample trace from the manifest */
+interface SampleTraceSummary {
+  filename: string
+  name: string
+  totalSteps: number
+  minError: number
+  minStep: number
+  numShapes: number
+  sizeBytes: number
+}
+
+/** Base URL for sample traces (configurable via env var, defaults to /apvd/samples) */
+const SAMPLES_BASE_URL = import.meta.env.VITE_SAMPLES_URL ?? `${import.meta.env.BASE_URL}samples`
 
 export interface TraceManagerProps {
   onLoad: (traceId: string) => Promise<void>
@@ -45,6 +59,7 @@ function ShapeIcons({ shapeTypes }: { shapeTypes: string[] }) {
 
 export function TraceManager({ onLoad, onSave, hasUnsavedChanges, totalSteps }: TraceManagerProps) {
   const [traces, setTraces] = useState<TraceMeta[]>([])
+  const [sampleTraces, setSampleTraces] = useState<SampleTraceSummary[]>([])
   const [isOpen, setIsOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -57,6 +72,18 @@ export function TraceManager({ onLoad, onSave, hasUnsavedChanges, totalSteps }: 
   // Check OPFS support on mount
   useEffect(() => {
     setIsSupported(TraceStorage.isSupported())
+  }, [])
+
+  // Fetch sample traces manifest
+  const fetchSamples = useCallback(async () => {
+    try {
+      const resp = await fetch(`${SAMPLES_BASE_URL}/manifest.json`)
+      if (!resp.ok) return
+      const samples = await resp.json() as SampleTraceSummary[]
+      setSampleTraces(samples)
+    } catch {
+      // Samples are optional
+    }
   }, [])
 
   // Load traces when panel opens
@@ -79,8 +106,9 @@ export function TraceManager({ onLoad, onSave, hasUnsavedChanges, totalSteps }: 
   useEffect(() => {
     if (isOpen) {
       refreshTraces()
+      fetchSamples()
     }
-  }, [isOpen, refreshTraces])
+  }, [isOpen, refreshTraces, fetchSamples])
 
   const handleLoad = async (traceId: string) => {
     if (hasUnsavedChanges) {
@@ -95,6 +123,31 @@ export function TraceManager({ onLoad, onSave, hasUnsavedChanges, totalSteps }: 
     } catch (err) {
       console.error("Failed to load trace:", err)
       alert(`Failed to load trace: ${err}`)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Fetch a sample trace, save to OPFS, then load it
+  const handleLoadSample = async (sample: SampleTraceSummary) => {
+    if (hasUnsavedChanges) {
+      if (!confirm("Current session has unsaved changes. Load anyway?")) {
+        return
+      }
+    }
+    setIsLoading(true)
+    try {
+      const resp = await fetch(`${SAMPLES_BASE_URL}/${sample.filename}`)
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+      const trace = await resp.json() as TraceData
+      // Save to OPFS so it shows up in saved traces
+      const meta = await traceStorage.save(trace, sample.name)
+      await refreshTraces()
+      await onLoad(meta.traceId)
+      setIsOpen(false)
+    } catch (err) {
+      console.error("Failed to load sample trace:", err)
+      alert(`Failed to load sample trace: ${err}`)
     } finally {
       setIsLoading(false)
     }
@@ -170,7 +223,7 @@ export function TraceManager({ onLoad, onSave, hasUnsavedChanges, totalSteps }: 
   return (
     <>
       <OverlayTrigger overlay={<Tooltip>Manage saved traces</Tooltip>}>
-        <span className={css.link} onClick={() => setIsOpen(true)}>📁</span>
+        <span className={css.link} onClick={e => { e.stopPropagation(); setIsOpen(true) }}>📁</span>
       </OverlayTrigger>
 
       <Modal show={isOpen} onHide={() => setIsOpen(false)} size="lg">
@@ -180,6 +233,52 @@ export function TraceManager({ onLoad, onSave, hasUnsavedChanges, totalSteps }: 
         <Modal.Body>
           {isLoading && <div style={{ textAlign: "center", padding: "1em" }}>Loading...</div>}
 
+          {/* Sample traces */}
+          {sampleTraces.length > 0 && (
+            <>
+              <h6 className="text-muted">Sample Traces</h6>
+              <table className="table table-sm table-hover mb-4">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Steps</th>
+                    <th>Error</th>
+                    <th>Shapes</th>
+                    <th>Size</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sampleTraces.map(sample => (
+                    <tr key={sample.filename}>
+                      <td>{sample.name}</td>
+                      <td>{sample.totalSteps.toLocaleString()}</td>
+                      <td>{formatError(sample.minError)}</td>
+                      <td>{sample.numShapes}</td>
+                      <td style={{ fontSize: "0.85em", opacity: 0.8 }}>
+                        {sample.sizeBytes < 1024 * 1024
+                          ? `${(sample.sizeBytes / 1024).toFixed(0)} KB`
+                          : `${(sample.sizeBytes / 1024 / 1024).toFixed(1)} MB`
+                        }
+                      </td>
+                      <td>
+                        <button
+                          className="btn btn-sm btn-outline-primary"
+                          onClick={() => handleLoadSample(sample)}
+                          disabled={isLoading}
+                          title="Load this sample trace"
+                        >
+                          Load
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
+
+          {sampleTraces.length > 0 && <h6 className="text-muted">Saved Traces</h6>}
           {!isLoading && traces.length === 0 && (
             <div style={{ textAlign: "center", padding: "2em", opacity: 0.7 }}>
               No saved traces yet. Click "Save Current" to save your training run.

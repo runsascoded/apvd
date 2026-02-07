@@ -23,7 +23,7 @@ export default defineConfig({
     // Exclude from Vite's pre-bundling:
     // - WASM packages: esbuild breaks WASM imports (permanent)
     // - Local deps: enables hot reload without restart (managed by pds)
-    exclude: ['apvd-wasm', '@apvd/client', '@rdub/agg-plot'],
+    exclude: ['@apvd/client', '@rdub/agg-plot'],
   },
   server: {
     port: 5183,
