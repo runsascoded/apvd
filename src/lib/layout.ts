@@ -293,9 +293,60 @@ function fiveBlobLayout(
     })
 }
 
-// Five 12-gon cardioid blobs
-export const FiveBlobs12: InitialLayout = fiveBlobLayout(12, 0.2, 0.7, 1.5, 0.15)
+// Five 12-gon cardioid blobs (parametric starting point)
+export const FiveBlobs12: InitialLayout = fiveBlobLayout(12, 0.10, 0.70, 1.3, 0.25)
 
-// Five 15-gon cardioid blobs (gently non-convex, elongated)
-// dist=0.2 ensures non-adjacent triples overlap (31/31 regions in Rust Scene analysis)
-export const FiveBlobs: InitialLayout = fiveBlobLayout(15, 0.2, 0.7, 1.5, 0.15)
+// Five 15-gon cardioid blobs (parametric starting point)
+export const FiveBlobs: InitialLayout = fiveBlobLayout(15, 0.15, 1.40, 2.1, 0.15)
+
+// Replicate a template polygon 5× via 72° rotations (matching Rust layout_opt).
+function fiveFromTemplate(template: R2<number>[]): InitialLayout {
+    return Array.from({ length: 5 }, (_, i) => {
+        const angle = Math.PI / 2 + (2 * Math.PI * i) / 5
+        const cos = Math.cos(angle)
+        const sin = Math.sin(angle)
+        return {
+            vertices: template.map(v => ({
+                x: v.x * cos - v.y * sin,
+                y: v.x * sin + v.y * cos,
+            }))
+        }
+    })
+}
+
+// Optimized 12-gon template (radial parameterization, 2000 steps)
+// min/total=2.81%, loss=8.3e-5 (not fully converged, 12 vertices may be insufficient)
+export const FiveBlobs12Opt: InitialLayout = fiveFromTemplate([
+    { x: +0.000000, y: +0.708513 },
+    { x: +0.135692, y: +0.235026 },
+    { x: +0.375308, y: +0.216684 },
+    { x: +0.070803, y: +0.000000 },
+    { x: +0.316522, y: -0.182744 },
+    { x: +0.300825, y: -0.521044 },
+    { x: +0.000000, y: -0.096645 },
+    { x: -0.275279, y: -0.476797 },
+    { x: -0.183135, y: -0.105733 },
+    { x: -0.056255, y: -0.000000 },
+    { x: -0.339773, y: +0.196168 },
+    { x: -0.144770, y: +0.250750 },
+])
+
+// Optimized 15-gon template (radial parameterization, 2000 steps)
+// All 31 regions equal area (3.2258% each), loss=7.4e-23
+export const FiveBlobs15Opt: InitialLayout = fiveFromTemplate([
+    { x: +0.000000, y: +1.308383 },
+    { x: +0.548921, y: +1.232896 },
+    { x: +0.798618, y: +0.719079 },
+    { x: +0.253762, y: +0.082452 },
+    { x: +0.142250, y: -0.014951 },
+    { x: +0.781661, y: -0.451292 },
+    { x: +0.607416, y: -0.836036 },
+    { x: +0.099147, y: -0.466452 },
+    { x: -0.206830, y: -0.973058 },
+    { x: -0.754323, y: -1.038237 },
+    { x: -1.223385, y: -0.706322 },
+    { x: -0.202345, y: -0.021267 },
+    { x: -0.749854, y: +0.243642 },
+    { x: -1.170053, y: +1.053520 },
+    { x: -0.497034, y: +1.116356 },
+])

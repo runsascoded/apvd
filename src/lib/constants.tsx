@@ -3,7 +3,7 @@ import A from "../components/A"
 import { ValItem } from "../types"
 import {
     CirclesFixed, CirclesFlexible, Disjoint, Ellipses4, Ellipses4t,
-    FiveBlobs, FiveBlobs12,
+    FiveBlobs, FiveBlobs12, FiveBlobs12Opt, FiveBlobs15Opt,
     FourDodecagons, FourHexagons, FourIcosagons, FourOctagons, FourPentagons,
     InitialLayout, Nested, ThreeHexagons, ThreePentagons, toShape,
     TriangleCircle, TwoPentagonsOneHexagon, TwoTriangles
@@ -48,4 +48,6 @@ export const layouts: ValItem<InitialLayout>[] = [
     // 5-shape layouts (31 regions)
     { name: "Five 12-gon Blobs", val: FiveBlobs12, description: "Five 12-vertex cardioid blobs in pentagonal arrangement (31 regions)" },
     { name: "Five 15-gon Blobs", val: FiveBlobs, description: "Five 15-vertex cardioid blobs in pentagonal arrangement (31 regions)" },
+    { name: "Five 12-gon Blobs (opt)", val: FiveBlobs12Opt, description: "Optimized 12-vertex template: all 31 regions equal area (via apvd 5-shape-layout)" },
+    { name: "Five 15-gon Blobs (opt)", val: FiveBlobs15Opt, description: "Optimized 15-vertex template: all 31 regions equal area (via apvd 5-shape-layout)" },
 ]
