@@ -209,6 +209,27 @@
 
     .svgContainer {
       padding: 0;
+      position: relative;
+    }
+    .hoverInfoPanel {
+      position: fixed;
+      top: 8px;
+      left: 8px;
+      background: rgba(0, 0, 0, 0.85);
+      color: white;
+      padding: 6px 10px;
+      border-radius: 4px;
+      font-size: 0.85em;
+      pointer-events: none;
+      z-index: 1000;
+      max-width: 250px;
+      .hoverInfoLabel {
+        font-weight: 500;
+        margin-bottom: 2px;
+      }
+      .hoverInfoValue {
+        opacity: 0.9;
+      }
     }
     .grid {
       width: 100%;

@@ -13,7 +13,7 @@ import Tooltip from 'react-bootstrap/Tooltip'
 import { entries, mapEntries, values } from "./lib/objs"
 import { cos, max, min, PI, pi2, round, sin, sq3 } from "./lib/math"
 import Apvd, { LogLevel } from "./components/apvd"
-import { getLabelAttrs, getMidpoint, getPointAndDirectionAtTheta, getRegionCenter } from "./lib/region"
+import { computeEdgeHighlightStates, edgeToPath, getLabelAttrs, getMidpoint, getPointAndDirectionAtTheta, getRegionCenter } from "./lib/region"
 import { BoundingBox, DefaultSetMetadata, getRadii, mapShape, S, SetMetadata, setMetadataParam, Shape, shapeBox, Shapes, shapesParam, shapeStrJS, shapeStrJSON, shapeStrRust } from "./lib/shape"
 import { TargetsTable } from "./components/tables/targets"
 import { defaultTargets, makeTargets, Target, Targets, targetsParam } from "./lib/targets"
@@ -35,7 +35,23 @@ import { fmt } from "./lib/utils"
 import { useDeepCmp } from "./lib/use-deep-cmp-memo"
 import d3ToPng from "d3-svg-to-png"
 import { EditableText } from "./components/editable-text"
-import { FizzBuzzBazz, MPowerLink, Zhang2014Href } from "./lib/sample-targets"
+import {
+    BenFredCircles,
+    FiveSetExample1,
+    FiveSetExample2,
+    FizzBuzz,
+    FizzBuzzBazz,
+    FizzBuzzBazzQux,
+    FizzBuzzBazzQuxQuux,
+    FizzBuzzSmallPrimes,
+    MPower,
+    MPowerLink,
+    VariantCallers,
+    Zhang2014D,
+    Zhang2014E,
+    Zhang2014F,
+    Zhang2014Href,
+} from "./lib/sample-targets"
 import { Details, DetailsSection, Links } from "./components/Details"
 import { SettingsPanel } from "./components/SettingsPanel"
 import { PlaybackControls, FastForwardButtonStandalone } from "./components/PlaybackControls"
@@ -512,6 +528,7 @@ export function Body() {
     const sparkLineCellProps = null
 
     const [ hoveredShapeIdx, setHoveredShapeIdx ] = useState<number | null>(null)
+    const [ hoveredRegion, setHoveredRegion ] = useState<string | null>(null)
 
     const col5 = "col"
     const col7 = "col"
@@ -521,23 +538,31 @@ export function Body() {
     const fs = [ 0.25, 0.5, 0.75, ];
     // const fs = [ 0.5, ];
 
+    // Convert hoveredShapeIdx to equivalent region key (e.g., index 0 with 3 shapes → "0**")
+    const shapeIdxToRegionKey = useCallback((idx: number, numShapes: number): string => {
+        return Array.from({ length: numShapes }, (_, i) => i === idx ? String(idx) : '*').join('')
+    }, [])
+
+    // Effective hovered region: either from Targets table or converted from Shapes table
+    const effectiveHoveredRegion = useMemo(() => {
+        if (hoveredRegion) return hoveredRegion
+        if (hoveredShapeIdx !== null && sets) {
+            return shapeIdxToRegionKey(hoveredShapeIdx, sets.length)
+        }
+        return null
+    }, [hoveredRegion, hoveredShapeIdx, sets, shapeIdxToRegionKey])
+
     const shapeNodes = useMemo(
         () => {
             if (!sets) return <g id={"shapes"} />
-            // Reorder so hovered shape renders last (on top)
-            const orderedSets = hoveredShapeIdx !== null
-                ? [...sets.filter((_, i) => i !== hoveredShapeIdx), sets[hoveredShapeIdx]]
-                : sets
+
+            // Shapes render with fills only - edges are drawn separately for precise control
             return <g id={"shapes"}>{
-                orderedSets.map(({ color, shape, idx }: S) => {
-                    const isHovered = hoveredShapeIdx === idx
-                    const isAnyHovered = hoveredShapeIdx !== null
+                sets.map(({ color, shape, idx }: S) => {
                     const commonProps = {
-                        stroke: "black",
-                        strokeWidth: (isHovered ? 4 : 3) / scale,
-                        strokeOpacity: isAnyHovered && !isHovered ? 0.3 : 1,
+                        stroke: "none",
                         fill: color,
-                        fillOpacity: isHovered ? 0.9 : (isAnyHovered ? shapeFillOpacity * 0.4 : shapeFillOpacity),
+                        fillOpacity: shapeFillOpacity,
                     }
                     if (shape.kind === 'Polygon') {
                         const points = shape.vertices.map(v => `${v.x},${v.y}`).join(' ')
@@ -561,7 +586,7 @@ export function Body() {
                 })
             }</g>
         },
-        [ sets, scale, shapeFillOpacity, hoveredShapeIdx ],
+        [ sets, shapeFillOpacity ],
     )
 
     const intersectionNodes = useMemo(
@@ -613,8 +638,6 @@ export function Body() {
             ))),
         [ showEdgePoints, curStep, scale, ]
     )
-
-    const [ hoveredRegion, setHoveredRegion ] = useState<string | null>(null)
 
     const totalRegionAreas = useMemo(
         () => {
@@ -857,26 +880,16 @@ export function Body() {
                     const area = gridArea / curStep.total_area.v * curStep.targets.total_area
                     const areaLabel = fmt(area)
                     const target = targets.all.get(key) || 0
-                    // console.log("key:", key, "hoveredRegion:", hoveredRegion)
+                    // Floating tooltip disabled - using fixed hover info panel instead
                     return (
-                        <OverlayTrigger
+                        <text
                             key={`${regionIdx}-${key}`}
-                            show={key == hoveredRegion}
-                            overlay={<Tooltip className={css.regionTooltip} onMouseOver={() => setHoveredRegion(key)}>
-                                <p className={css.regionTooltipLabel}>{label}</p>
-                                {fmt(target)} → {areaLabel}
-                            </Tooltip>}>
-                            <text
-                                transform={`translate(${center.x}, ${center.y}) scale(1, -1)`}
-                                textAnchor={"middle"}
-                                dominantBaseline={"middle"}
-                                fontSize={16 / scale}
-                                // Need non-empty text content in order for tooltips to appear correctly positioned in
-                                // Firefox (otherwise they end up off the screen somewhere).
-                                // TODO: file issue: https://github.com/react-bootstrap/react-bootstrap/issues
-                                opacity={showRegionSizes ? 1 : 0}
-                            >{areaLabel}</text>
-                        </OverlayTrigger>
+                            transform={`translate(${center.x}, ${center.y}) scale(1, -1)`}
+                            textAnchor={"middle"}
+                            dominantBaseline={"middle"}
+                            fontSize={16 / scale}
+                            opacity={showRegionSizes ? 1 : 0}
+                        >{areaLabel}</text>
                     )
                 })
             }</g>,
@@ -898,31 +911,127 @@ export function Body() {
         return true
     }, [])
 
+    // Edge rendering with explicit styling based on hover state
+    const edgeNodes = useMemo(
+        () => {
+            if (!curStep) return null
+
+            const matchFn = effectiveHoveredRegion
+                ? (key: string) => regionMatchesHovered(key, effectiveHoveredRegion)
+                : null
+
+            const highlightStates = computeEdgeHighlightStates(
+                curStep.edges,
+                curStep.regions,
+                matchFn
+            )
+
+            return <g id={"edges"}>{
+                curStep.edges.map((edge, edgeIdx) => {
+                    const key = `${edge.node0.x.toFixed(10)},${edge.node0.y.toFixed(10)}-${edge.node1.x.toFixed(10)},${edge.node1.y.toFixed(10)}`
+                    const normalizedKey = edge.node0.x < edge.node1.x || (edge.node0.x === edge.node1.x && edge.node0.y < edge.node1.y)
+                        ? key
+                        : `${edge.node1.x.toFixed(10)},${edge.node1.y.toFixed(10)}-${edge.node0.x.toFixed(10)},${edge.node0.y.toFixed(10)}`
+                    const state = highlightStates.get(normalizedKey) || 'normal'
+                    const d = edgeToPath(edge)
+
+                    let stroke: string
+                    let strokeWidth: number
+                    let strokeOpacity: number
+
+                    switch (state) {
+                        case 'highlighted':
+                            stroke = 'black'
+                            strokeWidth = 4 / scale
+                            strokeOpacity = 0.9
+                            break
+                        case 'faded':
+                            stroke = 'black'
+                            strokeWidth = 2 / scale
+                            strokeOpacity = 0.2
+                            break
+                        default: // 'normal'
+                            stroke = 'black'
+                            strokeWidth = 3 / scale
+                            strokeOpacity = 1
+                    }
+
+                    return (
+                        <path
+                            key={`edge-${edgeIdx}`}
+                            d={d}
+                            stroke={stroke}
+                            strokeWidth={strokeWidth}
+                            strokeOpacity={strokeOpacity}
+                            fill="none"
+                            pointerEvents="none"
+                        />
+                    )
+                })
+            }</g>
+        },
+        [ curStep, scale, effectiveHoveredRegion, regionMatchesHovered ],
+    )
+
     const regionPaths = useMemo(
-        () =>
-            curStep && <g id={"regionPaths"}>{
+        () => {
+            if (!curStep) return null
+            // Region paths for hover detection only - no fill overlay
+            // Edges are rendered separately with explicit styling
+            return <g id={"regionPaths"}>{
                 curStep.regions.map((region, regionIdx) => {
-                    const { key} = region
+                    const { key } = region
                     const d = regionPath(region)
-                    const isHovered = hoveredRegion === key || regionMatchesHovered(key, hoveredRegion)
                     return (
                         <path
                             key={`${regionIdx}-${key}`}
                             id={key}
                             d={d}
-                            stroke={isHovered ? "white" : "black"}
-                            strokeWidth={isHovered ? 3 / scale : 1 / scale}
-                            fill={"grey"}
-                            fillOpacity={isHovered ? 0.5 : 0}
+                            stroke="transparent"
+                            strokeWidth={10 / scale}
+                            fill="transparent"
                             fillRule={"evenodd"}
                             onMouseOver={() => setHoveredRegion(key)}
-                            // onMouseLeave={() => setHoveredRegion(null)}
                             onMouseOut={() => setHoveredRegion(null)}
                         />
                     )
                 })
-            }</g>,
-        [ curStep, scale, hoveredRegion, regionMatchesHovered, ],
+            }</g>
+        },
+        [ curStep, scale, ],
+    )
+
+    // Note: Edge highlighting is now handled by edgeNodes above
+
+    // Fixed hover info panel (replaces floating tooltip for table hovers)
+    const hoverInfoPanel = useMemo(
+        () => {
+            if (!effectiveHoveredRegion || !curStep || !sets) return null
+
+            // Find all matching regions and sum their areas
+            let totalArea = 0
+            const matchingContainers = new Set<number>()
+            for (const region of curStep.regions) {
+                if (regionMatchesHovered(region.key, effectiveHoveredRegion)) {
+                    totalArea += region.area
+                    region.containers.forEach(s => matchingContainers.add(s.idx))
+                }
+            }
+
+            const containerIdxs = Array.from(matchingContainers).sort((a, b) => a - b)
+            const label = `{ ${containerIdxs.map(idx => sets[idx].name).join(', ')} }`
+            const area = totalArea / curStep.total_area.v * curStep.targets.total_area
+            const areaLabel = fmt(area)
+            const target = targets.all.get(effectiveHoveredRegion) || 0
+
+            return (
+                <div className={css.hoverInfoPanel}>
+                    <div className={css.hoverInfoLabel}>{label}</div>
+                    <div className={css.hoverInfoValue}>{fmt(target)} → {areaLabel}</div>
+                </div>
+            )
+        },
+        [ effectiveHoveredRegion, curStep, sets, targets, regionMatchesHovered, ],
     )
 
     const shapesStr = useCallback(
@@ -1027,24 +1136,73 @@ export function Body() {
         [ setHash ]
     )
 
+    // ExampleLink generates dynamic hashes that respect current givenInclusive mode
+    const ExampleLink = useCallback(
+        ({ targetData, names, shapes, children }: {
+            targetData: Target[],
+            names?: string,  // encoded format: "Name1=abbrev@color,Name2,..."
+            shapes?: Shapes,
+            children: ReactNode,
+        }) => {
+            // Create Targets from data, then override givenInclusive to match current UI state
+            const baseTargets = makeTargets(targetData)
+            const newTargets: Targets = { ...baseTargets, givenInclusive: rawTargets.givenInclusive }
+
+            // Build the hash with only the params we want to set
+            const updates: Partial<Record<keyof Params, unknown>> = { t: newTargets }
+            if (names !== undefined) {
+                // Decode the names string to SetMetadata format
+                const namesList = names.split(',').map((part, idx) => {
+                    const [namePart, rest] = part.split('@')
+                    const [name, abbrev] = namePart.split('=')
+                    const color = rest || DefaultSetMetadata[idx]?.color || 'gray'
+                    return {
+                        name: name || DefaultSetMetadata[idx]?.name || `Set ${idx}`,
+                        abbrev: abbrev || name?.[0] || String(idx),
+                        color,
+                    }
+                })
+                updates.n = namesList
+            }
+            if (shapes !== undefined) {
+                updates.s = { shapes, precisionSchemeId: urlShapesPrecisionScheme }
+            } else if (newTargets.numShapes !== rawTargets.numShapes) {
+                // Clear shapes when target count changes (will use default layout)
+                updates.s = null
+            }
+
+            const hash = updatedHash(params, updates)
+            return (
+                <a
+                    className={window.location.hash === hash ? css.activeLink : ''}
+                    href={hash}
+                    onClick={(e) => {
+                        e.preventDefault()
+                        setHash(hash)
+                    }}
+                >{children}</a>
+            )
+        },
+        [ params, rawTargets.givenInclusive, setHash, urlShapesPrecisionScheme ]
+    )
+
     const exampleLinkItems: LinkItem[] = [
         {
             name: "Fizz Buzz Bazz",
             description: <>Visualizations of the number of natural numbers divisible by various sets of small primes, inspired by {fizzBuzzLink}</>,
             children: <span>
                 Naturals divisible by:
-                {/*Converged: #t=i35,21,7,15,5,3,1&s=0zjHy6C2eF4RZ05I4g6Q82kg_YooD__EwBF-4yGGy6YuvOv&n=Multiples+of+3=3,Multiples+of+5=5,Multiples+of+7=7*/}
-                {' '}<HashLink hash={"#t=i5,3,1&n=Multiples+of+3=3,Multiples+of+5=5"}>{`{3, 5}`}</HashLink>
-                ,{' '}<HashLink hash={"#t=i35,21,7,15,5,3,1&n=Multiples+of+3=3,Multiples+of+5=5,Multiples+of+7=7"}>{`{3, 5, 7}`}</HashLink>
-                ,{' '}<HashLink hash={"#t=i105,70,35,42,21,14,7,30,15,10,5,6,3,2,1&n=Multiples+of+2=2,Multiples+of+3=3,Multiples+of+5=5,Multiples+of+7=7"}>{`{2, 3, 5, 7}`}</HashLink>
-                ,{' '}<HashLink hash={"#t=i1155,770,385,462,231,154,77,330,165,110,55,66,33,22,11,210,105,70,35,42,21,14,7,30,15,10,5,6,3,2,1&n=Multiples+of+2=2,Multiples+of+3=3,Multiples+of+5=5,Multiples+of+7=7,Multiples+of+11=11"}>{`{2, 3, 5, 7, 11}`}</HashLink>
-                ,{' '}<HashLink hash={"#t=i8855,5313,1771,3795,1265,759,253,2415,805,483,161,345,115,69,23,1155,385,231,77,165,55,33,11,105,35,21,7,15,5,3,1&n=Multiples+of+3=3,Multiples+of+5=5,Multiples+of+7=7,Multiples+of+11=11,Multiples+of+23=23"}>{`{3, 5, 7, 11, 23}`}</HashLink>
+                {' '}<ExampleLink targetData={FizzBuzz} names="Multiples of 3=3,Multiples of 5=5">{`{3, 5}`}</ExampleLink>
+                ,{' '}<ExampleLink targetData={FizzBuzzBazz} names="Multiples of 3=3,Multiples of 5=5,Multiples of 7=7">{`{3, 5, 7}`}</ExampleLink>
+                ,{' '}<ExampleLink targetData={FizzBuzzBazzQux} names="Multiples of 2=2,Multiples of 3=3,Multiples of 5=5,Multiples of 7=7">{`{2, 3, 5, 7}`}</ExampleLink>
+                ,{' '}<ExampleLink targetData={FizzBuzzSmallPrimes} names="Multiples of 2=2,Multiples of 3=3,Multiples of 5=5,Multiples of 7=7,Multiples of 11=11">{`{2, 3, 5, 7, 11}`}</ExampleLink>
+                ,{' '}<ExampleLink targetData={FizzBuzzBazzQuxQuux} names="Multiples of 3=3,Multiples of 5=5,Multiples of 7=7,Multiples of 11=11,Multiples of 23=23">{`{3, 5, 7, 11, 23}`}</ExampleLink>
             </span>,
         }, {
             name: "Variant callers",
             description: <>Values from {VariantCallersPaperLink}, "A comparative analysis of algorithms for somatic SNV detection in cancer," Fig. 3</>,
             children: <span>
-                <HashLink hash={"#t=633,618,112,187,0,14,1,319,13,55,17,21,0,9,36&n=VarScan,SomaticSniper,Strelka=T@#99f,JSM2@orange"}>Variant Callers</HashLink>
+                <ExampleLink targetData={VariantCallers} names="VarScan,SomaticSniper,Strelka=T@#99f,JSM2@orange">Variant Callers</ExampleLink>
                 {' '}(
                 <HashLink hash={"#s=Mzx868wSrqe62oBeRfH2WUHakKB1OeVQltXVsxzG7xr1hF4oblIulnX_D1OLV6jNkgSlDvFN0OqgyD3OUuvX_X_5HhRUwN1mnF1uXKhW4bbNv4zNby2cxv2iiFbpHovsstMTrteKR4hgh43U5qPl9TqywzTQ4efn1ARs8VrIS_u6Ew57sD7lVHg&t=633,618,112,187,0,14,1,319,13,55,17,21,0,9,36&n=VarScan,SomaticSniper,Strelka=T@#99f,JSM2@orange"}>best</HashLink>,
                 {' '}<HashLink hash={"#s=MzFmMoDEjiFlaI75RLiVGFWa1LWsCUZLElD3k4Wb9MRcPZ4Fw55rJqHuFPEoGcVXr5715dyHmMD0m4hk-wsnCM54MAUEAfBJyiqu65c_DPWx0s25v7G0iFUMtLj_ah4HAMHHWffJ64khARnNgfQcpLLtcjrsqSnqPDSxMgczCQdjXopIpMOz7hg&t=633,618,112,187,0,14,1,319,13,55,17,21,0,9,36&n=VarScan,SomaticSniper,Strelka=T@#99f,JSM2@orange"}>alternate</HashLink>
@@ -1054,7 +1212,7 @@ export function Body() {
             name: "MPower",
             description: <>Values from "Clinical efficacy of atezolizumab plus bevacizumab and chemotherapy in KRAS-mutated non-small cell lung cancer with STK11, KEAP1, or TP53 computations: subgroup results from the phase III IMpower150 trial", {MPowerLink}</>,
             children: <span>
-                <HashLink hash={"#t=42,15,16,10,10,12,25,182,60,23,13,44,13,18,11&n=KRAS,STK11,KEAP1=P,TP53"}>MPower</HashLink>
+                <ExampleLink targetData={MPower} names="KRAS,STK11,KEAP1=P,TP53">MPower</ExampleLink>
                 {' '}(<HashLink hash={"#t=42,15,16,10,10,12,25,182,60,23,13,44,13,18,11&n=KRAS,STK11,KEAP1=P,TP53&s=MBa-DFxenUIPbbiY5zWUS75Sq6I_AoND3lCDN4c5cpbpL14Esh6Saq4ZExG4o8gjJ5dU0BbxsOy7d-X6u50CMd2V366UA1Ds8GIODVbI8YXEowhIyWjyf6ehH6Rv7XRt1FQ7iPZML4xDayY-CF36Azp1g3lboFO9072ceizTenkvUwA4t0T4bSM"}>best</HashLink>)
             </span>
         }, {
@@ -1062,11 +1220,11 @@ export function Body() {
             description: <>Values from "Comparison of RNA-seq and microarray-based models for clinical endpoint prediction", <A href={Zhang2014Href}>Zhang <i>et al</i> 2014</A>, Fig. 7, plots D, E, and F.</>,
             children: <span>
                 <A href={Zhang2014Href}>Zhang 2014</A> Fig. 7:
-                {' '}<HashLink hash={"#t=11,89,1,24,0,66,5,2268,5,271,5,2204,24,11368,353&n=qRT-PCR@#99f,Cuffdiff2,DESeq@#f99,edgeR@orange"}>D</HashLink>
+                {' '}<ExampleLink targetData={Zhang2014D} names="qRT-PCR@#99f,Cuffdiff2,DESeq@#f99,edgeR@orange">D</ExampleLink>
                 {' '}(<HashLink hash={"#t=11,89,1,24,0,66,5,2268,5,271,5,2204,24,11368,353&n=qRT-PCR@#99f,Cuffdiff2,DESeq@#f99,edgeR@orange&s=MzquCc1qHJVEd39MqI0o7S6_mGGRSdwuWGwmgy3c7XFgnl4wtl91F1348bEeB_HTdcDPGo6VC8t2UKYxT-EwbfF57sa0A40Zj-Bm0Z42LRb0BuNY9qtSMtrPqjN0f0cn4ouVyooYd4wItBeD--EDMlBsOIfVgOD9prmJEtDBImoltEIQl7G2r7M"}>best</HashLink>),
-                {' '}<HashLink hash={"#t=7,798,0,35,0,197,0,1097,1,569,4,303,0,3177,65&n=Microarray@#99f,Cuffdiff2,DESeq@#f99,edgeR@orange"}>E</HashLink>
+                {' '}<ExampleLink targetData={Zhang2014E} names="Microarray@#99f,Cuffdiff2,DESeq@#f99,edgeR@orange">E</ExampleLink>
                 {' '}(<HashLink hash={"#t=7,798,0,35,0,197,0,1097,1,569,4,303,0,3177,65&n=Microarray@#99f,Cuffdiff2,DESeq@#f99,edgeR@orange&s=MzmxcXrZYyppkecbYAfg4H-PdpCaRWiDeq7N44wuiJNlIm4wp8P8cuwA9Bucsmjr2dqn1zPM22wgGd1JSY0rISvxh2mUA2aXH3ag_t6G_89D8KxZnwOU6jB2JskrLQgrA2jCCHogg4hv96qke6qJW22g22WkvD-Ra6KpOXm4rQ50Y4pkpWQmTtE"}>best</HashLink>),
-                {' '}<HashLink hash={"#t=331,63,21,1,0,0,2,88,77,13,80,6,181,1,1644&n=Simulation@#99f,Cuffdiff2,DESeq@#f99,edgeR@orange"}>F</HashLink>
+                {' '}<ExampleLink targetData={Zhang2014F} names="Simulation@#99f,Cuffdiff2,DESeq@#f99,edgeR@orange">F</ExampleLink>
                 {' '}(<HashLink hash={"#t=331,63,21,1,0,0,2,88,77,13,80,6,181,1,1644&n=Simulation@#99f,Cuffdiff2,DESeq@#f99,edgeR@orange&s=MB338Q9DnKg_lC49IjUVEzmKsO8mQ6dhETFZi7x2gOAYpX4goJWRqKd0e_8WJPog2nm0bsUU2IVkhjK5WwIsdMycjSkoz0PJuyq7cdXN0cnqKBPoRCX2ecj6dr4sA-0LA6nKlMEKu4gux-1ioITfDBxjKok5trrPfC4W0Q9uecOaeAfYDVPgngg"}>best</HashLink>),
             </span>
         }, {
@@ -1079,8 +1237,8 @@ export function Body() {
             name: "5-Set Test Cases",
             description: <>Synthetic 5-set examples for testing 31-region Venn diagram layouts.</>,
             children: <span>
-                <HashLink hash={"#t=21,10,11,5,2,2,1,7,0,0,0,3,0,3,0,11,4,0,0,0,0,0,2,3,0,0,0,6,1,1,1&n=A,B,C,D,E"}>Example 1</HashLink>
-                ,{' '}<HashLink hash={"#t=21,10,11,5,6,3,3,2,0,0,0,3,1,0,0,7,3,1,0,2,0,1,0,2,1,0,1,1,0,0,0&n=A,B,C,D,E"}>Example 2</HashLink>
+                <ExampleLink targetData={FiveSetExample1} names="A,B,C,D,E">Example 1</ExampleLink>
+                ,{' '}<ExampleLink targetData={FiveSetExample2} names="A,B,C,D,E">Example 2</ExampleLink>
             </span>
         }
     ]
@@ -1365,25 +1523,29 @@ export function Body() {
     return (
         <div className={css.body}>
             <div className={`${css.row} ${css.content}`}>
-                <Grid
-                    id={GridId}
-                    className={"row"}
-                    style={{ backgroundColor: effectiveSvgBg }}
-                    svgRef={svgRef}
-                    resizableNodeClassName={css.svgContainer}
-                    svgClassName={css.grid}
-                    state={gridState}
-                    resizableBottom={true}
-                >
-                    <>
-                        {shapeNodes}
-                        {edgePoints}
-                        {regionTooltips}
-                        {setLabels}
-                        {regionPaths}
-                        {intersectionNodes}
-                    </>
-                </Grid>
+                <div style={{ position: 'relative' }}>
+                    <Grid
+                        id={GridId}
+                        className={"row"}
+                        style={{ backgroundColor: effectiveSvgBg }}
+                        svgRef={svgRef}
+                        resizableNodeClassName={css.svgContainer}
+                        svgClassName={css.grid}
+                        state={gridState}
+                        resizableBottom={true}
+                    >
+                        <>
+                            {shapeNodes}
+                            {edgeNodes}
+                            {edgePoints}
+                            {regionTooltips}
+                            {setLabels}
+                            {regionPaths}
+                            {intersectionNodes}
+                        </>
+                    </Grid>
+                    {hoverInfoPanel}
+                </div>
                 <div className={"row"}>
                     <div className={`${col6} ${css.controlPanel}`}>
                         <PlaybackControls
