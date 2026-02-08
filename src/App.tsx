@@ -1029,6 +1029,7 @@ export function Body() {
                 {' '}<HashLink hash={"#t=i5,3,1&n=Multiples+of+3=3,Multiples+of+5=5"}>{`{3, 5}`}</HashLink>
                 ,{' '}<HashLink hash={"#t=i35,21,7,15,5,3,1&n=Multiples+of+3=3,Multiples+of+5=5,Multiples+of+7=7"}>{`{3, 5, 7}`}</HashLink>
                 ,{' '}<HashLink hash={"#t=i105,70,35,42,21,14,7,30,15,10,5,6,3,2,1&n=Multiples+of+2=2,Multiples+of+3=3,Multiples+of+5=5,Multiples+of+7=7"}>{`{2, 3, 5, 7}`}</HashLink>
+                ,{' '}<HashLink hash={"#t=i1155,770,385,462,231,154,77,330,165,110,55,66,33,22,11,210,105,70,35,42,21,14,7,30,15,10,5,6,3,2,1&n=Multiples+of+2=2,Multiples+of+3=3,Multiples+of+5=5,Multiples+of+7=7,Multiples+of+11=11"}>{`{2, 3, 5, 7, 11}`}</HashLink>
                 ,{' '}<HashLink hash={"#t=i8855,5313,1771,3795,1265,759,253,2415,805,483,161,345,115,69,23,1155,385,231,77,165,55,33,11,105,35,21,7,15,5,3,1&n=Multiples+of+3=3,Multiples+of+5=5,Multiples+of+7=7,Multiples+of+11=11,Multiples+of+23=23"}>{`{3, 5, 7, 11, 23}`}</HashLink>
             </span>,
         }, {
@@ -1138,6 +1139,7 @@ export function Body() {
         { id: 'fizz-3-5', label: 'Fizz Buzz: {3, 5}', hash: '#t=i5,3,1&n=Multiples+of+3=3,Multiples+of+5=5', group: 'Fizz Buzz' },
         { id: 'fizz-3-5-7', label: 'Fizz Buzz: {3, 5, 7}', hash: '#t=i35,21,7,15,5,3,1&n=Multiples+of+3=3,Multiples+of+5=5,Multiples+of+7=7', group: 'Fizz Buzz' },
         { id: 'fizz-2-3-5-7', label: 'Fizz Buzz: {2, 3, 5, 7}', hash: '#t=i105,70,35,42,21,14,7,30,15,10,5,6,3,2,1&n=Multiples+of+2=2,Multiples+of+3=3,Multiples+of+5=5,Multiples+of+7=7', group: 'Fizz Buzz' },
+        { id: 'fizz-2-3-5-7-11', label: 'Fizz Buzz: {2, 3, 5, 7, 11}', hash: '#t=i1155,770,385,462,231,154,77,330,165,110,55,66,33,22,11,210,105,70,35,42,21,14,7,30,15,10,5,6,3,2,1&n=Multiples+of+2=2,Multiples+of+3=3,Multiples+of+5=5,Multiples+of+7=7,Multiples+of+11=11', group: 'Fizz Buzz' },
         { id: 'fizz-3-5-7-11-23', label: 'Fizz Buzz: {3, 5, 7, 11, 23}', hash: '#t=i8855,5313,1771,3795,1265,759,253,2415,805,483,161,345,115,69,23,1155,385,231,77,165,55,33,11,105,35,21,7,15,5,3,1&n=Multiples+of+3=3,Multiples+of+5=5,Multiples+of+7=7,Multiples+of+11=11,Multiples+of+23=23', group: 'Fizz Buzz' },
         { id: 'variant-callers', label: 'Variant Callers', hash: '#t=633,618,112,187,0,14,1,319,13,55,17,21,0,9,36&n=VarScan,SomaticSniper,Strelka=T@#99f,JSM2@orange', group: 'Examples' },
         { id: 'variant-callers-best', label: 'Variant Callers (best)', hash: '#s=Mzx868wSrqe62oBeRfH2WUHakKB1OeVQltXVsxzG7xr1hF4oblIulnX_D1OLV6jNkgSlDvFN0OqgyD3OUuvX_X_5HhRUwN1mnF1uXKhW4bbNv4zNby2cxv2iiFbpHovsstMTrteKR4hgh43U5qPl9TqywzTQ4efn1ARs8VrIS_u6Ew57sD7lVHg&t=633,618,112,187,0,14,1,319,13,55,17,21,0,9,36&n=VarScan,SomaticSniper,Strelka=T@#99f,JSM2@orange', group: 'Examples' },
