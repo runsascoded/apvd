@@ -511,6 +511,8 @@ export function Body() {
     // step history on the main thread. Can be re-enabled with a step history cache.
     const sparkLineCellProps = null
 
+    const [ hoveredShapeIdx, setHoveredShapeIdx ] = useState<number | null>(null)
+
     const col5 = "col"
     const col7 = "col"
     const col6 = "col"
@@ -520,40 +522,46 @@ export function Body() {
     // const fs = [ 0.5, ];
 
     const shapeNodes = useMemo(
-        () => <g id={"shapes"}>{
-            sets?.map(({ color, shape }: S, idx: number) => {
-                const commonProps = {
-                    stroke: "black",
-                    strokeWidth: 3 / scale,
-                    fill: color,
-                    fillOpacity: shapeFillOpacity,
-                }
-                if (shape.kind === 'Polygon') {
-                    const points = shape.vertices.map(v => `${v.x},${v.y}`).join(' ')
-                    return <polygon key={idx} points={points} {...commonProps} />
-                }
-                const { x: cx, y: cy } = shape.c
-                const radii = getRadii(shape)
-                if (!radii) throw new Error(`Expected radii for shape kind ${shape.kind}`)
-                const [rx, ry] = radii
-                const theta = shape.kind === 'XYRRT' ? shape.t : 0
-                const degrees = theta * 180 / PI
-                const ellipse =
-                    <ellipse
-                        key={idx}
-                        cx={cx}
-                        cy={cy}
-                        rx={rx}
-                        ry={ry} {...commonProps}
-                        // onMouseDown={e => {
-                        //     console.log(`ellipse ${idx} onMouseDown`, e)
-                        //     e.stopPropagation()
-                        // }}
-                    />
-                return degrees ? <g key={idx} transform={`rotate(${degrees} ${cx} ${cy})`}>{ellipse}</g> : ellipse
-            })
-        }</g>,
-        [ sets, scale, shapeFillOpacity ],
+        () => {
+            if (!sets) return <g id={"shapes"} />
+            // Reorder so hovered shape renders last (on top)
+            const orderedSets = hoveredShapeIdx !== null
+                ? [...sets.filter((_, i) => i !== hoveredShapeIdx), sets[hoveredShapeIdx]]
+                : sets
+            return <g id={"shapes"}>{
+                orderedSets.map(({ color, shape, idx }: S) => {
+                    const isHovered = hoveredShapeIdx === idx
+                    const isAnyHovered = hoveredShapeIdx !== null
+                    const commonProps = {
+                        stroke: "black",
+                        strokeWidth: (isHovered ? 4 : 3) / scale,
+                        strokeOpacity: isAnyHovered && !isHovered ? 0.3 : 1,
+                        fill: color,
+                        fillOpacity: isHovered ? 0.9 : (isAnyHovered ? shapeFillOpacity * 0.4 : shapeFillOpacity),
+                    }
+                    if (shape.kind === 'Polygon') {
+                        const points = shape.vertices.map(v => `${v.x},${v.y}`).join(' ')
+                        return <polygon key={idx} points={points} {...commonProps} />
+                    }
+                    const { x: cx, y: cy } = shape.c
+                    const radii = getRadii(shape)
+                    if (!radii) throw new Error(`Expected radii for shape kind ${shape.kind}`)
+                    const [rx, ry] = radii
+                    const theta = shape.kind === 'XYRRT' ? shape.t : 0
+                    const degrees = theta * 180 / PI
+                    const ellipse =
+                        <ellipse
+                            key={idx}
+                            cx={cx}
+                            cy={cy}
+                            rx={rx}
+                            ry={ry} {...commonProps}
+                        />
+                    return degrees ? <g key={idx} transform={`rotate(${degrees} ${cx} ${cy})`}>{ellipse}</g> : ellipse
+                })
+            }</g>
+        },
+        [ sets, scale, shapeFillOpacity, hoveredShapeIdx ],
     )
 
     const intersectionNodes = useMemo(
@@ -1535,6 +1543,8 @@ export function Body() {
                                         })
                                     }}
                                     vars={vars}
+                                    hoveredShapeIdx={hoveredShapeIdx}
+                                    setHoveredShapeIdx={setHoveredShapeIdx}
                                 />
                             }
                             <div>

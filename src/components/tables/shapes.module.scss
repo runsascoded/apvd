@@ -1,4 +1,10 @@
 .shapesTable {
+  tr.hovered {
+    background-color: rgba(0, 0, 0, 0.08);
+  }
+  tbody tr {
+    cursor: pointer;
+  }
   .abbrevCol {
     max-width: 3em;
   }

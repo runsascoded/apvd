@@ -24,6 +24,8 @@ export type Props = {
     updateSetMetadatum: (idx: number, newMetadatum: Partial<SetMetadatum>) => void
     vars: Vars
     precision?: number
+    hoveredShapeIdx?: number | null
+    setHoveredShapeIdx?: (idx: number | null) => void
 }
 
 export type Var = {
@@ -66,7 +68,7 @@ export function Math({ children }: { children: string }) {
     )
 }
 
-export function ShapesTable({ sets, setShape, updateSetMetadatum, vars, precision = 4 }: Props) {
+export function ShapesTable({ sets, setShape, updateSetMetadatum, vars, precision = 4, hoveredShapeIdx, setHoveredShapeIdx }: Props) {
     const hasDoubleRadii = sets.some(({shape}) => shape.kind === "XYRR" || shape.kind === "XYRRT")
     const hasXYRRT = sets.some(({shape}) => shape.kind === "XYRRT")
     const hasPolygon = sets.some(({shape}) => shape.kind === "Polygon")
@@ -128,9 +130,15 @@ export function ShapesTable({ sets, setShape, updateSetMetadatum, vars, precisio
                 sets.map(({ idx, name, abbrev, color, shape }) => {
                     const skippedVars = vars.skipVars[idx] || []
 
+                    const hoverProps = setHoveredShapeIdx ? {
+                        onMouseEnter: () => setHoveredShapeIdx(idx),
+                        onMouseLeave: () => setHoveredShapeIdx(null),
+                        className: hoveredShapeIdx === idx ? css.hovered : undefined,
+                    } : {}
+
                     // For Polygon shapes, only show metadata view (no coordinate editing yet)
                     if (shape.kind === 'Polygon') {
-                        return <tr key={idx}>
+                        return <tr key={idx} {...hoverProps}>
                             <td style={{ textAlign: "right", }}>
                                 <EditableText
                                     className={css.editableShapeField}
@@ -210,7 +218,7 @@ export function ShapesTable({ sets, setShape, updateSetMetadatum, vars, precisio
                         e => ({ skip: skippedVars.includes("t"), value: e.t, set: (t: number) => setShape(idx, { ...e, t }) }),
                         () => null,
                     )
-                    return <tr key={idx}>
+                    return <tr key={idx} {...hoverProps}>
                         <td style={{ textAlign: "right", }}>
                             <EditableText
                                 className={css.editableShapeField}
