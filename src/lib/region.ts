@@ -250,22 +250,13 @@ export function computeEdgeHighlightStates(
     edges: Edge[],
     regions: Region[],
     matchFn: ((key: string) => boolean) | null,
-): Map<string, EdgeHighlightState> {
-    const result = new Map<string, EdgeHighlightState>()
-
-    // Helper to create a consistent edge key
-    const edgeKey = (edge: Edge): string => {
-        const n0 = edge.node0, n1 = edge.node1
-        if (n0.x < n1.x || (n0.x === n1.x && n0.y < n1.y)) {
-            return `${n0.x.toFixed(10)},${n0.y.toFixed(10)}-${n1.x.toFixed(10)},${n1.y.toFixed(10)}`
-        }
-        return `${n1.x.toFixed(10)},${n1.y.toFixed(10)}-${n0.x.toFixed(10)},${n0.y.toFixed(10)}`
-    }
+): Map<Edge, EdgeHighlightState> {
+    const result = new Map<Edge, EdgeHighlightState>()
 
     // If no hover, all edges are normal
     if (!matchFn) {
         for (const edge of edges) {
-            result.set(edgeKey(edge), 'normal')
+            result.set(edge, 'normal')
         }
         return result
     }
@@ -278,32 +269,30 @@ export function computeEdgeHighlightStates(
         }
     }
 
-    // Build map of edge -> regions that use it
-    const edgeToRegions = new Map<string, string[]>()
+    // Build map of edge (by object identity) -> regions that use it
+    // Using object identity avoids conflating edges from different components
+    // that happen to share the same endpoint coordinates.
+    const edgeToRegions = new Map<Edge, string[]>()
     for (const region of regions) {
         for (const seg of region.segments) {
-            const key = edgeKey(seg.edge)
-            const list = edgeToRegions.get(key) || []
+            const list = edgeToRegions.get(seg.edge) || []
             list.push(region.key)
-            edgeToRegions.set(key, list)
+            edgeToRegions.set(seg.edge, list)
         }
     }
 
     // Determine state for each edge
     for (const edge of edges) {
-        const key = edgeKey(edge)
-        const adjacentRegions = edgeToRegions.get(key) || []
+        const adjacentRegions = edgeToRegions.get(edge) || []
 
         // Check if edge has matching and non-matching neighbors
         const hasMatchingNeighbor = adjacentRegions.some(rk => matchingKeys.has(rk))
         const hasNonMatchingNeighbor = adjacentRegions.some(rk => !matchingKeys.has(rk))
 
         if (hasMatchingNeighbor && (hasNonMatchingNeighbor || edge.isComponentBoundary)) {
-            // Edge is on the boundary of the highlighted region
-            result.set(key, 'highlighted')
+            result.set(edge, 'highlighted')
         } else {
-            // Edge is not on the boundary - fade it
-            result.set(key, 'faded')
+            result.set(edge, 'faded')
         }
     }
 

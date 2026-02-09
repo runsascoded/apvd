@@ -928,11 +928,7 @@ export function Body() {
 
             return <g id={"edges"}>{
                 curStep.edges.map((edge, edgeIdx) => {
-                    const key = `${edge.node0.x.toFixed(10)},${edge.node0.y.toFixed(10)}-${edge.node1.x.toFixed(10)},${edge.node1.y.toFixed(10)}`
-                    const normalizedKey = edge.node0.x < edge.node1.x || (edge.node0.x === edge.node1.x && edge.node0.y < edge.node1.y)
-                        ? key
-                        : `${edge.node1.x.toFixed(10)},${edge.node1.y.toFixed(10)}-${edge.node0.x.toFixed(10)},${edge.node0.y.toFixed(10)}`
-                    const state = highlightStates.get(normalizedKey) || 'normal'
+                    const state = highlightStates.get(edge) || 'normal'
                     const d = edgeToPath(edge)
 
                     let stroke: string
