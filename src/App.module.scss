@@ -388,14 +388,19 @@
           }
         }
         td.targetVal {
-          //padding-right: 0;
           input {
             background-color: transparent;
             color: inherit;
             text-align: right;
             width: 100%;
             border: none;
-            //padding-right: 0;
+            // Hide number spinners (keeps type="number" for mobile keyboard)
+            -moz-appearance: textfield; // Firefox
+            &::-webkit-inner-spin-button,
+            &::-webkit-outer-spin-button {
+              -webkit-appearance: none;
+              margin: 0;
+            }
           }
         }
         td.errorBarCell {
@@ -404,27 +409,39 @@
           padding: 0 0.2em;
           .errorBar {
             height: 0.8em;
-            background-color: var(--error-bar-color, #dc3545);
             border-radius: 2px;
             min-width: 1px;
+            // Default (fallback)
+            background-color: var(--error-bar-color, #dc3545);
+            // Too small: blue - region needs to grow
+            &.tooSmall {
+              background-color: #2196f3;
+            }
+            // Too large: red - region needs to shrink
+            &.tooLarge {
+              background-color: #dc3545;
+            }
+            // Missing region: gray stripes - should exist but doesn't
             &.missingRegion {
               background: repeating-linear-gradient(
                 45deg,
-                var(--error-bar-color, #dc3545),
-                var(--error-bar-color, #dc3545) 2px,
+                #6c757d,
+                #6c757d 2px,
                 transparent 2px,
                 transparent 4px
               );
-              border: 1px solid var(--error-bar-color, #dc3545);
+              border: 1px solid #6c757d;
             }
+            // Extra region: orange stripes - exists but shouldn't
             &.extraRegion {
               background: repeating-linear-gradient(
                 -45deg,
-                var(--error-bar-color, #dc3545),
-                var(--error-bar-color, #dc3545) 2px,
+                #ff9800,
                 #ff9800 2px,
-                #ff9800 4px
+                transparent 2px,
+                transparent 4px
               );
+              border: 1px solid #ff9800;
             }
           }
         }

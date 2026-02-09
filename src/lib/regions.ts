@@ -72,14 +72,16 @@ export function makeStep(step: apvd.Step, initialSets: Set[]): Step {
             })
         })
     })
+    // Convert errors to Map (tsify declares Record<K,V> but runtime may be Map or Object)
+    const errorsEntries = errors instanceof Map ? Array.from(errors.entries()) : Object.entries(errors)
+    const errorsMap: Errors = new Map(errorsEntries)
     return {
         sets,
         points,
         edges,
         regions,
         components: newComponents,
-        // tsify `#[declare]` erroneously emits Record<K, V> instead of Map<K, V>: https://github.com/madonoharu/tsify/issues/26
-        errors: errors as any as Errors,
+        errors: errorsMap,
         ...rest
     }
 }

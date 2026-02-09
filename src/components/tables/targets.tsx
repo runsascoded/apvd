@@ -1,12 +1,36 @@
 import {Step} from "../../lib/regions";
-import {Dual} from "@apvd/wasm"
+import {Dual, ErrorKind} from "@apvd/wasm"
 import React, {Dispatch, useCallback, useMemo, useState} from "react";
 import css from "../../App.module.scss";
-import {ArraySparkLineCell, SparkLineProps, SparkNum} from "../spark-lines";
+import {BiColorSparkLineCell, SparkLineProps, SparkNum} from "../spark-lines";
 import {S} from "../../lib/shape";
 import {abs} from "../../lib/math";
 import {makeTargets, Target, Targets} from "../../lib/targets";
 import { fmt } from "../../lib/utils";
+
+/** Get the CSS class for an error bar based on error kind */
+function getErrorBarClass(kind: ErrorKind): string {
+    switch (kind.type) {
+        case 'AreaMismatch':
+            return kind.signed_error > 0 ? css.tooLarge : css.tooSmall
+        case 'MissingRegion':
+            return css.missingRegion
+        case 'ExtraRegion':
+            return css.extraRegion
+    }
+}
+
+/** Get tooltip text for an error bar based on error kind */
+function getErrorBarTitle(kind: ErrorKind): string {
+    switch (kind.type) {
+        case 'AreaMismatch':
+            return kind.signed_error > 0 ? 'Region too large' : 'Region too small'
+        case 'MissingRegion':
+            return 'Missing region'
+        case 'ExtraRegion':
+            return 'Extra region (target = 0)'
+    }
+}
 
 export function getNegativeEntries(targets: Targets): Map<string, number> {
     const entries: Target[] = []
@@ -85,8 +109,7 @@ export function TargetsTable(
                 return false
             }
             for (let i = 0; i < region.length; i++) {
-                if (!(key[i] == '*' || key[i] == region[i] || region[i] != '-')) {
-                    // console.log(`${key} doesn't contain ${region}`)
+                if (!(key[i] == '*' || key[i] == region[i])) {
                     return false
                 }
             }
@@ -129,9 +152,9 @@ export function TargetsTable(
         // Error bar calculation
         const errorVal = err ? err.error.v * totalTargetArea : 0
         const errorBarWidth = maxAbsError > 0 ? (abs(errorVal) / maxAbsError) * 100 : 0
-        // Check for "infinite" error cases: missing region (should exist but doesn't) or extra region (exists but shouldn't)
-        const isMissing = err && err.actual_area === null && value > 0
-        const isExtra = err && err.actual_area !== null && err.actual_area > 0 && value === 0
+        // Use ErrorKind from shapes crate for classification
+        const errorKind = err?.kind
+        const isMissing = errorKind?.type === 'MissingRegion'
 
         const className = [
             negativeKey ? css.negativeKey : '',
@@ -198,15 +221,14 @@ export function TargetsTable(
             {SparkNum(err && err.error.v * totalTargetArea)}
             <td className={css.errorBarCell}>
                 <div
-                    className={`${css.errorBar} ${isMissing ? css.missingRegion : ''} ${isExtra ? css.extraRegion : ''}`}
+                    className={`${css.errorBar} ${errorKind ? getErrorBarClass(errorKind) : ''}`}
                     style={{ width: `${errorBarWidth}%` }}
-                    title={isMissing ? 'Missing region' : isExtra ? 'Extra region' : undefined}
+                    title={errorKind ? getErrorBarTitle(errorKind) : undefined}
                 />
             </td>
             {showSparkLines && (hasRegionHistory
-                ? <ArraySparkLineCell
+                ? <BiColorSparkLineCell
                     data={regionErrorHistory[key] || []}
-                    color={sparklineColors.red}
                     {...sparkLineProps}
                 />
                 : <td className={css.sparkLineCell} style={{ width: sparkLineWidth, height: sparkLineHeight }}></td>
