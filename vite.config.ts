@@ -11,20 +11,23 @@ export default defineConfig({
     wasm(),
     topLevelAwait(),
   ],
+
   test: {
     globals: true,
   },
+
   define: {
     // Polyfill for libraries that expect Node.js `global` (e.g., react-mathquill)
     global: 'globalThis',
   },
+
   base: '/apvd/',
+
   optimizeDeps: {
-    // Exclude from Vite's pre-bundling:
-    // - WASM packages: esbuild breaks WASM imports (permanent)
-    // - Local deps: enables hot reload without restart (managed by pds)
-    exclude: ['@apvd/wasm', '@apvd/client', '@rdub/agg-plot'],
+    // esbuild breaks WASM imports; must exclude from pre-bundling
+    exclude: ['@apvd/wasm'],
   },
+
   server: {
     port: 5183,
     fs: {
@@ -33,12 +36,15 @@ export default defineConfig({
     },
     ...(allowedHosts.length > 0 && { allowedHosts }),
   },
+
   preview: {
     port: 5183,
   },
+
   build: {
     outDir: 'dist',
   },
+
   worker: {
     format: 'es',
     plugins: () => [
@@ -46,6 +52,7 @@ export default defineConfig({
       topLevelAwait(),
     ],
   },
+
   css: {
     preprocessorOptions: {
       scss: {
@@ -53,6 +60,7 @@ export default defineConfig({
       },
     },
   },
+
   resolve: {
     alias: {
       // Handle next-utils imports that don't depend on Next.js

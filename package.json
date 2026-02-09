@@ -19,10 +19,10 @@
     "clean": "rm -rf node_modules/.vite dist"
   },
   "dependencies": {
-    "@apvd/client": "workspace:*",
-    "@apvd/worker": "workspace:*",
-    "@apvd/wasm": "link:../../shapes/apvd-wasm/pkg",
-    "@rdub/agg-plot": "workspace:*",
+    "@apvd/client": "github:runsascoded/shapes#0f2f9b0037747c430feb226d169a831d6a76a727&path:/client",
+    "@apvd/worker": "github:runsascoded/shapes#0f2f9b0037747c430feb226d169a831d6a76a727&path:/apvd-wasm/ts",
+    "@apvd/wasm": "github:runsascoded/shapes#0f2f9b0037747c430feb226d169a831d6a76a727&path:/apvd-wasm/pkg",
+    "@rdub/agg-plot": "https://gitlab.com/runsascoded/js/agg-plot/-/archive/e9087eda0724f058d4d2657afd51d0c3f59193e6/agg-plot-e9087eda0724f058d4d2657afd51d0c3f59193e6.tar.gz",
     "@types/pako": "^2.0.4",
     "bootstrap": "^5.3.3",
     "d3-svg-to-png": "^0.3.1",

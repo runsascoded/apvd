@@ -9,17 +9,17 @@ importers:
   .:
     dependencies:
       '@apvd/client':
-        specifier: workspace:*
-        version: link:../../shapes/client
+        specifier: github:runsascoded/shapes#0f2f9b0037747c430feb226d169a831d6a76a727&path:/client
+        version: https://codeload.github.com/runsascoded/shapes/tar.gz/0f2f9b0037747c430feb226d169a831d6a76a727#path:/client
       '@apvd/wasm':
-        specifier: link:../../shapes/apvd-wasm/pkg
-        version: link:../../shapes/apvd-wasm/pkg
+        specifier: github:runsascoded/shapes#0f2f9b0037747c430feb226d169a831d6a76a727&path:/apvd-wasm/pkg
+        version: https://codeload.github.com/runsascoded/shapes/tar.gz/0f2f9b0037747c430feb226d169a831d6a76a727#path:/apvd-wasm/pkg
       '@apvd/worker':
-        specifier: workspace:*
-        version: link:../../shapes/apvd-wasm/ts
+        specifier: github:runsascoded/shapes#0f2f9b0037747c430feb226d169a831d6a76a727&path:/apvd-wasm/ts
+        version: https://codeload.github.com/runsascoded/shapes/tar.gz/0f2f9b0037747c430feb226d169a831d6a76a727#path:/apvd-wasm/ts(@apvd/client@https://codeload.github.com/runsascoded/shapes/tar.gz/0f2f9b0037747c430feb226d169a831d6a76a727#path:/client)
       '@rdub/agg-plot':
-        specifier: workspace:*
-        version: link:../../../js/agg-plot
+        specifier: https://gitlab.com/runsascoded/js/agg-plot/-/archive/e9087eda0724f058d4d2657afd51d0c3f59193e6/agg-plot-e9087eda0724f058d4d2657afd51d0c3f59193e6.tar.gz
+        version: https://gitlab.com/runsascoded/js/agg-plot/-/archive/e9087eda0724f058d4d2657afd51d0c3f59193e6/agg-plot-e9087eda0724f058d4d2657afd51d0c3f59193e6.tar.gz(plotly.js@2.35.3(mapbox-gl@1.13.3)(webpack@5.104.1))(react-plotly.js@2.6.0(plotly.js@2.35.3(mapbox-gl@1.13.3)(webpack@5.104.1))(react@18.3.1))(react@18.3.1)
       '@types/pako':
         specifier: ^2.0.4
         version: 2.0.4
@@ -130,26 +130,7 @@ importers:
         specifier: ^2.1.9
         version: 2.1.9(@types/node@22.19.7)(sass@1.97.2)(terser@5.46.0)
 
-  ../../../js/agg-plot:
-    devDependencies:
-      '@types/react':
-        specifier: ^18
-        version: 18.3.27
-      plotly.js:
-        specifier: ^2
-        version: 2.35.3(mapbox-gl@1.13.3)(webpack@5.104.1)
-      react:
-        specifier: ^18
-        version: 18.3.1
-      react-plotly.js:
-        specifier: ^2
-        version: 2.6.0(plotly.js@2.35.3(mapbox-gl@1.13.3)(webpack@5.104.1))(react@18.3.1)
-      typescript:
-        specifier: ^5
-        version: 5.9.3
-      vitest:
-        specifier: ^2
-        version: 2.1.9(@types/node@22.19.7)(sass@1.97.2)(terser@5.46.0)
+  ../../shapes/apvd-wasm/pkg: {}
 
   ../../shapes/apvd-wasm/ts:
     devDependencies:
@@ -158,7 +139,7 @@ importers:
         version: link:../../client
       '@apvd/wasm':
         specifier: file:../pkg
-        version: file:../../shapes/apvd-wasm/pkg
+        version: link:../pkg
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -174,8 +155,19 @@ packages:
   '@adobe/css-tools@4.4.4':
     resolution: {integrity: sha512-Elp+iwUx5rN5+Y8xLt5/GRoG20WGoDCQ/1Fb+1LiGtvwbDavuSk0jhD/eZdckHAuzcDzccnkv+rEjyWfRx18gg==}
 
-  '@apvd/wasm@file:../../shapes/apvd-wasm/pkg':
-    resolution: {directory: ../../shapes/apvd-wasm/pkg, type: directory}
+  '@apvd/client@https://codeload.github.com/runsascoded/shapes/tar.gz/0f2f9b0037747c430feb226d169a831d6a76a727#path:/client':
+    resolution: {path: /client, tarball: https://codeload.github.com/runsascoded/shapes/tar.gz/0f2f9b0037747c430feb226d169a831d6a76a727}
+    version: 0.1.0-dist.1483cda
+
+  '@apvd/wasm@https://codeload.github.com/runsascoded/shapes/tar.gz/0f2f9b0037747c430feb226d169a831d6a76a727#path:/apvd-wasm/pkg':
+    resolution: {path: /apvd-wasm/pkg, tarball: https://codeload.github.com/runsascoded/shapes/tar.gz/0f2f9b0037747c430feb226d169a831d6a76a727}
+    version: 0.1.0-dist.1483cda
+
+  '@apvd/worker@https://codeload.github.com/runsascoded/shapes/tar.gz/0f2f9b0037747c430feb226d169a831d6a76a727#path:/apvd-wasm/ts':
+    resolution: {path: /apvd-wasm/ts, tarball: https://codeload.github.com/runsascoded/shapes/tar.gz/0f2f9b0037747c430feb226d169a831d6a76a727}
+    version: 0.1.0-dist.1483cda
+    peerDependencies:
+      '@apvd/client': '*'
 
   '@babel/code-frame@7.28.6':
     resolution: {integrity: sha512-JYgintcMjRiCvS8mMECzaEn+m3PfoQiyqukOMCCVQtoJGYJw8j/8LBJEiqkHLkfwCcs74E3pbAUFNg7d9VNJ+Q==}
@@ -731,6 +723,14 @@ packages:
     resolution: {integrity: sha512-aBSREisdsGH890S2rQqK82qmQYU3uFpSH8wcZWHgHzl3LfzsxAKbLNiAG9mO8v1Y0UICBeClICxPJvyr0rcuxg==}
     engines: {node: '>=18'}
     hasBin: true
+
+  '@rdub/agg-plot@https://gitlab.com/runsascoded/js/agg-plot/-/archive/e9087eda0724f058d4d2657afd51d0c3f59193e6/agg-plot-e9087eda0724f058d4d2657afd51d0c3f59193e6.tar.gz':
+    resolution: {tarball: https://gitlab.com/runsascoded/js/agg-plot/-/archive/e9087eda0724f058d4d2657afd51d0c3f59193e6/agg-plot-e9087eda0724f058d4d2657afd51d0c3f59193e6.tar.gz}
+    version: 0.0.1-dist.4794640
+    peerDependencies:
+      plotly.js: '>=2'
+      react: '>=17'
+      react-plotly.js: '>=2'
 
   '@react-aria/ssr@3.9.10':
     resolution: {integrity: sha512-hvTm77Pf+pMBhuBm760Li0BVIO38jv1IBws1xFm1NoL26PU+fe+FMW5+VZWyANR6nYL65joaJKZqOdTQMkO9IQ==}
@@ -3063,7 +3063,13 @@ snapshots:
 
   '@adobe/css-tools@4.4.4': {}
 
-  '@apvd/wasm@file:../../shapes/apvd-wasm/pkg': {}
+  '@apvd/client@https://codeload.github.com/runsascoded/shapes/tar.gz/0f2f9b0037747c430feb226d169a831d6a76a727#path:/client': {}
+
+  '@apvd/wasm@https://codeload.github.com/runsascoded/shapes/tar.gz/0f2f9b0037747c430feb226d169a831d6a76a727#path:/apvd-wasm/pkg': {}
+
+  '@apvd/worker@https://codeload.github.com/runsascoded/shapes/tar.gz/0f2f9b0037747c430feb226d169a831d6a76a727#path:/apvd-wasm/ts(@apvd/client@https://codeload.github.com/runsascoded/shapes/tar.gz/0f2f9b0037747c430feb226d169a831d6a76a727#path:/client)':
+    dependencies:
+      '@apvd/client': https://codeload.github.com/runsascoded/shapes/tar.gz/0f2f9b0037747c430feb226d169a831d6a76a727#path:/client
 
   '@babel/code-frame@7.28.6':
     dependencies:
@@ -3528,6 +3534,12 @@ snapshots:
       - bare-buffer
       - react-native-b4a
       - supports-color
+
+  '@rdub/agg-plot@https://gitlab.com/runsascoded/js/agg-plot/-/archive/e9087eda0724f058d4d2657afd51d0c3f59193e6/agg-plot-e9087eda0724f058d4d2657afd51d0c3f59193e6.tar.gz(plotly.js@2.35.3(mapbox-gl@1.13.3)(webpack@5.104.1))(react-plotly.js@2.6.0(plotly.js@2.35.3(mapbox-gl@1.13.3)(webpack@5.104.1))(react@18.3.1))(react@18.3.1)':
+    dependencies:
+      plotly.js: 2.35.3(mapbox-gl@1.13.3)(webpack@5.104.1)
+      react: 18.3.1
+      react-plotly.js: 2.6.0(plotly.js@2.35.3(mapbox-gl@1.13.3)(webpack@5.104.1))(react@18.3.1)
 
   '@react-aria/ssr@3.9.10(react@18.3.1)':
     dependencies:
