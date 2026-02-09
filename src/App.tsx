@@ -912,6 +912,8 @@ export function Body() {
     }, [])
 
     // Edge rendering with explicit styling based on hover state
+    const isDark = theme === 'dark'
+    const edgeColor = isDark ? 'white' : 'black'
     const edgeNodes = useMemo(
         () => {
             if (!curStep) return null
@@ -937,19 +939,19 @@ export function Body() {
 
                     switch (state) {
                         case 'highlighted':
-                            stroke = 'black'
+                            stroke = edgeColor
                             strokeWidth = 4 / scale
-                            strokeOpacity = 0.9
+                            strokeOpacity = 1
                             break
                         case 'faded':
-                            stroke = 'black'
+                            stroke = edgeColor
                             strokeWidth = 2 / scale
-                            strokeOpacity = 0.2
+                            strokeOpacity = 0.15
                             break
                         default: // 'normal'
-                            stroke = 'black'
+                            stroke = edgeColor
                             strokeWidth = 3 / scale
-                            strokeOpacity = 1
+                            strokeOpacity = isDark ? 0.6 : 1
                     }
 
                     return (
@@ -966,7 +968,32 @@ export function Body() {
                 })
             }</g>
         },
-        [ curStep, scale, effectiveHoveredRegion, regionMatchesHovered ],
+        [ curStep, scale, effectiveHoveredRegion, regionMatchesHovered, edgeColor, isDark ],
+    )
+
+    // Dim overlay on non-highlighted regions during hover
+    const regionDimOverlay = useMemo(
+        () => {
+            if (!curStep || !effectiveHoveredRegion) return null
+            return <g id={"regionDimOverlay"} pointerEvents="none">{
+                curStep.regions.map((region, regionIdx) => {
+                    const matches = regionMatchesHovered(region.key, effectiveHoveredRegion)
+                    if (matches) return null
+                    const d = regionPath(region)
+                    return (
+                        <path
+                            key={`dim-${regionIdx}-${region.key}`}
+                            d={d}
+                            fill={diagramBg}
+                            fillOpacity={0.6}
+                            fillRule={"evenodd"}
+                            stroke="none"
+                        />
+                    )
+                })
+            }</g>
+        },
+        [ curStep, effectiveHoveredRegion, regionMatchesHovered, diagramBg ],
     )
 
     const regionPaths = useMemo(
@@ -1532,6 +1559,7 @@ export function Body() {
                     >
                         <>
                             {shapeNodes}
+                            {regionDimOverlay}
                             {edgeNodes}
                             {edgePoints}
                             {regionTooltips}
